@@ -1,0 +1,5 @@
+# Copie para .dev.vars (ignorado pelo git) para desenvolvimento local com `wrangler dev`.
+# NUNCA coloque valores reais de produção aqui. Em staging/produção use `wrangler secret put`.
+TELEGRAM_WEBHOOK_SECRET=troque-por-um-segredo-local-longo
+# Só necessário com TELEGRAM_MODE=live (bot de teste):
+# TELEGRAM_BOT_TOKEN=
