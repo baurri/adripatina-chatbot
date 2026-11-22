@@ -6,15 +6,15 @@ import type { Ctx } from "./context.js";
 import { runScheduled } from "./cron.js";
 import { Db } from "./db/sql.js";
 import { loadConfig, type Env } from "./env.js";
-import { LiveTelegramClient, MockTelegramClient } from "./telegram/client.js";
+import { LiveTelegramClient, MissingTokenTelegramClient, MockTelegramClient } from "./telegram/client.js";
 import type { TelegramClient } from "./ports.js";
 
 function buildCtx(env: Env, requestId: string): Ctx {
   const config = loadConfig(env);
   let telegram: TelegramClient;
   if (config.telegramMode === "live") {
-    if (!env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN ausente (wrangler secret put TELEGRAM_BOT_TOKEN)");
-    telegram = new LiveTelegramClient(env.TELEGRAM_BOT_TOKEN);
+    // sem token, o Worker continua de pé (health, painel); só falha ao tentar falar com o Telegram
+    telegram = env.TELEGRAM_BOT_TOKEN ? new LiveTelegramClient(env.TELEGRAM_BOT_TOKEN) : new MissingTokenTelegramClient();
   } else {
     telegram = new MockTelegramClient(config.environment === "local");
   }

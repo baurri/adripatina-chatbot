@@ -72,7 +72,7 @@
     "production": {
       "name": "adripatina-chatbot",
       "d1_databases": [
-        { "binding": "DB", "database_name": "adripatina", "database_id": "REPLACE_WITH_PRODUCTION_D1_ID", "migrations_dir": "db/migrations" }
+        { "binding": "DB", "database_name": "adripatina", "database_id": "c761a787-503e-4f75-829b-e4b08692fdf4", "migrations_dir": "db/migrations" }
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files" }],
       "ai": { "binding": "AI" },
@@ -88,8 +88,8 @@
         "AUDIO_MAX_BYTES": "10485760",
         "IMAGE_MAX_BYTES": "10485760",
         "MEDIA_RETENTION_DAYS": "180",
-        "ACCESS_TEAM_DOMAIN": "REPLACE_https://<time>.cloudflareaccess.com",
-        "ACCESS_AUD": "REPLACE_WITH_ACCESS_AUD_TAG",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": "",
         "ADMIN_DEV_BYPASS_EMAIL": "",
         "TELEGRAM_MODE": "live",
         "DAILY_SUMMARY_HOUR": "7"

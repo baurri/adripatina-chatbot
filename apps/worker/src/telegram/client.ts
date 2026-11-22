@@ -102,3 +102,23 @@ export class MockTelegramClient implements TelegramClient {
     this.sent.length = 0;
   }
 }
+
+/** Usado em modo live quando o segredo TELEGRAM_BOT_TOKEN ainda não foi configurado. */
+export class MissingTokenTelegramClient implements TelegramClient {
+  readonly mode = "live" as const;
+  private fail(): never {
+    throw new Error("TELEGRAM_BOT_TOKEN ausente (wrangler secret put TELEGRAM_BOT_TOKEN)");
+  }
+  async sendMessage(): Promise<void> {
+    this.fail();
+  }
+  async sendDocument(): Promise<void> {
+    this.fail();
+  }
+  async answerCallbackQuery(): Promise<void> {
+    this.fail();
+  }
+  async downloadFile(): Promise<{ bytes: Uint8Array; filePath: string }> {
+    this.fail();
+  }
+}
