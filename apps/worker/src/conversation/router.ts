@@ -51,7 +51,8 @@ export function isStrongInterruption(nlu: NluResult, pending: PendingQuestion | 
       return e.amountCents !== undefined && nlu.confidence >= 0.85;
     case "register_expense":
       // durante a coleta de preço, "comprei por 90" é resposta, não uma nova compra
-      return e.amountCents !== undefined && nlu.confidence >= 0.85 && pending?.type !== "material_purchase_price" && pending?.type !== "material_package_size";
+      // (vale também para a pergunta proativa de preço/embalagem: "comprei duas latas por 150" responde a ela)
+      return e.amountCents !== undefined && nlu.confidence >= 0.85 && pending?.type !== "material_purchase_price" && pending?.type !== "material_package_size" && pending?.type !== "data_request";
     case "job_progress":
       // andamento exige evidência operacional explícita e nunca é só estado físico
       // "ainda não comecei" não muda nada: não interrompe o objetivo

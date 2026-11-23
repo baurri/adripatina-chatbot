@@ -1,3 +1,4 @@
+import { countEmojis } from "../llm/compose.js";
 import { Dec, formatBRL } from "@adripatina/shared";
 import type { NeedKind, NeedReason } from "./types.js";
 
@@ -250,11 +251,6 @@ export function exampleFor(kind: NeedKind, baseUnit?: string, expecting?: string
 
 // ------------------------------------------------------------------ verificação de estilo
 
-const EMOJI_RE = /\p{Extended_Pictographic}/gu;
-
-export function countEmojis(text: string): number {
-  return (text.match(EMOJI_RE) ?? []).length;
-}
 
 const FORBIDDEN = /\b(autis\w*|campo|nulo|null|sistema|banco de dados|tentativa|urgente|agora mesmo|obrigat\w*|bloquead\w* por (voce|você)|voce ainda nao respondeu|você ainda não respondeu|preciso que responda|querid\w*|fofinh\w*|amiguinh\w*)\b/i;
 
