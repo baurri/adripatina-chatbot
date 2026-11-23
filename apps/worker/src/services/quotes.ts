@@ -679,7 +679,6 @@ export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, num
     const obj = await ctx.storage.get(p.r2_key);
     if (obj) photos.push({ bytes: new Uint8Array(await obj.arrayBuffer()), mime: p.mime as "image/jpeg" | "image/png" });
   }
-  const days = r.leadTime.workingDays;
   const deadlineFact = f.deadline?.value as string | null | undefined;
   return {
     number,
@@ -704,10 +703,8 @@ export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, num
     finishes: techniques.map((t) => capitalize(techniqueLabel(t))),
     lines,
     totalCents: r.finalPriceCents ?? r.recommendedCents ?? 0,
-    deadlineText:
-      days > 0
-        ? `aproximadamente ${days} dias úteis após a aprovação${deadlineFact && deadlineFact !== "sem prazo" ? ` (combinado: ${deadlineFact})` : ""}`
-        : "a combinar",
+    // prazo do PDF é só o que o artesão combinou (ele tem fila de serviços); nunca um número calculado
+    deadlineText: deadlineFact && deadlineFact !== "sem prazo" ? deadlineFact : "a combinar",
     paymentTerms: (f.payment_terms?.value as string | null | undefined) ?? "a combinar",
     depositCents: r.depositRecommendedCents,
     exclusions: b.defaultExclusions,

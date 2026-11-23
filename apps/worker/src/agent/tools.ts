@@ -57,7 +57,7 @@ export interface ToolContext {
   /** número deste turno — o orçamento mostrado neste turno não fecha neste turno */
   turn: number;
   /** o que aconteceu de relevante (botões a anexar, PDFs enviados) */
-  effects: { presentedQuote?: boolean; pendingCreated?: PendingAction; pdfsSent?: number };
+  effects: { presentedQuote?: boolean; pendingCreated?: PendingAction; pdfsSent?: number; askPhoto?: boolean };
 }
 
 // ------------------------------------------------------------------ helpers
@@ -108,6 +108,7 @@ function describeJob(job: Job): Record<string, unknown> {
     metodo: v("application_method"),
     transporte: v("logistics"),
     material: v("material_status"),
+    prazo: v("deadline"),
     observacoes: v("details"),
     falta_para_orcamento: missingFor(job),
   };
@@ -149,7 +150,7 @@ const FIELDS_SCHEMA = {
     diametro_cm: n("diâmetro em cm (mesa redonda)"),
     porte: s("só se ele disser pequeno/médio/grande", ["pequeno", "medio", "grande"]),
     metodo: s("pincel (inclui trincha) | rolo | pistola", ["pincel", "rolo", "pistola"]),
-    artesao_busca: b("o ARTESÃO vai buscar a peça? (cliente traz = false)"),
+    artesao_busca: b("o ARTESÃO vai levar a peça da casa do cliente para a oficina? Só com ele dizendo isso claramente. 'Vou lá na casa dela ver/pegar o serviço' é ir orçar, NÃO é buscar a peça — na dúvida, deixe de fora e pergunte. (cliente traz = false)"),
     artesao_entrega: b("o ARTESÃO vai entregar? (cliente busca = false)"),
     frete_reais: n("quanto ele cobra/gasta de frete, se disser"),
     material: s("tem_tudo (já tem) | tem_parte | precisa_comprar", ["tem_tudo", "tem_parte", "precisa_comprar"]),
@@ -157,6 +158,7 @@ const FIELDS_SCHEMA = {
     portas: n("total de portas"),
     quantidade: n("quantas peças iguais neste serviço"),
     cliente: s("nome do dono com tratamento: 'Dona Carla', 'Seu Luiz'"),
+    prazo: s("quando fica pronto para o cliente, do jeito que ele falou, incluindo quando ele consegue começar: 'começo daqui a 2 meses, fica pronto em uns 10 dias', 'daqui a 6 meses', 'sem prazo'"),
     observacao: s("detalhe dito de passagem para guardar (cor, tempo que ele acha que leva, ferramenta extra...)"),
   },
 };
@@ -184,7 +186,16 @@ export const AGENT_TOOLS: AgentTool[] = [
   {
     name: "anotar",
     description: "Anota no serviço tudo o que ele disse (vários campos de uma vez). Use a cada resposta dele, ANTES de perguntar a próxima coisa. Para corrigir algo já anotado, mande correcao=true.",
-    input_schema: { type: "object", properties: { servico_id: { type: "string" }, campos: FIELDS_SCHEMA, correcao: { type: "boolean" } }, required: ["servico_id", "campos"] },
+    input_schema: {
+      type: "object",
+      properties: {
+        servico_id: { type: "string" },
+        campos: FIELDS_SCHEMA,
+        correcao: { type: "boolean" },
+        limpar: { type: "array", items: { type: "string", enum: ["metodo", "transporte", "porte", "medidas", "estado", "superficies", "parte", "conserto", "material", "prazo", "cliente"] }, description: "apaga o que foi anotado errado e ele ainda não sabe (ex.: 'não disse que ia buscar' → limpar ['transporte'] e pergunte)" },
+      },
+      required: ["servico_id", "campos"],
+    },
   },
   {
     name: "calcular_orcamento",
@@ -275,6 +286,33 @@ export const AGENT_TOOLS: AgentTool[] = [
 
 type Fields = Record<string, unknown>;
 
+/** campos que podem ser apagados (anotado errado / ele ainda não sabe) */
+const CLEARABLE: Record<string, ProjectField> = {
+  metodo: "application_method",
+  transporte: "logistics",
+  porte: "size_class",
+  medidas: "dimensions",
+  estado: "condition",
+  superficies: "surfaces",
+  parte: "scope",
+  conserto: "repairs",
+  material: "material_status",
+  prazo: "deadline",
+  cliente: "client_name",
+};
+
+async function clearFields(t: ToolContext, job: Job, keys: unknown): Promise<string[]> {
+  const cleared: string[] = [];
+  if (!Array.isArray(keys)) return cleared;
+  for (const k of keys) {
+    const field = typeof k === "string" ? CLEARABLE[k] : undefined;
+    if (!field || job.facts[field]?.value === undefined || job.facts[field]?.value === null) continue;
+    await setFact(t.ctx, job.id, field, null, { ...opts(t), correction: true, changeKind: "correction" });
+    cleared.push(k as string);
+  }
+  return cleared;
+}
+
 async function applyFields(t: ToolContext, job: Job, fields: Fields, correction: boolean): Promise<{ saved: string[]; rejected: string[] }> {
   const saved: string[] = [];
   const rejected: string[] = [];
@@ -339,6 +377,7 @@ async function applyFields(t: ToolContext, job: Job, fields: Fields, correction:
     await saveOverrides(t.ctx, job.id, { ...ov, specificExpenses: [...ov.specificExpenses.filter((e) => e.category !== "transporte"), { description: "Transporte (frete informado pelo artesão)", amountCents: Math.round(frete * 100), category: "transporte" }] }, t.user.id);
     saved.push(`frete de ${formatBRL(Math.round(frete * 100))}`);
   }
+  if (typeof fields.prazo === "string" && fields.prazo.trim().length >= 3) await set("deadline", fields.prazo.trim().slice(0, 120), `prazo: ${fields.prazo.trim().slice(0, 120)}`);
   if (fields.material === "tem_tudo" || fields.material === "tem_parte" || fields.material === "precisa_comprar") await set("material_status", fields.material, `material: ${fields.material}`);
   const drawers = num("gavetas", 40);
   const doors = num("portas", 40);
@@ -420,12 +459,16 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       focus(t, job.id);
       const done = (await getJob(t.ctx, job.id))!;
       const fotos = await attachPhotos(t, job.id);
-      return { criado: describeJob(done), anotado: r.saved, recusado: r.rejected, ...(fotos ? { fotos_guardadas: fotos } : {}) };
+      const hasPhoto = fotos > 0 || !!(await t.ctx.db.first("SELECT 1 FROM attachments WHERE job_id = ? AND deleted_at IS NULL LIMIT 1", job.id));
+      if (!hasPhoto) t.effects.askPhoto = true;
+      return { criado: describeJob(done), anotado: r.saved, recusado: r.rejected, ...(fotos ? { fotos_guardadas: fotos } : {}), ...(!hasPhoto ? { sem_foto: "peça uma foto desta peça nesta mensagem, uma vez, sem obrigar" } : {}) };
     }
     case "anotar": {
       const job = await loadJob(t, a.servico_id);
       if (typeof job === "string") return { erro: job };
-      const r = await applyFields(t, job, (a.campos && typeof a.campos === "object" ? a.campos : {}) as Fields, a.correcao === true);
+      const cleared = await clearFields(t, job, a.limpar);
+      const r = await applyFields(t, (await getJob(t.ctx, job.id))!, (a.campos && typeof a.campos === "object" ? a.campos : {}) as Fields, a.correcao === true || cleared.length > 0);
+      if (cleared.length) r.saved.push(`apagado: ${cleared.join(", ")}`);
       focus(t, job.id);
       const fotos = await attachPhotos(t, job.id);
       return { anotado: r.saved, recusado: r.rejected, servico: describeJob((await getJob(t.ctx, job.id))!), ...(fotos ? { fotos_guardadas: fotos } : {}) };
@@ -468,6 +511,8 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
           material_a_comprar: reais(r.materials.purchaseCashOutlayCents),
           material_usado: reais(r.materials.lines.reduce((acc, l) => acc + (l.consumptionCostCents ?? 0), 0)),
           horas_de_trabalho: Math.round(Number(r.labor.totalHours)),
+          dias_de_trabalho: r.leadTime.workingDays,
+          prazo_combinado: (job.facts.deadline?.value as string | null | undefined) ?? null,
           avisos: [
             ...(r.gaps ?? []).map((g) => g.message),
             ...r.warnings.filter((w) => w.code === "AREA_RANGE_MAX_USED").map(() => "medida aproximada (pelo porte)"),
@@ -572,6 +617,11 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       if (!p || !ids.length || ids.some((id) => !p.jobIds.includes(id))) return { erro: "calcule e mostre o orçamento antes (calcular_orcamento)" };
       if (p.turn >= t.turn) return { erro: "ele ainda não respondeu ao valor: mostre e pergunte se concorda; feche só depois da resposta" };
+      // prazo é crítico (ele tem fila de serviços): nunca vai pro PDF um prazo que ele não deu
+      for (const id of ids) {
+        const j = await getJob(t.ctx, id);
+        if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte quando ele consegue começar e quando fica pronto pro cliente (ex.: 'daqui a 2 meses'). Anote em campos.prazo e depois feche." };
+      }
       let final = p.baseCents;
       if (typeof a.valor_final_reais === "number") {
         const simulated = (t.state.simulated ?? []).some((x) => Math.abs(x - (a.valor_final_reais as number)) < 0.01);

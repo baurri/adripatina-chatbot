@@ -49,6 +49,9 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - FOTOS: se ele mandar foto, olhe com atenção: que móvel é, quantas gavetas/portas, estado (descascado, riscado, quebrado, cupim), se tem parte de dentro. Diga em UMA frase o que viu e pergunte se está certo ("Pela foto é uma cômoda com 4 gavetas, meio descascada, certo?"). Só anote o que ele confirmar. Medida não dá pra saber pela foto: pergunte. A foto fica guardada no serviço quando você cria ou anota nele (ou use guardar_foto).
 - Foto sem dizer de qual peça e com vários serviços abertos: pergunte de qual é.
 - Peça nova sem foto: no começo, peça UMA vez, sem obrigar ("Se tiver foto, manda que ajuda 📸"). Se ele não mandar, siga normal e não peça de novo.
+- PRAZO é importante (ele tem fila de serviços). Ao mostrar o orçamento, diga quantos dias de trabalho a peça leva (dias_de_trabalho). Depois que ele decidir o valor, pergunte quando ele consegue começar e quando fica pronto pro cliente ("daqui a 2 meses", "daqui a 6 meses"). Anote em campos.prazo do jeito que ele falou. Nunca invente prazo; o orçamento só fecha com o prazo dele.
+- Anotou algo errado ou ele ainda não sabe: apague com anotar.limpar e pergunte. Se ele não sabe o método, sugira pincel e só anote se ele concordar.
+- Transporte: só anote ou diga que ele busca/entrega se ele disser claramente ("eu vou buscar a mesa"). "Tenho um serviço pra pegar lá na casa dela" ou "vou lá ver" = pegar o TRABALHO / ir orçar, NÃO é buscar a peça: não escreva "você busca". Pergunte quem leva e traz.
 - Fale dos serviços pelo móvel e pelo cliente ("a cômoda da Dona Carla"), nunca por código ou id.
 - Só liste os serviços em andamento se ele perguntar ou se precisar saber de qual peça ele está falando.
 - Resposta final: CURTA. Em geral 1 a 3 frases curtas e uma pergunta no fim. Nada de listas de campos, nada de repetir tudo o que ele falou.`;
@@ -232,6 +235,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...(photo?.block ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
     const invented = numbersIn(finalText).filter((x) => !grounded(x, allowed));
     const tone = toneIssues(finalText, 4);
+    if (/\bsistema\b|\bmarca[cç](ao|ão)\b|\bferramenta\b/i.test(finalText)) tone.push('palavras de sistema ("sistema", "marcação", "ferramenta")');
     // acessibilidade: mensagem comprida cansa; só o orçamento (que traz valores) pode ser maior
     const showedQuote = toolResults.some((r) => r.includes("mensagem_pronta"));
     if (finalText.length > (showedQuote ? 700 : 380)) tone.push("texto comprido (deixe bem mais curta: no máximo 3 frases curtas e uma pergunta)");
@@ -248,6 +252,8 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     return null; // motor antigo assume
   }
   if (!finalText) finalText = "Opa, me perdi aqui. 😅 Pode me falar de novo?";
+  // peça nova sem foto: pede uma vez (o Claude às vezes esquece)
+  if (t.effects.askPhoto && !/foto|📸/i.test(finalText)) finalText = `${finalText}\n\n📸 Se tiver foto da peça, manda que ajuda!`;
   finalText = stripJobCodes(finalText);
 
   const buttons: Button[][] = [];

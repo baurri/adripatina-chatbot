@@ -249,6 +249,29 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    id: "edileuza-prazo",
+    title: "Mesa da Dona Edileuza: 'pegar o serviço' não é buscar a peça, método em aberto, prazo do Adriano",
+    opening: "conte por áudio: 'amanhã eu tenho um serviço para pegar lá na casa da dona Edileuza e do seu Crayson, uma mesa de centro e outros dois móveis, é pra lixar, fazer uns ajustes e pintar'. Por enquanto só fale da mesa de centro.",
+    brief:
+      "Mesa de centro da Dona Edileuza e do Seu Crayson, pintura. Tamanho médio (não sabe as medidas). Só precisa passar massa e lixar, sem conserto. Só por fora. Peça inteira. Não sabe ainda se vai de pincel ou rolo; se sugerirem pincel, aceita. Os clientes trazem e buscam a mesa (ele vai lá amanhã só pra ver). Preços se perguntarem: lixa 10 reais o pacote com 10 folhas; fundo preparador 100 reais a lata de 5 litros; tinta 50 reais a lata de 2 litros; thinner 15 reais a lata de 500 ml. Prazo: consegue começar daqui a 2 meses, e aí fica pronto em uma semana.",
+    quirks: "Responde curtinho. Se o bot disser que ele vai buscar a mesa, reclama: 'eu não disse que ia buscar'. Quando vier o valor, pede 59 reais de desconto. Só fala do prazo se perguntarem.",
+    goal: "Fechar o orçamento com o desconto e receber o PDF.",
+    checks: async (h) => {
+      const js = await jobs(h);
+      const j = js.find((x) => has(v(x, "furniture_type"), /mesa/));
+      const said = h.telegram.sent.map((s) => s.text ?? "").join("\n");
+      return [
+        check(!!j, "mesa de centro anotada"),
+        check(!/voc[eê] (vai )?busca|voc[eê] vai pegar a mesa/i.test(said), "não disse que ele vai buscar a peça"),
+        check(!has(v(j, "logistics"), /"pickup":true/), "não anotou que ele busca", v(j, "logistics")),
+        check(has(v(j, "deadline"), /2 meses/), "prazo dele anotado (2 meses)", v(j, "deadline")),
+        check(/foto/i.test(said), "pediu foto"),
+        check(!/\bsistema\b|marca[cç][aã]o/i.test(said), "sem falar de sistema/marcação"),
+        check((await docs(h)) >= 1, "PDF gerado"),
+      ];
+    },
+  },
+  {
     id: "decisao-valor",
     title: "Decisão do valor: desconto abaixo do mínimo e depois acréscimo de frete",
     opening: "peça o orçamento de um aparador do seu Luiz pra envernizar.",

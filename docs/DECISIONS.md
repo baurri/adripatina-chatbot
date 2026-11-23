@@ -113,3 +113,10 @@ Valores inventados para testes estão no catálogo **demo_only / calibrated=fals
 - A foto fica na fila da conversa e é ligada ao serviço quando o Claude cria/anota nele (ou via `guardar_foto`). Foto repetida (mesmo hash) não é guardada de novo.
 - Uma confirmação curta ("isso", "sim") valida os números da última mensagem do assistente (ex.: "4 gavetas, certo?").
 - O bot pede foto uma vez, sem obrigar, quando a peça é nova. Com o motor novo, o palpite do modelo de imagem do Workers AI não é mais chamado; durante a coleta de preço do motor antigo, a foto (recibo) segue com ele.
+
+## D-077 — Prazo do artesão, apagar anotação errada, foto sempre pedida (2026-11-23)
+
+- Prazo: o orçamento só fecha (PDF) com o prazo dito pelo Adriano (`campos.prazo`, ex.: "começo daqui a 2 meses, fica pronto em uma semana"). O PDF mostra só esse prazo, ou "a combinar"; nunca mais os "N dias úteis" calculados. Os dias de trabalho calculados aparecem na conversa como referência.
+- `anotar.limpar` apaga um campo anotado errado (transporte, método, prazo...). Antes não havia como apagar e o bot dizia que "não conseguia tirar a marcação do sistema".
+- "Tenho um serviço pra pegar lá na casa dela" é pegar o trabalho / ir orçar, não buscar a peça.
+- Peça nova sem foto: o pedido de foto vai na mensagem (o código acrescenta se o Claude esquecer). Respostas com "sistema", "marcação" ou "ferramenta" voltam para reescrita.

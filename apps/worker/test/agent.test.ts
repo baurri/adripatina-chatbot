@@ -90,7 +90,7 @@ describe("motor novo (D-075): travas do código", () => {
     let jobId = "";
     let closeSameTurn: Record<string, unknown> = {};
     const { h } = await setup([
-      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false } }),
+      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo: "daqui a 2 meses" } }),
       (m) => {
         jobId = ((lastToolResult(m).criado as { servico_id: string }).servico_id);
         return tool("calcular_orcamento", { servico_ids: [jobId] });
@@ -104,7 +104,7 @@ describe("motor novo (D-075): travas do código", () => {
       () => tool("fechar_orcamento", { servico_ids: [jobId] }),
       () => say("Fechado! ✅ Te mandei o PDF."),
     ]);
-    const r1 = await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca");
+    const r1 = await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
     expect(String(closeSameTurn.erro)).toMatch(/ainda não respondeu/);
     expect(buttonsOf(r1.at(-1))).toEqual(expect.arrayContaining([expect.stringMatching(/^ag:btn:/)]));
     h.telegram.clear();
