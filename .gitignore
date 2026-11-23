@@ -14,3 +14,4 @@ tmp/
 # imagem pessoal grande, não versionar
 Retrato Ciberpunk do Artista AdriPatina.png
 db/seeds/0002_local_dev_users.sql
+backups/
