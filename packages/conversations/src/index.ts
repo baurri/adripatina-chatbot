@@ -8,3 +8,4 @@ export * from "./pricing-answers.js";
 export * from "./ai-answers.js";
 export * from "./furniture/index.js";
 export * from "./llm/index.js";
+export * from "./proactive/index.js";

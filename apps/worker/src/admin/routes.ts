@@ -34,6 +34,7 @@ import {
 import { cashflowReport, dashboardSummary, profitabilityReport, toCsv } from "../services/reports.js";
 import { approveAccessRequest, listAccessRequests, rejectAccessRequest } from "../services/access-requests.js";
 import { listLearningObservations } from "../services/learning.js";
+import { registerProactiveRoutes } from "./proactive-routes.js";
 
 const decStr = z.string().regex(/^\d+(\.\d+)?$/);
 const cents = z.number().int().positive();
@@ -712,6 +713,8 @@ export function adminRoutes(): Hono<AppEnv> {
     await audit(ctx, c.get("admin").id, "user.update", "user", c.req.param("id"), undefined, b);
     return c.json({ ok: true });
   });
+
+  registerProactiveRoutes(r);
 
   return r;
 }

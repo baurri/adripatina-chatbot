@@ -6,6 +6,7 @@ import { processOutbox } from "./services/outbox.js";
 import { listArtisans } from "./repos/users.js";
 import { listActiveJobs } from "./repos/jobs.js";
 import { scanForDuplicates } from "./services/duplicates.js";
+import { runProactiveCollection } from "./services/proactive/job.js";
 
 /** Cron (a cada 15 min): outbox, resumo diário idempotente, retenção de mídia, varredura de duplicidades. */
 export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
@@ -15,6 +16,14 @@ export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
   result.retention = await purgeExpiredMedia(ctx);
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(ctx.clock()));
   if (hour === 3) result.duplicates = await scanForDuplicates(ctx);
+  // coleta proativa: isolada — uma falha aqui nunca interrompe o restante do cron nem o bot
+  try {
+    const r = await runProactiveCollection(ctx);
+    result.proactive = { mode: r.mode, skipped: r.skipped ?? null, correlationId: r.correlationId, sent: r.users.filter((u) => u.sent).length, users: r.users.length };
+  } catch (err) {
+    result.proactive = { error: err instanceof Error ? err.name : "unknown" };
+    console.error(JSON.stringify({ level: "error", msg: "proactive_failed", error: err instanceof Error ? err.message.slice(0, 200) : "unknown" }));
+  }
   return result;
 }
 

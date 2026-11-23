@@ -22,6 +22,8 @@ export interface Env {
   TELEGRAM_MODE: string;
   DAILY_SUMMARY_HOUR: string;
   PHRASING_VARIETY?: string;
+  /** coleta proativa: off | dry_run | live (live ainda exige ativação no painel) */
+  PROACTIVE_MODE?: string;
   // segredos
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
@@ -51,6 +53,8 @@ export const ConfigSchema = z.object({
   dailySummaryHour: z.number(),
   /** varia a forma das perguntas (testes usam false para textos estáveis) */
   phrasingVariety: z.boolean(),
+  /** coleta proativa: off (nada), dry_run (só simula), live (envia, se ligada no painel) */
+  proactiveMode: z.enum(["off", "dry_run", "live"]),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
@@ -74,5 +78,7 @@ export function loadConfig(env: Partial<Env>): Config {
     telegramMode: env.TELEGRAM_MODE === "live" ? "live" : "mock",
     dailySummaryHour: intStr(7).parse(env.DAILY_SUMMARY_HOUR),
     phrasingVariety: env.PHRASING_VARIETY !== "false",
+    // fora de produção o padrão é só simular — nunca enviar mensagens reais automaticamente
+    proactiveMode: (["off", "dry_run", "live"].includes(env.PROACTIVE_MODE ?? "") ? env.PROACTIVE_MODE : environment === "production" ? "live" : "dry_run") as "off" | "dry_run" | "live",
   });
 }

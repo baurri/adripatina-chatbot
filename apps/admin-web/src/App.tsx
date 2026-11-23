@@ -11,6 +11,7 @@ import { Reports } from "./pages/Reports";
 import { Admin } from "./pages/Admin";
 import { Clients } from "./pages/Clients";
 import { Conversations } from "./pages/Conversations";
+import { Proactive } from "./pages/Proactive";
 
 const NAV: [string, string][] = [
   ["#/", "Painel"],
@@ -22,6 +23,7 @@ const NAV: [string, string][] = [
   ["#/duplicidades", "Duplicidades"],
   ["#/relatorios", "Relatórios"],
   ["#/conversas", "Conversas e aprendizado"],
+  ["#/coleta", "Coleta proativa"],
   ["#/configuracoes", "Configurações"],
   ["#/administracao", "Usuários, auditoria e IA"],
 ];
@@ -70,6 +72,9 @@ export function App() {
       break;
     case "conversas":
       page = <Conversations />;
+      break;
+    case "coleta":
+      page = <Proactive />;
       break;
     case "configuracoes":
       page = <Settings />;

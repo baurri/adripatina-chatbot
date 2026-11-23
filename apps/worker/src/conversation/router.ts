@@ -39,7 +39,7 @@ export interface RoutingDecision {
 
 const UNIVERSAL = new Set(["menu", "greeting", "help", "cancel", "pause"]);
 const CONFIRM_FLOWS: readonly Flow[] = ["confirm_match", "choose_match", "confirm_new_similar", "progress_confirm", "admin_confirm", "contradiction", "disambiguate", "resume_prompt"];
-const SIDE_FLOWS: readonly Flow[] = ["expense", "payment", "learning_time"];
+const SIDE_FLOWS: readonly Flow[] = ["expense", "payment", "learning_time", "data_collection"];
 
 /** Interrupção só com sinal claro. */
 export function isStrongInterruption(nlu: NluResult, pending: PendingQuestion | null): boolean {

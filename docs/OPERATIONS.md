@@ -32,3 +32,11 @@ Ver `.env.example`. Segredos: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
 - Configure o webhook com `max_connections=1` (ver README): o Telegram entrega uma atualização por vez, em ordem, e duas mensagens rápidas do mesmo usuário não disputam a sessão.
 - Se mesmo assim houver disputa, o Worker registra `session_conflict` no log e `session.conflict` em `audit_events` (a mensagem atual é gravada; a anterior pode ter o contexto sobrescrito). Consulta: `SELECT * FROM audit_events WHERE action='session.conflict' ORDER BY created_at DESC`.
 - Acima de 120 atualizações/minuto o webhook responde **429** e o Telegram reenvia depois (antes respondia 200 e a mensagem se perdia).
+
+## Coleta proativa
+
+- Começa **desligada**. Ligar em *Coleta proativa → Ligar coleta* no painel (ou pausar por 7 dias, ajustar horário, limites e tipos).
+- *Simular agora* mostra o que seria perguntado, para quem, com a pontuação e o motivo — nada é enviado nem gravado.
+- Variável `PROACTIVE_MODE`: `dry_run` (local/staging: nunca envia sozinho), `live` (produção: envia só se ligada no painel), `off`.
+- Cada solicitação tem linha do tempo (enviada, resposta, confirmação, dado salvo, orçamento retomado). O administrador pode adiar, cancelar, reabrir, fixar prioridade e impedir novas perguntas sobre um item.
+- Logs estruturados: `proactive_run`, `proactive_sent`, `proactive_send_failed`, `proactive_failed` (com `correlationId`).

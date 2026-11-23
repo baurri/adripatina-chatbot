@@ -62,6 +62,10 @@ const LABELS: Record<string, string> = {
   "photo:job": "escolheu o serviço da foto",
   "photo:new": "disse que a foto é de um móvel novo",
   "job:open": "abriu um serviço da lista",
+  "dc:later": "pediu para perguntar novamente depois",
+  "dc:dontknow": "disse que não sabia (sem problema)",
+  "dc:discontinued": "disse que não usa mais esse item",
+  "dc:cancel": "cancelou a pergunta",
 };
 
 export function humanizeCallback(data: string | null | undefined, who = "Usuário"): string {

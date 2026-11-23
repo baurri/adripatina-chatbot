@@ -40,7 +40,8 @@
     "ACCESS_AUD": "8adb41e4e2d0046d0825df4cf995eb26a5bda29de7d4ebba6fa21532f5749b7a",
     "ADMIN_DEV_BYPASS_EMAIL": "",
     "TELEGRAM_MODE": "live",
-    "DAILY_SUMMARY_HOUR": "7"
+    "DAILY_SUMMARY_HOUR": "7",
+    "PROACTIVE_MODE": "live"
   },
   "env": {
     "local": {
@@ -65,7 +66,8 @@
         "ACCESS_AUD": "",
         "ADMIN_DEV_BYPASS_EMAIL": "admin@exemplo.local",
         "TELEGRAM_MODE": "mock",
-        "DAILY_SUMMARY_HOUR": "7"
+        "DAILY_SUMMARY_HOUR": "7",
+        "PROACTIVE_MODE": "dry_run"
       }
     },
     "staging": {
@@ -91,7 +93,8 @@
         "ACCESS_AUD": "REPLACE_WITH_ACCESS_AUD_TAG",
         "ADMIN_DEV_BYPASS_EMAIL": "",
         "TELEGRAM_MODE": "live",
-        "DAILY_SUMMARY_HOUR": "7"
+        "DAILY_SUMMARY_HOUR": "7",
+        "PROACTIVE_MODE": "dry_run"
       }
     },
     "production": {
@@ -117,7 +120,8 @@
         "ACCESS_AUD": "8adb41e4e2d0046d0825df4cf995eb26a5bda29de7d4ebba6fa21532f5749b7a",
         "ADMIN_DEV_BYPASS_EMAIL": "",
         "TELEGRAM_MODE": "live",
-        "DAILY_SUMMARY_HOUR": "7"
+        "DAILY_SUMMARY_HOUR": "7",
+        "PROACTIVE_MODE": "live"
       }
     }
   }

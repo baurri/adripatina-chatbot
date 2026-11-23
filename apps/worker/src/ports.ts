@@ -10,7 +10,8 @@ export interface OutgoingMessage {
 
 export interface TelegramClient {
   readonly mode: "mock" | "live";
-  sendMessage(chatId: string, text: string, buttons?: Button[][]): Promise<void>;
+  /** devolve o message_id do Telegram (null quando indisponível) para correlação */
+  sendMessage(chatId: string, text: string, buttons?: Button[][]): Promise<{ messageId: number | null }>;
   sendDocument(chatId: string, filename: string, bytes: Uint8Array, caption?: string): Promise<void>;
   answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void>;
   /** Baixa um arquivo pelo file_id. */

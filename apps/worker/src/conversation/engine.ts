@@ -69,6 +69,7 @@ import {
 } from "../services/quotes.js";
 import { handleAdminCommand } from "./admin-commands.js";
 import { decideRoute, type RoutingDecision } from "./router.js";
+import { dataCollectionText, isPlausibleCollectionAnswer, onDataCollectionCallback, releaseCollection } from "./data-collection-flow.js";
 import { missingPriceKeys } from "../services/material-pricing.js";
 import { askCurrent as askPricingCurrent, isPlausiblePricingAnswer, onPricingCallback, pricingText, startPricing, targetPhrase } from "./pricing-flow.js";
 import {
@@ -201,6 +202,7 @@ export class Conversation {
     // nesses fluxos qualquer resposta é dirigida à pergunta feita (o handler pede de novo se não entender)
     if (flow === "disambiguate" || flow === "contradiction") return true;
     if (flow === "quote_material_pricing") return isPlausiblePricingAnswer(this, text, nlu);
+    if (flow === "data_collection") return isPlausibleCollectionAnswer(this, text, nlu);
     if (flow === "quote_request") return isPlausibleQuoteRequestAnswer(this, text, nlu);
     if (flow === "expense" || flow === "payment") return nlu.entities.amountCents !== undefined || ["yes", "no"].includes(nlu.intent) || /\d/.test(text);
     if (flow === "learning_time") return /\d|hora|nao sei|não sei|nao lembro|não lembro/i.test(text);
@@ -261,6 +263,10 @@ export class Conversation {
       return this.resumePrompt();
     }
 
+    // pergunta proativa pendente + assunto claramente diferente: libera a conversa
+    // (a solicitação continua aguardando, sem insistir)
+    if (this.session.flow === "data_collection" && (decision.route === "global" || decision.route === "interruption" || decision.route === "fallback")) releaseCollection(this);
+
     switch (decision.route) {
       case "universal":
         return this.onUniversal(nlu.intent);
@@ -316,6 +322,8 @@ export class Conversation {
     switch (flow) {
       case "quote_material_pricing":
         return pricingText(this, text, nlu);
+      case "data_collection":
+        return dataCollectionText(this, text, nlu);
       case "quote_request":
         return quoteRequestText(this, text, nlu);
       case "expense":
@@ -637,6 +645,9 @@ ${GUIDE}`);
   }
 
   async cancel(): Promise<void> {
+    // "cancelar" logo depois de uma pergunta proativa: deixa a pergunta de lado
+    const dc = this.session.context.dataCollection;
+    if (this.session.flow === "data_collection" && dc) return onDataCollectionCallback(this, "cancel", dc.requestId);
     // cancelar uma ação lateral não derruba o objetivo suspenso: ele é retomado
     if (["expense", "payment", "progress_confirm", "learning_time"].includes(this.session.flow) && this.session.context.goalStack?.length) {
       this.say("Tudo bem, não fiz essa alteração.");
@@ -1458,6 +1469,7 @@ ${await this.questionText(job, field, 4)}`);
     if (ns === "photo") return this.onPhotoChoice(action, arg);
     if (ns === "adm") return this.onAdmin(action, arg);
     if (ns === "mp") return onPricingCallback(this, action, arg);
+    if (ns === "dc") return onDataCollectionCallback(this, action, arg);
     if (ns === "qr") {
       if (action === "resume") return askQuoteRequestAgain(this);
       return onQuoteRequestCallback(this, action);

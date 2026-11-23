@@ -68,3 +68,11 @@ Detalhes, matriz de cenários e causas-raiz: [`VALIDATION_2026-11-22.md`](VALIDA
 - Novos testes: `validation.test.ts` em shared, pricing, conversations e worker (cálculos comparados a fórmulas independentes); simulador `explore-validation.test.ts` (`EXPLORE=1`).
 - Migrations novas: nenhuma.
 - Não executado: Telegram/Workers AI/D1/R2 reais, painel em navegador, coleta proativa (não existe).
+
+## 23/11/2026 — Coleta proativa
+
+`pnpm check` (lint, typecheck, testes, build): **sucesso**. Testes: shared 18 · domain 7 · pricing 26 · pdf 7 · conversations **111** · worker **133** (+1 exploratório pulado) = **302**.
+
+Novos: `packages/conversations/test/proactive.test.ts` (29 — detectores, prioridade, horários/fuso/limites, mensagens, interpretação) e `apps/worker/test/proactive.test.ts` (19 — os três cenários obrigatórios ponta a ponta, idempotência e lock, destinatário pelo vínculo Telegram, pausa e tipos desativados, pergunta aguardando, falha do Telegram com nova tentativa, falha isolada do cron, botões idempotentes e humanizados, "não uso mais", resolução por outra conversa, demãos sem calibrar, horas reais, mudança de assunto, IA com fallback, simulação sem efeitos, painel com datas DD/MM/AAAA).
+
+Migration `0005_proactive_collection.sql` aplicada nos testes (D1 shim) sobre 0001–0004, incluindo a recriação de `learning_observations` com cópia dos dados. **Pendente em produção.**

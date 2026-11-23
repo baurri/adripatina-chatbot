@@ -19,12 +19,13 @@ export class LiveTelegramClient implements TelegramClient {
     return data.result;
   }
 
-  async sendMessage(chatId: string, text: string, buttons?: Button[][]): Promise<void> {
-    await this.call("sendMessage", {
+  async sendMessage(chatId: string, text: string, buttons?: Button[][]): Promise<{ messageId: number | null }> {
+    const r = (await this.call("sendMessage", {
       chat_id: chatId,
       text,
       ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons.map((row) => row.map((b) => ({ text: b.text, callback_data: b.data.slice(0, 64) }))) } } : {}),
-    });
+    })) as { message_id?: number } | undefined;
+    return { messageId: typeof r?.message_id === "number" ? r.message_id : null };
   }
 
   async sendDocument(chatId: string, filename: string, bytes: Uint8Array, caption?: string): Promise<void> {
@@ -75,12 +76,20 @@ export class MockTelegramClient implements TelegramClient {
   readonly sent: SentRecord[] = [];
   readonly files = new Map<string, Uint8Array>();
   /** em desenvolvimento local, imprime as respostas no terminal do `wrangler dev` */
+  /** testes: quantas próximas chamadas de sendMessage devem falhar */
+  failNextSends = 0;
+  private seq = 1000;
   constructor(private readonly log = false) {}
 
-  async sendMessage(chatId: string, text: string, buttons?: Button[][]): Promise<void> {
+  async sendMessage(chatId: string, text: string, buttons?: Button[][]): Promise<{ messageId: number | null }> {
+    if (this.failNextSends > 0) {
+      this.failNextSends--;
+      throw new Error("Telegram sendMessage falhou: mock indisponível");
+    }
     this.sent.push({ kind: "message", chatId, text, ...(buttons ? { buttons } : {}) });
     if (this.log) console.info(`[telegram-mock → ${chatId}] ${text}${buttons ? `
    [${buttons.flat().map((b) => `${b.text} = ${b.data}`).join(" | ")}]` : ""}`);
+    return { messageId: ++this.seq };
   }
   async sendDocument(chatId: string, filename: string, bytes: Uint8Array, caption?: string): Promise<void> {
     this.sent.push({ kind: "document", chatId, filename, bytes, ...(caption ? { text: caption } : {}) });
@@ -109,7 +118,7 @@ export class MissingTokenTelegramClient implements TelegramClient {
   private fail(): never {
     throw new Error("TELEGRAM_BOT_TOKEN ausente (wrangler secret put TELEGRAM_BOT_TOKEN)");
   }
-  async sendMessage(): Promise<void> {
+  async sendMessage(): Promise<{ messageId: number | null }> {
     this.fail();
   }
   async sendDocument(): Promise<void> {

@@ -4,6 +4,7 @@ import type { Ctx } from "../context.js";
 import { nowIso } from "../context.js";
 import { auditStmt } from "../repos/audit.js";
 import { getMaterialByKey } from "../repos/catalog.js";
+import { resolveMatchingRequests } from "./proactive/repo.js";
 
 /**
  * Serviço único para gravar um preço de reposição CONFIRMADO pelo artesão,
@@ -17,7 +18,7 @@ import { getMaterialByKey } from "../repos/catalog.js";
  * - valores em centavos inteiros e tamanhos em decimal exato.
  */
 
-export type PriceOrigin = "telegram_quote_confirmed" | "telegram_confirmed";
+export type PriceOrigin = "telegram_quote_confirmed" | "telegram_confirmed" | "telegram_proactive";
 
 export interface ConfirmedPriceInput {
   materialKey: string;
@@ -37,6 +38,10 @@ export interface ConfirmedPriceInput {
   idempotencyKey: string;
   /** tipo de observação de aprendizado registrada junto */
   observationKind: "MATERIAL_PRICE_QUOTE" | "MATERIAL_PURCHASE";
+  /** valor aproximado ("uns 85") — padrão: confiança diferente de "alta" */
+  isEstimate?: boolean;
+  /** solicitação de coleta proativa que originou o valor */
+  collectionRequestId?: string | null;
 }
 
 export type ApplyResult = { kind: "applied"; previousPriceCents: number | null } | { kind: "duplicate" } | { kind: "invalid"; reason: string };
@@ -59,6 +64,7 @@ export async function applyConfirmedPrice(ctx: Ctx, input: ConfirmedPriceInput):
   const now = nowIso(ctx);
   const observationId = newId();
   const size = Dec.from(input.packageSize).toString();
+  const isEstimate = input.isEstimate ?? input.confidence !== "alta";
   const data = {
     origin: input.origin,
     previousPriceCents: material.replacementPriceCents,
@@ -71,22 +77,25 @@ export async function applyConfirmedPrice(ctx: Ctx, input: ConfirmedPriceInput):
     packageSize: size,
     unit: material.unit,
     confidence: input.confidence,
+    isEstimate,
+    collectionRequestId: input.collectionRequestId ?? null,
   };
   try {
     await ctx.db.batch([
       ctx.db.stmt(
         // calibrated NÃO é alterado de propósito
-        "UPDATE materials SET package_size = ?, replacement_price_cents = ?, price_updated_at = ?, origin = ?, updated_at = ? WHERE id = ?",
+        "UPDATE materials SET package_size = ?, replacement_price_cents = ?, price_updated_at = ?, origin = ?, price_is_estimate = ?, updated_at = ? WHERE id = ?",
         size,
         input.priceCents,
         now,
         input.origin,
+        isEstimate ? 1 : 0,
         now,
         material.id,
       ),
       ctx.db.stmt(
-        `INSERT INTO material_price_history (id, material_id, price_cents, source, recorded_by, recorded_at, previous_price_cents, package_size, previous_package_size, confidence, message_id, job_id, quote_id, source_text, idempotency_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO material_price_history (id, material_id, price_cents, source, recorded_by, recorded_at, previous_price_cents, package_size, previous_package_size, confidence, message_id, job_id, quote_id, source_text, idempotency_key, is_estimate, collection_request_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         newId(),
         material.id,
         input.priceCents,
@@ -102,10 +111,12 @@ export async function applyConfirmedPrice(ctx: Ctx, input: ConfirmedPriceInput):
         input.quoteId,
         input.sourceText?.slice(0, 500) ?? null,
         input.idempotencyKey,
+        isEstimate ? 1 : 0,
+        input.collectionRequestId ?? null,
       ),
       ctx.db.stmt(
-        `INSERT INTO learning_observations (id, user_id, job_id, message_id, kind, entity_type, entity_key, data_json, confidence, status, applied_at, created_at, origin, quote_id, source_text)
-         VALUES (?, ?, ?, ?, ?, 'material', ?, ?, ?, 'APLICADO', ?, ?, ?, ?, ?)`,
+        `INSERT INTO learning_observations (id, user_id, job_id, message_id, kind, entity_type, entity_key, data_json, confidence, status, applied_at, created_at, origin, quote_id, source_text, collection_request_id)
+         VALUES (?, ?, ?, ?, ?, 'material', ?, ?, ?, 'APLICADO', ?, ?, ?, ?, ?, ?)`,
         observationId,
         input.userId,
         input.jobId,
@@ -119,11 +130,12 @@ export async function applyConfirmedPrice(ctx: Ctx, input: ConfirmedPriceInput):
         input.origin,
         input.quoteId,
         input.sourceText?.slice(0, 500) ?? null,
+        input.collectionRequestId ?? null,
       ),
       auditStmt(
         ctx,
         input.userId,
-        input.origin === "telegram_quote_confirmed" ? "material.price_from_quote" : "material.learn_purchase",
+        input.origin === "telegram_quote_confirmed" ? "material.price_from_quote" : input.origin === "telegram_proactive" ? "material.price_from_proactive" : "material.learn_purchase",
         "material",
         material.id,
         { priceCents: material.replacementPriceCents, packageSize: material.packageSize },
@@ -135,6 +147,12 @@ export async function applyConfirmedPrice(ctx: Ctx, input: ConfirmedPriceInput):
     if (/UNIQUE/i.test(String(err))) return { kind: "duplicate" };
     throw err;
   }
+  // o dado chegou: perguntas proativas abertas sobre o mesmo preço não precisam mais ser feitas
+  await resolveMatchingRequests(
+    ctx,
+    { kinds: ["material_price", "material_package_size"], entityType: "material", entityId: material.id },
+    { actor: input.userId, messageId: input.messageId, reason: `preço informado (${input.origin})`, ...(input.collectionRequestId ? { exceptId: input.collectionRequestId } : {}) },
+  ).catch(() => 0);
   return { kind: "applied", previousPriceCents: material.replacementPriceCents };
 }
 

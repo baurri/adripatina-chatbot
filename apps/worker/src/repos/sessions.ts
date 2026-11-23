@@ -1,4 +1,5 @@
 import type { ProjectField } from "@adripatina/domain";
+import type { NeedKind } from "@adripatina/conversations";
 import type { Entities, PriceConfidence, QuoteRequestDraft } from "@adripatina/conversations";
 import { newId } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
@@ -22,7 +23,9 @@ export type Flow =
   | "resume_prompt"
   | "admin_confirm"
   | "quote_request"
-  | "quote_material_pricing";
+  | "quote_material_pricing"
+  /** resposta a uma pergunta proativa (coleta de informação) */
+  | "data_collection";
 
 /** Fluxos que representam um OBJETIVO do usuário (sobrevivem a interrupções). */
 export const GOAL_FLOWS: readonly Flow[] = ["intake", "collecting", "confirm_calc", "quote_request", "quote_material_pricing"];
@@ -51,11 +54,12 @@ export type PendingQuestionType =
   | "amount"
   | "job_field"
   | "furniture_kind"
-  | "furniture_detail";
+  | "furniture_detail"
+  | "data_request";
 
 export interface PendingQuestion {
   type: PendingQuestionType;
-  entity: { kind: "job" | "quote_request" | "item" | "material" | "purchase" | "payment"; id?: string; refs?: string[] };
+  entity: { kind: "job" | "quote_request" | "item" | "material" | "purchase" | "payment" | "data_request"; id?: string; refs?: string[] };
   field?: ProjectField;
   askedAt: string;
 }
@@ -185,6 +189,23 @@ export interface SessionContext {
   goalStack?: SuspendedGoal[];
   quoteRequest?: QuoteRequestState;
   pricing?: PricingState;
+  /** pergunta proativa aguardando resposta (coleta de informação) */
+  dataCollection?: DataCollectionState;
+}
+
+export interface DataCollectionState {
+  requestId: string;
+  /** "primary" = dado pedido; "size" = tamanho da embalagem; "confirm" = confirmação */
+  expecting: "primary" | "size" | "confirm";
+  unparsed?: number;
+  /** tipo do dado e unidade (interpretação síncrona da resposta) */
+  kind: NeedKind;
+  baseUnit?: string;
+  packageSize?: string | null;
+  /** o que já foi entendido nesta conversa (ex.: preço dito, falta a embalagem) */
+  partial?: { amountCents?: number; packages?: number; perPackage?: boolean; packageSize?: string; sizeLabel?: string; approximate?: boolean; confirmKind?: "total" | "price"; priceCents?: number; totalCents?: number };
+  /** pergunta exibida (para repetir com gentileza) */
+  question?: string;
 }
 
 export interface Session {
