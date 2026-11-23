@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { EXTRACTION_JSON_SCHEMA, EXTRACTION_SYSTEM_PROMPT, QUOTE_REQUEST_SYSTEM_PROMPT, REPHRASE_SYSTEM_PROMPT, answerJsonSchema, answerSystemPrompt } from "@adripatina/conversations";
+import { EXTRACTION_JSON_SCHEMA, EXTRACTION_SYSTEM_PROMPT, QUOTE_REQUEST_SYSTEM_PROMPT, REPHRASE_SYSTEM_PROMPT, answerJsonSchema, answerSystemPrompt, systemPrompt } from "@adripatina/conversations";
 import type { ProjectField } from "@adripatina/domain";
 import type { ExtractionProvider, GenerateRequest } from "../ports.js";
 
@@ -80,10 +80,12 @@ export class ClaudeExtraction implements ExtractionProvider {
   }
 
   private async run(system: string, user: string, maxTokens: number, schema?: object): Promise<string> {
+    // D-074: toda chamada herda o contrato de conversa (perfil do Adriano, papel, o que nunca fazer)
+    const fullSystem = system.includes("QUEM É O USUÁRIO") ? system : systemPrompt(system);
     const response = await this.client.messages.create({
       model: this.name,
       max_tokens: maxTokens,
-      system,
+      system: fullSystem,
       messages: [{ role: "user", content: user }],
       output_config: { effort: "low", ...(schema ? { format: { type: "json_schema" as const, schema: closedSchema(schema) } } : {}) },
     });

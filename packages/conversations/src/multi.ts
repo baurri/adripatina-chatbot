@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { extractDateMention, normalizeText, wordsToNumber, type DateMention } from "@adripatina/shared";
-import { detectConditionStatement, extractClientNames } from "./nlu.js";
+import { detectConditionStatement, extractClientNames, stripNegated } from "./nlu.js";
 import { FURNITURE, TECHNIQUES, ambiguousFurnitureKind, findTechniques, furnitureLabel, normalizeFurnitureText, nounFeminine } from "./vocabulary.js";
 
 /**
@@ -22,6 +22,9 @@ export interface MentionedItem {
   ref: string;
   /** peças iguais no mesmo pedido: "o 1º criado-mudo", "o 2º criado-mudo" */
   ordinal?: number;
+  /** medida/porte ditos antes de o serviço existir (aplicados quando ele é criado) */
+  pendingDims?: Record<string, string>;
+  pendingSize?: "pequeno" | "medio" | "grande";
   /** "mesinha de centro", "outros dois móveis" */
   description: string;
   furnitureType: string | null;
@@ -112,7 +115,10 @@ export function partOf(clause: string): "tampo" | "inteiro" | null {
 const ACERTAR_DETALHES = /\b(acert|arrum|ajeit|consert)\w*\s+(?:os |uns |alguns |umas |as |o |a )?(detalhes?|detalhezinhos?|coisinhas?|partes?)\b|\bretoques?\b|\b(ajustezinho|ajustinho|um ajuste|uns ajustes)\b/;
 
 export function conditionOf(clause: string): { condition: ItemCondition; repairPart: string | null } | null {
-  const n = normalizeText(clause);
+  const full = normalizeText(clause);
+  // trecho negado não conta: "sem conserto nenhum" não é reparo (D-074)
+  const n = stripNegated(full);
+  if (n !== full && /\b(conserto|reparo|problema|defeito|estrago|dano)/.test(full) && !/\b(reparos?|conserto|quebrad|estragad|danificad|riscad|rachad)\w*/.test(n)) return { condition: "bom", repairPart: null };
   if (!detectConditionStatement(clause) && !ACERTAR_DETALHES.test(n) && !/\b(bom|boa|bons|boas|boazinha|bonzinho|bonzinha|razoavel|inteirinh[oa]|danificad[oa]s?)\b/.test(n)) return null;
   const repairPart = /\b(tampo|perna|pernas|gaveta|gavetas|porta|portas|pe|pes|lateral|laterais|fundo|puxador)\b/.exec(n)?.[1] ?? null;
   if (/\b(melhor|melhores)\b/.test(n)) return { condition: "melhor_que_outros", repairPart: null };
@@ -188,7 +194,19 @@ export function findFurnitureHits(text: string): FurnitureHit[] {
       hits.push({ start, end, key, description: desc, quantity: q, generic: false });
     }
   }
-  return hits.sort((a, b) => a.start - b.start);
+  hits.sort((a, b) => a.start - b.start);
+  // RETOMADA não é peça nova: "peguei uma mesa da dona Ana... A mesa tem 1 metro", "a mesa de
+  // cabeceira do casal... a mesa tá boa" (avaliação 24/11/2026: viravam 2 peças). Repetição com
+  // artigo definido/demonstrativo de um móvel compatível já citado = a mesma peça.
+  const root = (k: string) => k.split("_")[0]!;
+  return hits.filter((h, i) => {
+    if (h.generic || h.quantity !== 1 || i === 0) return true;
+    const before = norm.slice(Math.max(0, h.start - 14), h.start).trim().split(/\s+/).slice(-2);
+    const art = before.at(-1) ?? "";
+    if (!/^(a|o|essa|esse|dessa|desse|nessa|nesse|na|no|da|do|pra|pro|ela|ele|aquela|aquele)$/.test(art)) return true;
+    if (/^(outr[oa]|mais)$/.test(before.at(-2) ?? "")) return true;
+    return !hits.slice(0, i).some((p) => !p.generic && (p.key === h.key || root(p.key) === root(h.key)));
+  });
 }
 
 /**
@@ -429,8 +447,11 @@ export function parseQuantityCorrection(text: string): { from: number | null; to
   const n = normalizeText(text).replace(/[.,!?;]/g, " ");
   const m = new RegExp(String.raw`(?:\b(?:nao|nem)\s+(?:sao|e|eram|era)\s+${COUNT}\b\s*(?:nao\s+)?)?(?:\bna verdade\s+)?\b(?:sao|eram|e|serao)\s+${COUNT}\b(?!\s*(?:horas?|reais|real|dias?|cm|metros?|m|litros?|ml|latas?))`).exec(n);
   if (!m) return null;
+  // sem acento "é" e "e" ficam iguais: "80 de diâmetro e 45 de altura" NÃO é "são 45" (avaliação 24/11/2026)
+  const after = n.slice(m.index + m[0].length).trimStart();
+  if (/^(de |por |x |cm|centimetros|metros?|m\b|mm|polegadas)/.test(after)) return null;
   const to = toCount(m[2]);
-  if (!to || to > 50) return null;
+  if (!to || to > 20) return null;
   // "é uma cômoda" não é correção de quantidade: exige número > 1 ou negação explícita
   if (!m[1] && to < 2) return null;
   if (!m[1] && !/\b(na verdade|nao|errei|corrig)\b/.test(n)) return null;
@@ -534,6 +555,8 @@ export function mergeAiQuoteRequest(draft: QuoteRequestDraft, raw: unknown): Quo
       const desc = normalizeText(it.description);
       if (!desc || !norm.includes(desc)) continue;
       const known = findFurnitureHits(it.description).find((h) => !h.generic);
+      // quantidade da IA só vale se for pequena e dita no texto ("45 de altura" virou "45 mesinhas" — avaliação 24/11/2026)
+      if (it.quantity > 12 || (it.quantity > 1 && !new RegExp(`\\b(${it.quantity}|${["", "uma|um", "duas|dois", "tres", "quatro", "cinco", "seis", "sete", "oito", "nove", "dez", "onze", "doze"][it.quantity] ?? "x"})\\b`).test(norm))) continue;
       out.items.push({
         ref: `i${out.items.length + 1}`,
         description: it.description,

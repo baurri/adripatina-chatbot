@@ -123,6 +123,10 @@ export interface QuoteRequestState {
   /** estado dito sem dizer de qual peça ("o tampo está ruim, os outros estão melhores"): perguntado depois, nunca descartado */
   notes?: string[];
   clientAsked?: boolean;
+  /** material dito antes de os serviços existirem */
+  materialStatusPending?: "tem_tudo" | "tem_parte" | "precisa_comprar";
+  /** quantas vezes cada pergunta (etapa + peças) recebeu resposta sem avançar — quebra laços */
+  stepRepeats?: Record<string, number>;
   techniquesAsked?: boolean;
   /** horas de reparo perguntadas uma vez para todas as peças */
   repairAskedAll?: boolean;

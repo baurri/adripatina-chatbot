@@ -339,9 +339,11 @@ function buildSearchText(facts: FactSet, description: string): string {
 }
 
 /** Frase curta: "a cristaleira da Dona Maria". */
-export function jobPhrase(job: Pick<Job, "facts" | "clientName" | "code">): string {
+export function jobPhrase(job: Pick<Job, "facts" | "clientName" | "code"> & { title?: string | null }): string {
   const ft = job.facts.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined;
   const type = ft?.type;
+  // serviço criado sem o móvel identificado (ex.: pelo painel): usa o título, nunca "o móvel (S-0001)"
+  if (!type && job.title && job.title.trim().length > 2) return `${/^(a|o|as|os) /i.test(job.title) ? "" : "o serviço "}${job.title.trim().replace(/[.,]+$/, "").slice(0, 60)}`;
   const article = type && ["cristaleira", "comoda", "mesa", "cadeira", "estante", "penteadeira", "poltrona", "cama", "escrivaninha", "sapateira", "moldura", "porta"].includes(type) ? "a" : "o";
   const label = furnitureLabel(type);
   const client = (job.facts.client_name?.value as string | null | undefined) ?? job.clientName;

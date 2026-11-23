@@ -542,9 +542,37 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
 
   // o Claude lê a resposta no contexto (peças, pergunta): medidas de várias peças de uma vez,
   // "duas aparadoras", "já trnho"... Nas medidas sempre; nas outras perguntas quando as regras não entendem.
-  if (AI_STEPS.includes(qr.step) && !dontKnow && (qr.step === "dims" || !isPlausibleQuoteRequestAnswer(c, text, nlu))) {
+  // D-074: toda resposta passa pelo Claude (ele costuma repetir tudo numa fala só); o que ele
+  // entender de qualquer campo é aplicado, não só o da pergunta atual
+  if (AI_STEPS.includes(qr.step) && !(dontKnow && text.trim().split(/\s+/).length <= 4)) {
     const ai = await interpretQuoteRequestAnswer(c.ctx, d.items, questionOf(qr), text);
-    if (ai && (await applyAi(c, qr, ai))) return nextQuoteRequestStep(c);
+    if (ai) {
+      // "é uma mesinha só": quantidade corrigida
+      for (const x of ai.items) {
+        const it = d.items.find((i) => i.ref === x.ref);
+        if (it && x.quantity && x.quantity !== it.quantity && !qr.jobByRef) it.quantity = x.quantity;
+      }
+      if (ai.clientsRelation === "couple" && d.clients.length >= 2 && qr.clientsRelation !== "couple") return onQuoteRequestCallback(c, "couple");
+      if (ai.clientsRelation === "separate" && qr.step === "clients_relation") return onQuoteRequestCallback(c, "separate");
+      const resolved = await applyAi(c, qr, ai);
+      if (qr.step === "review" || qr.step === "review_fix") {
+        if (ai.confirms === true) return onQuoteRequestCallback(c, "review_yes");
+        if (resolved || ai.items.length) {
+          qr.reviewed = false;
+          return nextQuoteRequestStep(c);
+        }
+      }
+      if (resolved) return nextQuoteRequestStep(c);
+    }
+  }
+  // laço sem saída: a mesma pergunta 3 vezes sem avanço → segue com o que já sabe (e avisa)
+  const repeats = (qr.stepRepeats ??= {});
+  const repeatKey = `${qr.step}:${qr.currentRefs.join(",")}`;
+  repeats[repeatKey] = (repeats[repeatKey] ?? 0) + 1;
+  if (repeats[repeatKey]! >= 3 && LOOP_SKIPPABLE.includes(qr.step)) {
+    skipStep(qr);
+    c.ack = "Vou seguir com o que já entendi pra gente não ficar rodando. Se algo estiver errado, me fala no final que eu corrijo. 👍";
+    return nextQuoteRequestStep(c);
   }
 
   // informação útil dita fora de hora (ex.: estado das peças) é guardada, nunca descartada
@@ -1083,6 +1111,17 @@ async function materializeJobs(c: Conversation): Promise<void> {
     await setFact(c.ctx, job.id, "scope", { part: it.affectedPart ?? "inteiro", repairPart: it.repairPart }, opts);
     await setFact(c.ctx, job.id, "surfaces", "externa", { ...opts, status: "unconfirmed" });
     await setFact(c.ctx, job.id, "subcontract", { needed: false }, { ...opts, status: "unconfirmed" });
+    // o que ele adiantou antes de o serviço existir (medida, porte, método, material, transporte)
+    if (it.pendingDims) {
+      await setFact(c.ctx, job.id, "dimensions", it.pendingDims as never, opts);
+      qr.askedDims = [...new Set([...(qr.askedDims ?? []), it.ref])];
+    } else if (it.pendingSize) {
+      await setFact(c.ctx, job.id, "size_class", it.pendingSize, opts);
+      qr.askedDims = [...new Set([...(qr.askedDims ?? []), it.ref])];
+    }
+    if (qr.method) await setFact(c.ctx, job.id, "application_method", qr.method, opts);
+    if (qr.materialStatusPending) await setFact(c.ctx, job.id, "material_status", qr.materialStatusPending, opts);
+    if (qr.logistics) await setFact(c.ctx, job.id, "logistics", qr.logistics, opts);
     if (d.date) await c.ctx.db.run("UPDATE jobs SET due_date = NULL, delivery_address = NULL WHERE id = ?", job.id);
   }
   qr.jobByRef = map;
@@ -1248,12 +1287,23 @@ function questionOf(qr: QuoteRequestState): string {
       return "O que vai ser feito nas peças?";
     case "client":
       return "De quem são os móveis?";
+    case "clients_relation":
+      return `${humanList(qr.draft.clients.map((x) => x.name))} são um casal (um cliente só) ou clientes diferentes?`;
+    case "owner_confirm":
+    case "owner_each":
+      return `De quem é cada peça (${humanList(qr.draft.items.map(itemName))})?`;
+    case "review":
+      return `O resumo está certo? ${reviewText(qr.draft)}`;
+    case "grouping":
+      return "Um orçamento para cada cliente ou tudo junto?";
+    case "repair_hours":
+      return `Quanto tempo leva o reparo de ${names}?`;
     default:
       return qr.step;
   }
 }
 
-const AI_STEPS: readonly string[] = ["identity", "scope", "condition", "review_fix", "dims", "method", "material_source", "logistics", "techniques", "client"];
+const AI_STEPS: readonly string[] = ["clients_relation", "owner_confirm", "owner_each", "identity", "scope", "condition", "review", "review_fix", "grouping", "dims", "repair_hours", "method", "material_source", "logistics", "techniques", "client"];
 
 /**
  * Aplica o que o Claude entendeu. Devolve o que ficou resolvido para a pergunta atual
@@ -1283,6 +1333,11 @@ async function applyAi(c: Conversation, qr: QuoteRequestState, ai: QrAiResult): 
       if (qr.step === "scope" && qr.currentRefs.includes(it.ref)) resolved = true;
     }
     const jobId = qr.jobByRef?.[it.ref];
+    // dito antes de o serviço existir: guarda e aplica quando ele for criado (antes se perdia)
+    if (!jobId && (x.dims || x.sizeClass)) {
+      if (x.dims) it.pendingDims = x.dims as Record<string, string>;
+      else it.pendingSize = x.sizeClass;
+    }
     if (jobId && (x.dims || x.sizeClass)) {
       if (x.dims) await setFact(c.ctx, jobId, "dimensions", x.dims, { ...opts, correction: true });
       else await setFact(c.ctx, jobId, "size_class", x.sizeClass!, opts);
@@ -1310,11 +1365,21 @@ async function applyAi(c: Conversation, qr: QuoteRequestState, ai: QrAiResult): 
     for (const jobId of jobIds) await setFact(c.ctx, jobId, "application_method", ai.method, opts);
     if (qr.step === "method") resolved = true;
   }
+  if (ai.materialStatus && qr.step !== "material_source" && !qr.materialSourceAsked) {
+    qr.materialStatusPending = ai.materialStatus;
+    qr.materialSourceAsked = true;
+    for (const jobId of jobIds) await setFact(c.ctx, jobId, "material_status", ai.materialStatus, opts);
+  }
   if (ai.materialStatus && qr.step === "material_source") {
     qr.materialSourceAsked = true;
     for (const jobId of jobIds) await setFact(c.ctx, jobId, "material_status", ai.materialStatus, opts);
     c.ack = ai.materialStatus === "precisa_comprar" ? "Certo, vou considerar a compra. 🛒" : "Beleza! 👍 Mesmo já tendo, o material entra no preço (pra você repor depois sem sair no prejuízo).";
     resolved = true;
+  }
+  if (qr.step !== "logistics" && !qr.logisticsAsked && ai.pickup !== undefined && ai.delivery !== undefined) {
+    qr.logistics = { pickup: ai.pickup, delivery: ai.delivery };
+    qr.logisticsAsked = true;
+    for (const jobId of jobIds) await setFact(c.ctx, jobId, "logistics", qr.logistics, opts);
   }
   if (qr.step === "logistics" && ai.pickup !== undefined && ai.delivery !== undefined) {
     const l = { pickup: ai.pickup, delivery: ai.delivery };
@@ -1361,4 +1426,73 @@ async function askBlocked(c: Conversation, quotes: { ref: string; quote: QuoteRe
     }
   }
   return false;
+}
+
+/** Perguntas que podem ser puladas quando entram em laço (nenhuma decide dinheiro). */
+const LOOP_SKIPPABLE: readonly string[] = ["clients_relation", "owner_confirm", "owner_each", "identity", "scope", "condition", "review", "review_fix", "grouping", "techniques", "client", "repair_hours", "method", "material_source", "logistics", "transport_cost"];
+
+/** Marca a pergunta atual como resolvida com o que já se sabe (ou o padrão mais seguro). */
+function skipStep(qr: QuoteRequestState): void {
+  const d = qr.draft;
+  switch (qr.step) {
+    case "clients_relation":
+      qr.clientsRelation = "couple";
+      if (d.clients.length >= 2) d.clients = [{ ref: d.clients[0]!.ref, rawName: d.clients.map((x) => x.rawName).join(" e "), name: d.clients.map((x) => x.name).join(" e "), confidence: 1 }];
+      for (const it of d.items) {
+        it.ownerRef = d.clients[0]?.ref ?? null;
+        it.ownerConfirmed = true;
+      }
+      delete qr.ownerProposal;
+      break;
+    case "owner_confirm":
+    case "owner_each":
+      for (const it of d.items) {
+        it.ownerRef = it.ownerRef ?? qr.ownerProposal?.[it.ref] ?? d.clients[0]?.ref ?? null;
+        it.ownerConfirmed = true;
+      }
+      break;
+    case "identity":
+      for (const it of d.items) if (it.generic) {
+        it.generic = false;
+        it.description = it.quantity > 1 ? "móveis" : "móvel";
+      }
+      for (const it of d.items) delete it.typeQuestion;
+      break;
+    case "scope":
+      for (const it of d.items) it.affectedPart ??= "inteiro";
+      break;
+    case "condition":
+      qr.askedCondition = true;
+      break;
+    case "review":
+    case "review_fix":
+      qr.reviewed = true;
+      break;
+    case "grouping":
+      qr.grouping ??= "agrupado";
+      break;
+    case "techniques":
+      qr.techniquesAsked = true;
+      break;
+    case "client":
+      qr.clientAsked = true;
+      break;
+    case "repair_hours":
+      qr.askedRepair = d.items.map((i) => i.ref);
+      qr.repairAskedAll = true;
+      break;
+    case "method":
+      qr.methodAsked = true;
+      break;
+    case "material_source":
+      qr.materialSourceAsked = true;
+      break;
+    case "logistics":
+      qr.logisticsAsked = true;
+      qr.logistics ??= { pickup: false, delivery: false };
+      break;
+    case "transport_cost":
+      qr.transportAsked = true;
+      break;
+  }
 }

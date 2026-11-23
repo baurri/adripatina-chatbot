@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { extractLengths, extractLooseMoney, extractMoney, normalizeText, extractCount } from "@adripatina/shared";
-import { findDescriptors, findFurniture, findTechniques } from "./vocabulary.js";
+import { FURNITURE, findDescriptors, findFurniture, findTechniques } from "./vocabulary.js";
+import { sumCounts } from "./furniture/answers.js";
+
+const DRAWER_WORDS = /^(gavetas?|gavetao|gavetoes|gavetinhas?|gavetonas?)$/;
 
 export const INTENTS = [
   "new_job",
@@ -79,7 +82,7 @@ const NAME_STOP = new Set([
 /** verbo conjugado no lugar do sobrenome ("Dona Jo trouxeram") */
 const VERB_LIKE = /(aram|eram|iram|ando|endo|indo|ou|eu)$/;
 /** verbos comuns logo depois de "cliente" ("cliente traz", "cliente quer", "cliente vai buscar") */
-const CLIENT_ACTION = /^(deix\w*|traz\w*|trouxe|busc\w*|peg\w*|retir\w*|lev\w*|vai|vem|vao|quer|queria|pediu|pede|mandou|manda|falou|fala|disse|ligou|pagou|paga|achou|acha|gostou|gosta|tem|tinha|precisa|ficou|esta|ta|e|eh|nao|ja|so|mesmo|mesma|chegou|aceitou|recusou|prefere|escolheu|marcou|combinou)$/;
+const CLIENT_ACTION = /^(deix\w*|pass\w*|aparec\w*|cheg\w*|lig\w*|avis\w*|mor\w*|decid\w*|escolh\w*|volt\w*|ped\w*|traz\w*|trouxe|busc\w*|peg\w*|retir\w*|lev\w*|vai|vem|vao|quer|queria|pediu|pede|mandou|manda|falou|fala|disse|ligou|pagou|paga|achou|acha|gostou|gosta|tem|tinha|precisa|ficou|esta|ta|e|eh|nao|ja|so|mesmo|mesma|chegou|aceitou|recusou|prefere|escolheu|marcou|combinou)$/;
 
 function titleCase(s: string): string {
   return s
@@ -97,8 +100,8 @@ export function extractClientNames(text: string): string[] {
   while ((m = re.exec(norm))) {
     const nameTokens: string[] = [];
     for (const t of (m[2] ?? "").split(" ")) {
-      if (!t || NAME_STOP.has(t)) break;
-      if (nameTokens.length > 0 && VERB_LIKE.test(t)) break;
+      if (!t || NAME_STOP.has(t) || FURNITURE_WORDS.has(t)) break;
+      if (nameTokens.length > 0 && (VERB_LIKE.test(t) || CLIENT_ACTION.test(t))) break;
       nameTokens.push(t);
     }
     if (nameTokens.length === 0) continue;
@@ -168,8 +171,8 @@ export function extractClientName(text: string): string | undefined {
     // mantém apenas tokens iniciais consecutivos que não são stopwords
     const nameTokens: string[] = [];
     for (const t of nameRaw.split(" ")) {
-      if (!t || NAME_STOP.has(t)) break;
-      if (nameTokens.length > 0 && VERB_LIKE.test(t)) break;
+      if (!t || NAME_STOP.has(t) || FURNITURE_WORDS.has(t)) break;
+      if (nameTokens.length > 0 && (VERB_LIKE.test(t) || CLIENT_ACTION.test(t))) break;
       nameTokens.push(t);
     }
     if (nameTokens.length === 0 && tokens.length === 0) continue;
@@ -251,7 +254,8 @@ export function interpretRules(text: string): NluResult {
   };
   const doors = extractCount(text, /^portas?$/);
   if (doors !== null) e.doors = doors;
-  const drawers = extractCount(text, /^gavetas?$/);
+  // "4 gavetas e 1 gavetão" = 5 (avaliação real 24/11/2026: a primeira mensagem anotava 4)
+  const drawers = sumCounts(text, DRAWER_WORDS) ?? extractCount(text, DRAWER_WORDS);
   if (drawers !== null) e.drawers = drawers;
   if (/\b(pequen[oa]s?|pequenininh[oa])\b/.test(norm)) e.sizeClass = "pequeno";
   else if (/\b(medi[oa])\b/.test(norm)) e.sizeClass = "medio";
@@ -273,3 +277,27 @@ export function interpretRules(text: string): NluResult {
   const { intent, confidence } = classify(norm, e);
   return { intent, confidence, entities: e, source: "rules" };
 }
+
+/**
+ * NEGAÇÃO (D-074, classe "palavra certa, sentido trocado"): tira os trechos negados antes de
+ * procurar palavras-chave. Avaliação real 24/11/2026: "sem conserto nenhum" virava "precisa de
+ * reparo"; "tá boa, sem problema nenhum" virava "reparos"; "por dentro não precisa mexer" virava
+ * "por dentro e por fora". Vale para qualquer campo que decide por palavra.
+ */
+export function stripNegated(norm: string): string {
+  return ` ${norm} `
+    .replace(/\bsem (?:nenhum |nenhuma |qualquer |muito |grandes? )?[a-z]+(?: (?:nenhum|nenhuma|algum|alguma))?/g, " ")
+    .replace(/\b(?:nada de|nenhum|nenhuma) [a-z]+/g, " ")
+    .replace(/\b[a-z]+ (?:nenhum|nenhuma)\b/g, " ")
+    .replace(/\b(?:nao|nem) (?:precisa|tem|vai|vou|mexe|mexer|esta|ta|tao|estao|faz|fazer|leva|levar|tem que|precisa de|precisa mexer|vai precisar|vai ter)(?: (?:de|em|no|na|nos|nas|mexer|fazer|nada|nenhum|nenhuma))*(?: [a-z]+){0,2}/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** "por dentro não precisa", "dentro não mexe", "não mexe por dentro": só por fora. */
+export function insideNegated(norm: string): boolean {
+  return /\b(dentro|interna|interior)\b[^,.;]{0,18}\b(nao|nem)\b|\b(nao|nem)\b[^,.;]{0,22}\b(dentro|interna|interior)\b/.test(norm);
+}
+
+/** Palavra de móvel nunca faz parte do nome da cliente ("a dona Maria da cristaleira" ≠ "Dona Maria Cristaleira"). */
+const FURNITURE_WORDS = new Set(Object.values(FURNITURE).flatMap((f) => f.variants.flatMap((v) => normalizeText(v).split(" "))).filter((w) => w.length >= 4));

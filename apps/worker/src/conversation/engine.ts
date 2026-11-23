@@ -27,6 +27,8 @@ import {
   labelDimensions,
   parseAnswer,
   questionFor,
+  interpretRules,
+  volunteeredFacts,
   techniquesLabel,
   type Button,
   type NluResult,
@@ -80,6 +82,7 @@ import { dataCollectionText, isPlausibleCollectionAnswer, onDataCollectionCallba
 import { missingPriceKeys } from "../services/material-pricing.js";
 import { askCurrent as askPricingCurrent, isPlausiblePricingAnswer, onPricingCallback, pricingText, startPricing, targetPhrase } from "./pricing-flow.js";
 import { polishOutbound, understandInbound } from "./ai-layer.js";
+import { applyJobAi } from "./job-ai.js";
 import { onQuoteDecisionCallback, presentQuoteDecision, quoteDecisionText, reaskQuoteDecision } from "./quote-decision-flow.js";
 import {
   askQuoteRequestAgain,
@@ -202,7 +205,7 @@ export class Conversation {
         // D-073: o Claude lê a mensagem no contexto e entrega o texto claro para os fluxos
         const u = await understandInbound(this, this.input.text);
         this.understood = u;
-        await this.onText(u.text, resuming);
+        if (!(u.action && (await this.onAiAction(u.action, u.text)))) await this.onText(u.text, resuming);
       }
     } catch (err) {
       if (err instanceof DomainError) this.say(friendlyDomainError(err));
@@ -282,7 +285,14 @@ export class Conversation {
     const meta = detectMeta(trimmed, { voice: this.input.kind === "voice" });
     if (meta && (await this.onMeta(meta))) return;
     const nlu = await interpret(this.ctx, trimmed);
-    const decision = decideRoute({ nlu, flow: this.session.flow, pendingQuestion: this.session.context.pendingQuestion ?? null, plausibleAnswer: this.isPlausibleAnswer(trimmed, nlu) });
+    let decision = decideRoute({ nlu, flow: this.session.flow, pendingQuestion: this.session.context.pendingQuestion ?? null, plausibleAnswer: this.isPlausibleAnswer(trimmed, nlu) });
+    // D-074: o Claude leu no contexto que é RESPOSTA (ou correção) à pergunta em andamento: as regras
+    // de palavra não desviam para outro assunto. Avaliação 24/11/2026: "o interior fica como está"
+    // virava consulta de situação e a mesma pergunta se repetiu 5 vezes.
+    const kind = this.understood?.kind;
+    if ((kind === "resposta" || kind === "correcao") && this.session.flow !== "idle" && ["interruption", "global", "fallback"].includes(decision.route)) {
+      decision = { ...decision, route: "active_goal", contextualIntent: `${this.session.flow}_continue`, reason: `Claude classificou como ${kind}: segue o objetivo` };
+    }
     await this.logRouting(nlu, decision);
 
     // retomada depois de horas/dias num objetivo de orçamento: lembrar onde paramos
@@ -307,6 +317,50 @@ export class Conversation {
         return this.onGlobal(trimmed, nlu);
       default:
         return this.onFallback(trimmed, nlu);
+    }
+  }
+
+  /**
+   * D-074: intenção decidida pelo Claude (comandos, consultas, social) vai direto ao lugar certo —
+   * antes dependia de lista de palavras ("apagar e recomeçar" e "quanto a dona Maria deve?" se
+   * perdiam). Nada aqui grava dado sem confirmação: recomeçar pergunta antes; cancelar só pausa.
+   */
+  async onAiAction(action: string, text: string): Promise<boolean> {
+    const busy = this.session.flow !== "idle";
+    const rules = interpretRules(text);
+    switch (action) {
+      case "recomecar":
+        return this.onMeta("restart");
+      case "cancelar":
+        if (!busy) return false;
+        await this.cancel();
+        return true;
+      case "pausar":
+        if (!busy) return false;
+        this.pause();
+        return true;
+      case "lista_servicos":
+        await this.listJobs();
+        if (busy) await this.reaskCurrent();
+        return true;
+      case "saldo_cliente": {
+        const job = await this.findJobFromMention(text, { ...rules, intent: "query_status", confidence: 1 });
+        if (!job) return busy ? false : (await this.listJobs("De qual serviço? Toca nele aqui:"), true);
+        await this.describeJob(job);
+        return true;
+      }
+      case "agradecimento":
+        return this.onMeta("thanks");
+      case "teste_audio":
+        return this.onMeta("audio_test");
+      case "conversa_social":
+        return this.onMeta("small_talk");
+      case "saudacao":
+        if (busy) return this.onMeta("small_talk");
+        await this.greet();
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -1035,7 +1089,11 @@ ${GUIDE}`);
           await setFact(this.ctx, jobId, "furniture_type", value, { actor: this.input.user.id, source: m.source, messageId: m.messageId, correction: true, changeKind: "set" });
           added.push(describeFact("furniture_type", value));
         } else proposals.push(["furniture_type", value]);
-      } else proposals.push(["furniture_type", { type: m.furnitureType, descriptors: m.descriptors ?? [] }]);
+      } else if (/^(corrigir|corrige)\b|\b(na verdade|errei|me enganei|nao e (um|uma)|o movel e)\b/.test(normalizeText(m.text ?? ""))) {
+        proposals.push(["furniture_type", { type: m.furnitureType, descriptors: m.descriptors ?? [] }]);
+      }
+      // outro móvel citado de passagem ("gaveta e prateleira" → "estante") NÃO troca o móvel do
+      // serviço nem abre pergunta de contradição: só correção explícita (avaliação 24/11/2026)
     }
     if (m.techniques?.length) {
       const existing = (job.facts.techniques?.value as string[] | undefined) ?? [];
@@ -1044,15 +1102,27 @@ ${GUIDE}`);
       if (existing.length && (genericPaint || m.techniques.every((t) => existing.includes(t)))) repeated.push(describeFact("techniques", existing));
       else proposals.push(["techniques", m.techniques]);
     }
-    if (m.clientName) proposals.push(["client_name", m.clientName]);
+    // o próprio artesão nunca é o cliente ("o próprio Adriano leva" virava cliente — avaliação 24/11/2026)
+    if (m.clientName && !(this.firstName && normalizeText(m.clientName).includes(normalizeText(this.firstName)))) proposals.push(["client_name", m.clientName]);
+    // medidas: com IA e fala longa, quem decide qual número é altura/largura/fundura é o Claude
+    // ("tampo de 1 m por 60, 75 de altura"); a ordem posicional das regras fica de plano B
+    // (avaliação 24/11/2026: altura e largura trocadas)
+    const aiDims = !!this.ctx.ai.extraction?.generate && (m.text ?? "").split(/\s+/).length >= 6;
+    let rulesDims: FactValueMap["dimensions"] | null = null;
     if (m.lengthsM?.length) {
       const [a, b, c] = m.lengthsM;
-      const dims: FactValueMap["dimensions"] = { height: a, ...(b ? { width: b } : {}), ...(c ? { depth: c } : {}) };
-      proposals.push(["dimensions", dims]);
+      const labeled = labelDimensions(normalizeText(m.text ?? ""));
+      const dims: FactValueMap["dimensions"] = labeled.height || labeled.width || labeled.depth ? Object.fromEntries(Object.entries(labeled).filter(([, x]) => x)) : { height: a, ...(b ? { width: b } : {}), ...(c ? { depth: c } : {}) };
+      if (aiDims) rulesDims = dims;
+      else proposals.push(["dimensions", dims]);
     } else if (m.sizeClass) proposals.push(["size_class", m.sizeClass]);
     if (m.materialStatus) proposals.push(["material_status", m.materialStatus]);
     if (m.method) proposals.push(["application_method", m.method]);
     if (m.surfaces) proposals.push(["surfaces", m.surfaces]);
+    // D-074: o que ele já adiantou (estado, só por fora, sem conserto, quem traz/busca) não é perguntado de novo
+    for (const [field, value] of volunteeredFacts(m.text ?? "")) {
+      if (!proposals.some(([f]) => f === field) && job.facts[field]?.value === undefined) proposals.push([field, value]);
+    }
 
     for (const [field, value] of proposals) {
       if (field === "client_name") {
@@ -1068,6 +1138,21 @@ ${GUIDE}`);
         if (field === "material_status") added.push(stockExplanation(value as string));
       } else if (r.kind === "same") repeated.push(describeFact(field, value));
       else if (r.kind === "conflict" && !conflict) conflict = { field, oldValue: r.previous.value, newValue: value };
+    }
+    // D-074: a primeira fala também passa pelo Claude (estado, medidas, método, frete...) — só
+    // preenche o que as regras deixaram vazio; nada é sobrescrito
+    if (!conflict && (m.text ?? "").split(/\s+/).length >= 6) {
+      const fresh = await getJob(this.ctx, jobId);
+      const ai = fresh ? await applyJobAi(this, fresh, "primeira fala do pedido (ainda não perguntei nada)", null, m.text!) : null;
+      if (ai?.saved.length) added.push(...ai.saved);
+    }
+    // o Claude não deu as medidas: vale a leitura das regras
+    if (rulesDims) {
+      const after = await getJob(this.ctx, jobId);
+      if (!after?.facts.dimensions?.value) {
+        const r = await setFact(this.ctx, jobId, "dimensions", rulesDims, { actor: this.input.user.id, source: m.source, messageId: m.messageId });
+        if (r.kind === "set") added.push(describeFact("dimensions", rulesDims));
+      }
     }
     return { added, repeated, ...(conflict ? { conflict } : {}) };
   }
@@ -1348,7 +1433,7 @@ Com mais ${left === 1 ? "uma resposta" : `${left} respostas`} eu fecho o valor. 
   }
 
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
-    const job = await getJob(this.ctx, this.session.activeJobId!);
+    let job = await getJob(this.ctx, this.session.activeJobId!);
     if (!job) {
       this.session.flow = "idle";
       this.session.activeJobId = null;
@@ -1357,6 +1442,23 @@ Com mais ${left === 1 ? "uma resposta" : `${left} respostas`} eu fecho o valor. 
     // detalhes ditos de passagem (cor, tempo que ele estima, outro dono) nunca se perdem
     const notes = await this.appendNotes(job.id, text);
     if (notes.length) this.notesAck = `📝 Anotei também: ${notes.join("; ")}.`;
+    // D-074: o Claude extrai TODOS os campos que a fala trouxer (não só o perguntado)
+    const asked = this.session.flow === "collecting" ? (this.session.lastQuestion ?? nextQuestion(job.facts, this.skipFieldsFor(job))) : null;
+    if (!isQuestionToBot(text)) {
+      const ai = await applyJobAi(this, job, asked ? questionFor(asked).text : "dados completos; esperando confirmar o cálculo ou corrigir", asked, text);
+      if (ai?.saved.length) {
+        this.ack = `${ai.correction ? "Corrigido" : "Anotado"}: ${ai.saved.join("; ")}.`;
+        if (ai.correction) {
+          delete (this.session.context as { correctionMode?: boolean }).correctionMode;
+          delete (this.session.context as { backField?: ProjectField }).backField;
+        }
+        if (ai.answeredField || this.session.flow === "confirm_calc" || ai.correction) return this.askNext((await getJob(this.ctx, job.id))!);
+        job = (await getJob(this.ctx, job.id))!;
+      } else if (ai?.answeredField && asked && !this.session.context.catalogQ) {
+        // ele repetiu algo que já estava anotado: segue sem perguntar de novo
+        return this.askNext(job);
+      }
+    }
     // resposta a uma pergunta do catálogo (tipo do móvel, medidas, portas, estofado...)
     if (this.session.context.catalogQ && nlu.intent !== "correction" && (await catalogAnswer(this, job, text, nlu.intent))) return;
     const field = this.session.flow === "collecting" ? (this.session.lastQuestion ?? nextQuestion(job.facts, this.skipFieldsFor(job))) : null;
@@ -1380,6 +1482,20 @@ Com mais ${left === 1 ? "uma resposta" : `${left} respostas`} eu fecho o valor. 
       return this.askNext((await getJob(this.ctx, job.id))!);
     }
 
+    // laço sem saída (D-074): a mesma pergunta respondida 3 vezes sem avançar → segue sem esse dado
+    // (avaliação 24/11/2026: a pergunta de transporte se repetiu 7 vezes)
+    if (field) {
+      const fr = (this.session.context as { fieldRepeat?: { field: string; n: number } }).fieldRepeat;
+      const n = fr && fr.field === field ? fr.n + 1 : 1;
+      (this.session.context as { fieldRepeat?: { field: string; n: number } }).fieldRepeat = { field, n };
+      if (n >= 3 && !["furniture_type", "techniques", "client_name"].includes(field)) {
+        (this.session.context as { fieldRepeat?: unknown }).fieldRepeat = undefined;
+        await setFact(this.ctx, job.id, field, null, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
+        await this.appendNotes(job.id, text);
+        this.ack = "Vou seguir sem isso por enquanto pra gente não ficar rodando. 👍 Se quiser, me fala depois que eu ajusto.";
+        return this.askNext((await getJob(this.ctx, job.id))!);
+      }
+    }
     // 1) a resposta à pergunta pendente vem antes de qualquer outra leitura
     let ans: ParsedAnswer = field ? parseAnswer(field, text) : { kind: "unparsed" };
     // texto livre só é aceito como resposta quando a mensagem não fala de outra coisa
@@ -1590,7 +1706,9 @@ ${await this.questionText(job, field, 4)}`);
     const e = nlu.entities;
     const norm = normalizeText(text);
     const labeled = labelDimensions(norm);
-    if (!e.lengthsM.length && (labeled.height || labeled.width || labeled.depth)) {
+    // rótulo dito ("a altura é 1 metro e a largura é 80") vale sempre, com ou sem outros números —
+    // antes só o primeiro número ia para o primeiro rótulo (avaliação 24/11/2026: laço de correção)
+    if (labeled.height || labeled.width || labeled.depth) {
       const dims = { ...((job.facts.dimensions?.value as FactValueMap["dimensions"] | undefined) ?? {}) };
       if (labeled.height) dims.height = labeled.height;
       if (labeled.width) dims.width = labeled.width;
@@ -1615,6 +1733,14 @@ ${await this.questionText(job, field, 4)}`);
     if (e.method) changes.push(["application_method", e.method]);
     if (e.materialStatus) changes.push(["material_status", e.materialStatus]);
     if (e.surfaces) changes.push(["surfaces", e.surfaces]);
+    // D-074: correção de vários campos numa fala ("estado bom, só por fora, sem conserto") — antes
+    // só o primeiro reconhecido mudava e o bot dizia "ajustei" sem ajustar (avaliação real 24/11/2026)
+    const body = text.replace(/^(corrigir|corrige|na verdade|errei|me enganei)[,:]?\s*/i, "");
+    for (const [field, value] of volunteeredFacts(body)) {
+      const i = changes.findIndex(([f]) => f === field);
+      if (i >= 0) changes[i] = [field, value];
+      else changes.push([field, value]);
+    }
     if (changes.length === 0 && fallbackField) {
       const ans = parseAnswer(fallbackField, text.replace(/^(corrigir|corrige|na verdade|errei|me enganei)[,:]?\s*/i, ""));
       if (ans.kind === "value") changes.push([ans.field, ans.value]);
@@ -1622,6 +1748,8 @@ ${await this.questionText(job, field, 4)}`);
     if (changes.length === 0) return false;
     for (const [field, value] of changes) {
       const before = job.facts[field]?.value;
+      // "corrigido: sem frete (antes: sem frete)": correção que não muda nada não é anunciada
+      if (before !== undefined && JSON.stringify(before) === JSON.stringify(value)) continue;
       await setFact(this.ctx, job.id, field, value as never, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
       this.say(before !== undefined && before !== null ? `Corrigido: ${describeFact(field, value)} (antes: ${describeFact(field, before)}). Guardei o histórico.` : `Anotado: ${describeFact(field, value)}.`);
     }
@@ -1976,6 +2104,22 @@ ${await this.questionText(job, field, 4)}`);
     return this.askExpenseJob();
   }
 
+  /** Serviço citado pelo nome (móvel, cliente ou título); só devolve se for um só. */
+  async matchJobByText(text: string): Promise<Job | null> {
+    const words = normalizeText(text).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !["isso", "esse", "essa", "dela", "dele", "servico", "pagou", "gasto", "compra", "entrada"].includes(w));
+    if (!words.length) return null;
+    const jobs = await listActiveJobs(this.ctx, 20);
+    const scored = jobs
+      .map((j) => {
+        const hay = normalizeText(`${j.title ?? ""} ${jobPhrase(j)} ${(j.facts.client_name?.value as string | undefined) ?? ""}`);
+        return { j, score: words.filter((w) => hay.includes(w.slice(0, 6))).length };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    if (!scored.length || (scored[1] && scored[1].score === scored[0]!.score)) return null;
+    return scored[0]!.j;
+  }
+
   async askExpenseJob(): Promise<void> {
     const jobs = await listActiveJobs(this.ctx, 5);
     const e = this.session.context.expense!;
@@ -2053,9 +2197,15 @@ Está certo? Pode responder "sim" ou "não".`, [
       }
       return this.askExpenseJob();
     }
+    if (e.step === "job") {
+      // escolher o serviço falando ("é da cristaleira", "da dona Maria", "pro estoque") — avaliação 24/11/2026
+      if (/\b(estoque|geral|sem servico|nenhum servico)\b/.test(normalizeText(text))) return this.onExpense("job", "geral");
+      const picked = await this.matchJobByText(text);
+      if (picked) return this.onExpense("job", picked.id);
+    }
     if (nlu.intent === "yes" && e.step === "confirm") return this.onExpense("confirm");
     if (nlu.intent === "no" && e.step === "confirm") return this.onExpense("fix");
-    this.say("Use os botões acima para confirmar, ou diga \"cancelar\".");
+    this.say("Pode tocar num dos botões ou me dizer qual é, tipo \"da cristaleira\". Se quiser parar, diga \"cancelar\".");
   }
 
   async onExpense(action: string, arg?: string): Promise<void> {
@@ -2186,9 +2336,13 @@ Está certo? Pode responder "sim" ou "não".`, [
       if (nlu.entities.clientName) p.clientName = nlu.entities.clientName;
       return this.askPaymentJob();
     }
+    if (p.step === "job") {
+      const picked = await this.matchJobByText(text);
+      if (picked) return this.onPayment("job", picked.id);
+    }
     if (nlu.intent === "yes" && p.step === "confirm") return this.onPayment("confirm");
     if (nlu.intent === "no" && p.step === "confirm") return this.onPayment("fix");
-    this.say("Use os botões acima para confirmar, ou diga \"cancelar\".");
+    this.say("Pode tocar num dos botões ou me dizer qual é, tipo \"da cristaleira\". Se quiser parar, diga \"cancelar\".");
   }
 
   async onPayment(action: string, arg?: string): Promise<void> {
@@ -2390,7 +2544,8 @@ Está certo? Pode responder "sim" ou "não".`, [
       return;
     }
     const rows: Button[][] = jobs.map((j) => [{ text: `${capitalize(jobPhrase(j))} — ${JOB_STATUS_LABEL[j.status]}`.slice(0, 60), data: `job:open:${j.id}` }]);
-    this.say(title, rows);
+    // a lista também vai no texto (o botão corta o nome); tocar abre o detalhe
+    this.say(`${title}\n\n${jobs.map((j) => `• ${capitalize(jobPhrase(j))} — ${JOB_STATUS_LABEL[j.status].toLowerCase()}`).join("\n")}\n\nToca num deles pra ver os detalhes. 👇`, rows);
   }
 
   async agenda(): Promise<void> {

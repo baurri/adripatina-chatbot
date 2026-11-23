@@ -47,3 +47,20 @@ describe("teste real 23/11/2026 (tarde): frases que o bot não entendia", () => 
     expect((parseAnswer("condition", "até que tá boazinha") as { value: unknown }).value).toBe("bom");
   });
 });
+
+describe("negação (avaliação real 24/11/2026)", () => {
+  it.each([
+    ["tá boazinha, sem conserto nenhum", "bom"],
+    ["Tá em bom estado, sem problema nenhum", "bom"],
+    ["não precisa de conserto, tá boa", "bom"],
+    ["precisa de uns reparos no tampo", "reparos"],
+  ])("estado: %s → %s", (text, expected) => {
+    expect((parseAnswer("condition", text) as { value: unknown }).value).toBe(expected);
+  });
+  it.each(["Isso, só por fora mesmo. Por dentro não precisa mexer nada", "por dentro não, só fora", "não mexe por dentro"])("só por fora: %s", (text) => {
+    expect((parseAnswer("surfaces", text) as { value: unknown }).value).toBe("externa");
+  });
+  it("'por dentro e por fora' continua os dois lados", () => {
+    expect((parseAnswer("surfaces", "por dentro e por fora") as { value: unknown }).value).toBe("interna_externa");
+  });
+});

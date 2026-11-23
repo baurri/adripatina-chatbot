@@ -1,4 +1,4 @@
-import { FURNITURE, TECHNIQUES, itemName, parseFurnitureList, type MentionedItem } from "@adripatina/conversations";
+import { FURNITURE, TECHNIQUES, itemName, parseFurnitureList, systemPrompt, type MentionedItem } from "@adripatina/conversations";
 import { extractLengths, normalizeText, wordsToNumber } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { interpretStructured } from "../ai/orchestrator.js";
@@ -20,6 +20,8 @@ export interface QrAiItem {
   affectedPart?: "tampo" | "inteiro";
   dims?: { height?: string; width?: string; depth?: string; diameter?: string };
   sizeClass?: "pequeno" | "medio" | "grande";
+  /** quantas peças essa linha representa ("é uma mesinha só" → 1) */
+  quantity?: number;
 }
 
 export interface QrAiResult {
@@ -31,6 +33,10 @@ export interface QrAiResult {
   pickup?: boolean;
   delivery?: boolean;
   clientName?: string;
+  /** os nomes ditos juntos são um casal/um cliente só, ou clientes diferentes */
+  clientsRelation?: "couple" | "separate";
+  /** ele confirmou que o resumo está certo ("tá certo", "isso mesmo") */
+  confirms?: boolean;
 }
 
 const nullable = (t: string, extra: Record<string, unknown> = {}) => ({ type: [t, "null"], ...extra });
@@ -52,6 +58,7 @@ const SCHEMA = {
           depthCm: nullable("number"),
           diameterCm: nullable("number"),
           sizeClass: nullable("string", { enum: ["pequeno", "medio", "grande", null] }),
+          quantity: nullable("integer"),
         },
         required: ["ref"],
       },
@@ -63,11 +70,13 @@ const SCHEMA = {
     pickup: nullable("boolean"),
     delivery: nullable("boolean"),
     clientName: nullable("string"),
+    clientsRelation: nullable("string", { enum: ["couple", "separate", null] }),
+    confirms: nullable("boolean"),
   },
   required: ["items"],
 };
 
-const SYSTEM = `Você interpreta a resposta de Adriano, artesão de restauração de móveis, dentro de um orçamento com várias peças. Português do Brasil, fala transcrita de áudio (pode ter erros de digitação/transcrição: "aparadoras" = aparadores, "invernizar" = envernizar, "já trnho" = já tenho).
+const SYSTEM = systemPrompt(`Você interpreta a resposta do Adriano dentro de um orçamento com várias peças.
 Regras:
 - Use SOMENTE as refs da lista de peças. Uma frase no plural ("os criados-mudos", "todos eles", "as outras") vale para todas as peças correspondentes.
 - Medidas em centímetros, só com números ditos na mensagem (1 metro = 100). Mesa redonda com uma medida só = diâmetro. "80 por 40" numa peça: o primeiro é largura, o segundo fundura, salvo se ele disser altura.
@@ -77,8 +86,12 @@ Regras:
 - materialStatus: "tem_tudo" se ele já tem/usa do estoque; "tem_parte"; "precisa_comprar".
 - pickup = ele (artesão) busca o móvel; delivery = ele entrega. Cliente traz → pickup false; cliente busca/leva de volta → delivery false.
 - clientName: só o nome do dono dos móveis, se ele disser.
+- clientsRelation: "couple" se ele diz que os nomes são um casal / um cliente só / "é tudo dos dois"; "separate" se são clientes diferentes.
+- quantity por peça: só se ele disser quantas são ("é uma mesinha só" → 1). Número de medida NUNCA é quantidade ("45 de altura" não são 45 peças).
+- confirms: true se ele diz que o resumo está certo; false se diz que está errado.
+- Ele costuma repetir tudo numa fala só (estado, escopo, medidas, método, material, transporte): preencha TODOS os campos que a fala diz, para todas as peças, não só o da pergunta atual.
 - Não invente nada. Campo que a mensagem não diz → null (ou fora da lista).
-Responda só JSON.`;
+Responda só JSON.`);
 
 /** Números ditos na mensagem, já em centímetros possíveis (80 → 80; 1,2 → 120; "dois metros" → 200). */
 function spokenCm(text: string): number[] {
@@ -129,6 +142,8 @@ export function validateQrAi(raw: unknown, items: MentionedItem[], text: string)
     if (di) dims.diameter = cmToM(di);
     if (Object.keys(dims).length) it.dims = dims;
     if (o.sizeClass === "pequeno" || o.sizeClass === "medio" || o.sizeClass === "grande") it.sizeClass = o.sizeClass;
+    // quantidade: 1 sempre pode; mais que 1 só se o número for dito (e nunca número de medida)
+    if (typeof o.quantity === "number" && o.quantity >= 1 && o.quantity <= 12 && (o.quantity === 1 || spoken.includes(o.quantity))) it.quantity = Math.round(o.quantity);
     out.items.push(it);
   }
   for (const f of Array.isArray(r.newFurniture) ? r.newFurniture : []) {
@@ -145,6 +160,8 @@ export function validateQrAi(raw: unknown, items: MentionedItem[], text: string)
   if (r.materialStatus === "tem_tudo" || r.materialStatus === "tem_parte" || r.materialStatus === "precisa_comprar") out.materialStatus = r.materialStatus;
   if (typeof r.pickup === "boolean") out.pickup = r.pickup;
   if (typeof r.delivery === "boolean") out.delivery = r.delivery;
+  if (r.clientsRelation === "couple" || r.clientsRelation === "separate") out.clientsRelation = r.clientsRelation;
+  if (typeof r.confirms === "boolean") out.confirms = r.confirms;
   if (typeof r.clientName === "string" && r.clientName.trim().length >= 2) {
     const first = normalizeText(r.clientName).replace(/^(dona|seu|sr|sra)\s+/, "").split(" ")[0]!;
     if (first.length >= 2 && normalizeText(text).includes(first)) out.clientName = r.clientName.trim().slice(0, 60);

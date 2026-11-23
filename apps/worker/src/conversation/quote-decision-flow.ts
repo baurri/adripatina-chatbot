@@ -1,9 +1,10 @@
-import type { Button, NluResult } from "@adripatina/conversations";
+import { systemPrompt, type Button, type NluResult } from "@adripatina/conversations";
 import { findConfidentialTerms } from "@adripatina/pdf";
 import { allocateCents, extractLooseMoney, formatBRL, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { Conversation } from "./engine.js";
 import { getJob, jobPhrase, type Job } from "../repos/jobs.js";
 import { closeQuoteByArtisan, getQuote, issueDocuments, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
+import { interpretStructured } from "../ai/orchestrator.js";
 import { enqueueOutbox } from "../services/outbox.js";
 
 /**
@@ -139,11 +140,31 @@ export async function quoteDecisionText(c: Conversation, text: string, nlu: NluR
   const wantsDiscount = d.step === "discount" || /\b(desconto|descont\w*|abaix\w*|diminu\w*|tira|tirar|menos)\b/.test(n);
   const wantsAdd = d.step === "add" || /\b(acrescent\w*|soma|somar|aumenta\w*|adiciona\w*|a mais)\b|\bmais (uns |um |r\$ ?)?\d/.test(n);
 
+  // D-074: o Claude lê a decisão ("dá pra fazer por uns 569?", "tira 10%", "põe o frete de 60").
+  // Valor só vale se for dito na fala. NUNCA fecha com número na fala sem ter entendido o número
+  // (avaliação 24/11/2026: "pode ser uns 569?" fechou em R$ 956 e mandou o PDF).
+  const ai = await interpretDecision(c, g, d.step, text);
+  if (ai) {
+    if (ai.action === "concordar" && !/\d/.test(n)) return d.step === "below_floor" ? onQuoteDecisionCallback(c, "force", d.quoteId) : finalize(c, g, base);
+    if (ai.action === "valor_final" && ai.cents) return confirmOrWarn(c, g, ai.cents);
+    if (ai.action === "desconto" && (ai.cents || ai.pct)) return confirmOrWarn(c, g, base - (ai.cents ?? Math.round((base * ai.pct!) / 100)));
+    if (ai.action === "acrescimo" && (ai.cents || ai.pct)) return confirmOrWarn(c, g, base + (ai.cents ?? Math.round((base * ai.pct!) / 100)), ai.reason);
+    if (ai.action === "desconto") return onQuoteDecisionCallback(c, "disc", d.quoteId);
+    if (ai.action === "acrescimo") return onQuoteDecisionCallback(c, "add", d.quoteId);
+    if (ai.action === "nao_concorda") {
+      c.say(`Tranquilo, o valor é você quem decide. 🙂\n\nMe diz quanto você quer cobrar, ou quanto de desconto, tipo "550 reais" ou "10%".`, decisionButtons(d.quoteId));
+      return;
+    }
+  }
   if (d.step === "below_floor") {
-    if (nlu.intent === "yes") return onQuoteDecisionCallback(c, "force", d.quoteId);
+    if (nlu.intent === "yes" && !/\d/.test(n)) return onQuoteDecisionCallback(c, "force", d.quoteId);
     if (nlu.intent === "no" && amount === null && !percent) return onQuoteDecisionCallback(c, "redo", d.quoteId);
   }
   if (!percent && amount === null) {
+    if (/\d/.test(n)) {
+      c.say("Não peguei bem o valor. 🤔 Me diz só o número que você quer cobrar, tipo \"550 reais\", ou o desconto, tipo \"10%\".", decisionButtons(d.quoteId));
+      return;
+    }
     if (nlu.intent === "yes" || /\b(concordo|pode ser|ta bom|ta otimo|fechado|fechou|beleza|esse mesmo|isso mesmo|perfeito|combinado|bora)\b/.test(n)) return finalize(c, g, base);
     if (/\bdesconto\b/.test(n)) return onQuoteDecisionCallback(c, "disc", d.quoteId);
     if (/\b(acrescent\w*|somar|aumentar)\b/.test(n)) return onQuoteDecisionCallback(c, "add", d.quoteId);
@@ -289,4 +310,40 @@ export async function reaskQuoteDecision(c: Conversation): Promise<void> {
     return;
   }
   return askAgain(c, g);
+}
+
+const DECISION_SCHEMA = {
+  type: "object",
+  properties: {
+    acao: { type: "string", enum: ["concordar", "desconto", "acrescimo", "valor_final", "nao_concorda", "outro"] },
+    valor_reais: { type: ["number", "null"] },
+    percentual: { type: ["number", "null"] },
+    motivo: { type: ["string", "null"] },
+  },
+  required: ["acao"],
+};
+
+const DECISION_SYSTEM = systemPrompt(`O assistente mostrou ao Adriano o valor sugerido de um orçamento e perguntou se ele concorda. Classifique a resposta dele:
+- "concordar": aceita o valor sugerido como está.
+- "desconto": quer baixar (valor_reais = quanto tirar, ou percentual).
+- "acrescimo": quer somar algo (valor_reais ou percentual; motivo curto, ex.: "frete").
+- "valor_final": diz o valor que quer cobrar no total ("faz por 550", "dá pra fazer por uns 569?", "cobra 600") → valor_reais = esse total.
+- "nao_concorda": não aceita mas não diz valor.
+- "outro": outra coisa.
+Números só os que ele disse. Uma pergunta como "dá pra fazer por 500?" é "valor_final" 500 (ele está propondo). Responda só JSON.`);
+
+/** Decisão interpretada pelo Claude; valor só se dito na fala. */
+async function interpretDecision(c: Conversation, g: Group, step: string, text: string): Promise<{ action: string; cents?: number; pct?: number; reason?: string } | null> {
+  const user = JSON.stringify({ valor_sugerido: formatBRL(g.base), minimo_sem_prejuizo: g.floor !== null ? formatBRL(g.floor) : null, etapa: step, fala: text.slice(0, 600) });
+  const raw = await interpretStructured(c.ctx, "decision:interpret", DECISION_SYSTEM, user, DECISION_SCHEMA, 200);
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as { acao?: unknown; valor_reais?: unknown; percentual?: unknown; motivo?: unknown };
+  if (typeof r.acao !== "string") return null;
+  const nums = (normalizeText(text).match(/\d+(?:[.,]\d+)?/g) ?? []).map((x) => Number(x.replace(/\.(?=\d{3}\b)/g, "").replace(",", ".")));
+  const said = (v: unknown) => typeof v === "number" && v > 0 && nums.some((x) => Math.abs(x - v) < 0.01);
+  const out: { action: string; cents?: number; pct?: number; reason?: string } = { action: r.acao };
+  if (said(r.valor_reais)) out.cents = Math.round((r.valor_reais as number) * 100);
+  if (said(r.percentual) && (r.percentual as number) < 100) out.pct = r.percentual as number;
+  if (typeof r.motivo === "string" && r.motivo.trim().length >= 3 && r.motivo.length <= 30 && normalizeText(text).includes(normalizeText(r.motivo).split(" ")[0]!)) out.reason = r.motivo.trim();
+  return out;
 }

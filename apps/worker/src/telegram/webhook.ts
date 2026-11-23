@@ -161,7 +161,9 @@ async function handleVoice(ctx: Ctx, user: User, chatId: string, msg: TelegramMe
     return "ok";
   }
   const inId = await logMessage(ctx, { sessionId, userId: user.id, jobId, direction: "in", kind: "voice", transcript, updateId, messageId: msg.message_id, fileUniqueId: media.file_unique_id });
-  await ctx.telegram.sendMessage(chatId, `Ouvi: "${transcript.slice(0, 300)}"`);
+  // eco curto: só o começo da fala (o eco inteiro de cada áudio poluía a conversa — avaliação 24/11/2026)
+  const words = transcript.trim().split(/\s+/);
+  await ctx.telegram.sendMessage(chatId, `🎧 Ouvi: "${words.slice(0, 10).join(" ")}${words.length > 10 ? "…" : ""}"`);
   return deliver(ctx, user, chatId, { user, chatId, kind: "voice", text: transcript, inboundMessageId: inId });
 }
 

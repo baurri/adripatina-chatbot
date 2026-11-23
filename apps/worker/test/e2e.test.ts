@@ -142,3 +142,18 @@ describe("Fluxo ponta a ponta (aceite 28)", () => {
     expect(row.final_price_cents).toBe(q.recommended_cents + 10000);
   });
 });
+
+describe("decisão do valor nunca fecha contra a vontade (avaliação 24/11/2026)", () => {
+  it.each(["dá pra fazer por uns 569?", "pode ser uns 500?", "faz por 450 que eu fecho"])("'%s' não fecha no valor sugerido", async (text) => {
+    const h = await createHarness();
+    await artisanCreatesQuote(h);
+    await h.calibrateAndPrice();
+    await h.click("calc:yes");
+    const q = (await h.ctx.db.first<{ id: string; recommended_cents: number }>("SELECT id, recommended_cents FROM quotes"))!;
+    const r = h.allText(await h.send(text));
+    const row = (await h.ctx.db.first<{ status: string; final_price_cents: number | null }>("SELECT status, final_price_cents FROM quotes"))!;
+    // ou fechou com o valor DELE, ou avisou do prejuízo e perguntou — nunca o sugerido
+    if (row.status === "ENVIADO" || row.status === "APROVADO") expect(row.final_price_cents).not.toBe(q.recommended_cents);
+    else expect(r).toMatch(/prejuízo|Me diz|valor/);
+  });
+});

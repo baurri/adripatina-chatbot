@@ -1,6 +1,6 @@
 import type { FactValueMap, ProjectField } from "@adripatina/domain";
 import { Dec, normalizeText } from "@adripatina/shared";
-import { interpretRules, extractClientName } from "./nlu.js";
+import { interpretRules, extractClientName, insideNegated, stripNegated } from "./nlu.js";
 import { findFurniture, findTechniques, findDescriptors, furnitureLabel, TECHNIQUES } from "./vocabulary.js";
 
 export interface Button {
@@ -115,14 +115,34 @@ export function clientHandlesTransport(text: string): { pickup?: false; delivery
   return out;
 }
 
-/** Interpreta a resposta do usuário a uma pergunta específica. */
+/**
+ * Interpreta a resposta do usuário a uma pergunta específica.
+ * "Não sei" só vale quando a fala não traz a resposta: "tamanho médio, não sei a medida exata" é
+ * médio (avaliação real 24/11/2026: o "não sei" atropelava a resposta dita junto).
+ */
 export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer {
+  const text = rawText.startsWith("ans:") ? rawText.slice(4) : rawText;
+  const norm = normalizeText(text);
+  if (text.trim().toLowerCase() === "nao_sei" || norm === "nao_sei") return { kind: "dont_know" };
+  if (!DONT_KNOW_RE.test(norm)) return parseAnswerCore(field, rawText);
+  // tira o "não sei ..." e vê se sobrou uma resposta de verdade ("não sei a medida, mas é médio");
+  // sem isso o "não" do "não sei" virava "não precisa" em outros campos
+  const rest = norm.replace(/(nao sei|sei la|nao lembro|nao tenho certeza)( (a|o|as|os) [a-z]+( exata| exato)?)?/g, " ").replace(/\s+/g, " ").trim();
+  if (rest.split(" ").filter((w) => w.length > 2).length >= 1) {
+    const r = parseAnswerCore(field, rest);
+    if (r.kind === "value" && r.strength === "specific") return r;
+  }
+  return { kind: "dont_know" };
+}
+
+const DONT_KNOW_RE = /(^|[^a-z])(nao sei|sei la|nao lembro|nao tenho certeza)([^a-z]|$)/;
+
+function parseAnswerCore(field: ProjectField, rawText: string): ParsedAnswer {
   const text = rawText.startsWith("ans:") ? rawText.slice(4) : rawText;
   const norm = normalizeText(text);
   const key = text.trim().toLowerCase();
   // valores de botões (com "_") são comparados antes da normalização
   const is = (v: string) => key === v || norm === v;
-  if (is("nao_sei") || /\b(nao sei|sei la|nao lembro|nao tenho certeza)\b/.test(norm)) return { kind: "dont_know" };
   if (!rawText.startsWith("ans:") && isQuestionToBot(text)) return { kind: "question" };
   const nlu = interpretRules(text);
   const e = nlu.entities;
@@ -155,9 +175,13 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
       return { kind: "unparsed" };
     }
     case "condition": {
-      if (/\b(bem|muito|todo|toda|tudo|bastante) (estragad|detonad|judiad|acabad|ruim|velh|podre)\w*|\b(danificad|pessim|cupim|podre|quebrad|caindo aos pedacos|detonad)\w*/.test(norm)) return specific(field, "danificado");
-      if (/\b(reparos?|consertos?|arranhad|riscad|descascand|desgastad|estragad|velh|manchad|lascad|solt)\w*/.test(norm) || /\bprecis\w* de (uns |um |alguns |algum )?(reparo|conserto|massa|cola|ajuste|cuidado|restauro)/.test(norm)) return specific(field, "reparos");
-      if (/\b(bom|boa|boazinha|bonzinho|bonzinha|boinha|otim[oa]|inteir[oa]|inteirinh[oa]|conservad[oa]|bonit[oa]|tranquil[oa]|em bom estado|razoavel|ok|de boa|em ordem|ajeitad[oa]|direitinh[oa])\b/.test(norm)) return specific(field, "bom");
+      // "sem conserto nenhum", "sem problema": o trecho negado não conta (D-074)
+      const cn = stripNegated(norm);
+      const negatedRepair = cn !== norm && /\b(conserto|reparo|problema|defeito|estrago|dano)/.test(norm);
+      if (/\b(bem|muito|todo|toda|tudo|bastante) (estragad|detonad|judiad|acabad|ruim|velh|podre)\w*|\b(danificad|pessim|cupim|podre|quebrad|caindo aos pedacos|detonad)\w*/.test(cn)) return specific(field, "danificado");
+      if (/\b(reparos?|consertos?|arranhad|riscad|descascand|desgastad|estragad|velh|manchad|lascad|solt)\w*/.test(cn) || /\bprecis\w* de (uns |um |alguns |algum )?(reparo|conserto|massa|cola|ajuste|cuidado|restauro)/.test(cn)) return specific(field, "reparos");
+      if (/\b(bom|boa|boazinha|bonzinho|bonzinha|boinha|otim[oa]|inteir[oa]|inteirinh[oa]|conservad[oa]|bonit[oa]|tranquil[oa]|em bom estado|razoavel|ok|de boa|em ordem|ajeitad[oa]|direitinh[oa])\b/.test(cn)) return specific(field, "bom");
+      if (negatedRepair) return specific(field, "bom");
       // texto livre só quando fala de alguma parte/acabamento da peça (nunca "hmm deixa eu ver")
       return /\b(pe|pes|perna|pernas|cabeceira|peseira|tampo|gaveta|gavetas|porta|portas|pintura|verniz|madeira|lateral|laterais|estrutura|acabamento|assento|encosto|puxador|puxadores)\b/.test(norm)
         ? free(field, text.trim())
@@ -194,6 +218,8 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
       return { kind: "unparsed" };
     }
     case "surfaces":
+      // "por dentro não precisa mexer" é só por fora (D-074)
+      if (insideNegated(norm)) return specific(field, "externa");
       if (is("interna_externa") || e.surfaces === "interna_externa" || /\b(dentro e fora|por dentro tambem|os dois lados|interna e externa)\b/.test(norm)) return specific(field, "interna_externa");
       if (is("externa") || e.surfaces === "externa" || /\b(so (por )?fora|parte de fora|so o lado de fora|nao tem dentro|so a parte externa)\b/.test(norm)) return specific(field, "externa");
       return { kind: "unparsed" };
@@ -494,4 +520,28 @@ export const FIELD_EXPLANATION: Record<ProjectField, string> = {
 export function naturalAck(fact: string, seed: number): string {
   const cap = fact ? fact[0]!.toUpperCase() + fact.slice(1) : fact;
   return pick([`Anotado: ${fact}. ✅`, `Show! Anotei: ${fact}. 👌`, `Beleza, ${fact}. Tá na mão! 🙌`, `Perfeito, ${fact}. ✍️`, `Opa, anotadinho: ${fact}. 📝`, `Entendi! ${cap}. 😉`, `Certo, ${fact}. 👍`], seed);
+}
+
+/**
+ * INFORMAÇÃO ADIANTADA (D-074): o que ele já contou na primeira fala ("tá boazinha, só por fora,
+ * sem conserto, ela traz e busca") vira dado na hora — o bot não pergunta de novo. Só respostas
+ * específicas e inequívocas (nunca texto livre); campo já preenchido não é tocado pelo chamador.
+ * Avaliação real 24/11/2026: perguntou conserto e frete que já tinham sido ditos três vezes.
+ */
+export function volunteeredFacts(text: string): [ProjectField, unknown][] {
+  const out: [ProjectField, unknown][] = [];
+  const norm = normalizeText(text);
+  const take = (field: ProjectField) => {
+    const a = parseAnswer(field, text);
+    if (a.kind === "value" && a.strength === "specific") out.push([field, a.value]);
+  };
+  // estado só com palavra de estado (não "danificado" solto de outra peça num pedido longo)
+  if (/\b(bo[am]|boazinha|bonzinho|conservad|estragad|danificad|riscad|reparo|conserto|problema|judiad|detonad|inteir)\w*/.test(norm)) take("condition");
+  if (/\b(por fora|por dentro|lado de fora|parte de fora|parte de dentro)\b/.test(norm)) take("surfaces");
+  if (/\b(sem (nenhum )?(conserto|reparo)s?|(conserto|reparo)s? nenhum|nao precisa (de )?(conserto|reparo|consertar|arrumar nada))\b/.test(norm)) out.push(["repairs", { needed: false }]);
+  if (/\b(traz|trazer|busca|buscar|entrega|entregar|leva|levar|pega|pegar|retira|frete)\w*/.test(norm)) {
+    const a = parseAnswer("logistics", text);
+    if (a.kind === "value") out.push(["logistics", a.value]);
+  }
+  return out;
 }

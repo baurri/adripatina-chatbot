@@ -1,0 +1,4224 @@
+[
+  {
+    "id": "real-adriano-roberto-jo",
+    "title": "Conversa real do Adriano: mesinha + 2 móveis do Seu Roberto e da Dona Jo",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, beleza? Terça eu vou buscar um trabalho do seu Roberto e da Dona Jo. Uma mesinha de centro pra lixar inteira e passar verniz, e mais outros dois móveis que é só o tampo. Queria saber quanto cobrar nisso aí.\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, beleza? Terça eu vou buscar um trabalho do…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: são 3 móveis para lixar e envernizar, sendo uma mesinha de centro e mais dois móveis para o Seu Roberto e a Dona Jo. Você quer saber quanto cobrar. 📅 Anotei o dia que você falou: terça (01/12/2026), só como lembrete. Se for outro dia, me avisa.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Só falta organizar de quem é cada peça. A mesinha de centro é do Seu Roberto, e os outros dois móveis são da Dona Jo?",
+        "buttons": [
+          {
+            "text": "Isso",
+            "data": "qr:owner_yes"
+          },
+          {
+            "text": "Não",
+            "data": "qr:owner_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, os dois são do casal, é um cliente só. Os outros dois são duas aparadoras, só o tampo de cada uma pra lixar e envernizar. Mede 1,20 por 40 cada. A mesinha é redonda, 80 de diâmetro e 45 de altura. Já tenho o verniz, vou de pincel. Acho que leva uns 3 a 5 dias e o material deve dar uns 70 reais. Eu mesmo busco e entrego. Me fala aí quanto ficaria.\n   {entendido: Não: a mesinha de centro é do Seu Roberto, e os outros dois móveis são do casal, que é um cliente só (Seu Roberto e Dona Jo). Os outros dois são duas aparadoras, só o tampo de cada uma para lixar e envernizar, medindo 1,20 por 40 cada. A mesinha é redonda, 80 de diâmetro e 45 de altura, para lixar inteira e envernizar. Já tenho o verniz; vou usar pincel. Acho que leva de 3 a 5 dias. O material deve dar uns 70 reais. Eu mesmo busco e entrego. Quero saber quanto ficaria. · rota: pending_answer/item_owner_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, os dois são do casal, é um cliente só.…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Combinado! Seu Roberto e Dona Jo ficam como um cliente só, com um orçamento só. 😄",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quais são os outros dois móveis? Por exemplo: \"uma cômoda e um aparador\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Duas aparadoras, só o tampo de cada uma, pra lixar e envernizar. Cada tampo mede 1,20 por 40. A mesinha é redonda, 80 de diâmetro e 45 de altura. Tudo de pincel, que o verniz eu já tenho.\n   {entendido: duas aparadoras; só o tampo de cada uma para lixar e envernizar; cada tampo mede 1,20 por 40; a mesinha de centro é redonda, 80 de diâmetro e 45 de altura; tudo com pincel; o verniz eu já tenho. · rota: pending_answer/item_identity_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Duas aparadoras, só o tampo de cada uma, pra lixar…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, anotado! 😄 Agora me conta: como estão a mesinha de centro, o 1º aparador e o 2º aparador? Alguma peça precisa de reparo?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Então a mesinha tá meio danificada no tampo, precisa acertar uns detalhes antes de lixar e passar o verniz. Os dois aparadores tão melhores, só precisam de lixar e envernizar mesmo. Mas o tampo da mesinha é redondo, então tem que ter cuidado com o acabamento ali.\n   {entendido: Mesinha de centro: tampo meio danificado, precisa acertar uns detalhes antes de lixar e envernizar. Tampo redondo, então tem que ter cuidado com o acabamento ali. 1º aparador e 2º aparador: estão melhores, só precisam de lixar e envernizar. · rota: pending_answer/item_condition_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Então a mesinha tá meio danificada no tampo, precisa acertar…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi! 😄 A mesinha de centro: lixar e envernizar inteira, com reparos no tampo. O 1º aparador: lixar e envernizar só o tampo, sem reparos grandes. O 2º aparador: lixar e envernizar só o tampo, sem reparos grandes.\n\nEstá certo assim?",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Certo]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, vamos em frente! 🪵 Qual é o tamanho do tampo do 1º aparador? Pode me dizer largura e profundidade, tipo \"1,20 por 50\", ou só se ele é pequeno, médio ou grande.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, os dois aparadores têm o tampo 1,20 por 40, cada um. Os dois iguais.\n   {entendido: 1º e 2º aparador: tampo de 1,20 por 40 cada um (os dois iguais). · rota: pending_answer/item_dimensions_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei, os dois aparadores têm o tampo 1,20 por…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado! 🪵 Quanto tempo você acha que leva o reparo da mesinha de centro? Por exemplo: \"2 horas\". Se não souber, tudo bem.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, o reparo da mesinha eu não sei dizer ao certo ainda, depende do que aparecer quando eu abrir o tampo. Mas chuto umas 3 horas pra acertar tudo. Depois vejo melhor. O resto já falei: cada aparador é 1,20 por 40, e a mesinha é redonda, 80 de diâmetro e 45 de altura.\n   {entendido: Tempo do reparo da mesinha de centro: chuto umas 3 horas para acertar tudo, mas depende do que aparecer quando eu abrir o tampo; depois vejo melhor. Reafirmando: cada aparador tem tampo de 1,20 por 40; a mesinha é redonda, diâmetro 80 e altura 45. · rota: pending_answer/repair_hours_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, o reparo da mesinha eu não sei dizer ao…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, anotado! 🚚 Você vai buscar os móveis na terça (01/12/2026)? E a entrega, também fica por sua conta? Por exemplo: \"buscar e entregar\" ou \"não precisa\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Isso, eu busco na terça e entrego também, eu mesmo levo. Acho que leva uns 3 a 5 dias pra terminar tudo, e o material deve dar uns 70 reais. Pode seguir com o orçamento aí.\n   {entendido: buscar na terça (01/12/2026) e entregar também, eu mesmo levo; prazo de 3 a 5 dias para terminar tudo; material deve dar uns R$ 70; pode seguir com o orçamento · rota: pending_answer/logistics_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Isso, eu busco na terça e entrego também, eu mesmo…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quanto você costuma gastar com esse transporte (ida e volta)? Por exemplo: \"60 reais\". Se não souber, tudo bem.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, não sei de cabeça o valor do transporte, depende da gasolina e do caminho. Pode deixar sem esse valor por enquanto, depois eu vejo. Mas pode seguir com o orçamento aí, tá?\n   {entendido: Não sei o valor do transporte agora, depende da gasolina e do caminho. Deixar sem esse valor por enquanto; depois ele vê. Pode seguir com o orçamento. · rota: pending_answer/transport_cost_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, não sei de cabeça o valor do transporte, depende…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas dos 3 móveis!\n\n• Mesinha de centro: R$ 378,00\n• 1º aparador: R$ 130,00\n• 2º aparador: R$ 130,00\n\n💰 Total sugerido: R$ 638,00\n\n⚠️ Menos que R$ 509,00 no total você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 360,00 de material.\n⏱️ Dá umas 11 horas de trabalho.\n🚚 O frete não está na conta. Se for cobrar, é só acrescentar.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:a2674972-ad37-4db7-bb01-e8a87310e679"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:a2674972-ad37-4db7-bb01-e8a87310e679"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:a2674972-ad37-4db7-bb01-e8a87310e679"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0002-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0003-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅\n\n💰 Valor final: R$ 638,00\n\n📄 Os 3 PDFs (um por peça) já estão prontos. Pode encaminhar pro Seu Roberto e Dona Jo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quando o cliente responder, me chama aqui: 👇",
+        "buttons": [
+          {
+            "text": "👍 Cliente aceitou",
+            "data": "outcome:acceptall:x"
+          },
+          {
+            "text": "👎 Cliente recusou",
+            "data": "outcome:rejectall:x"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Cliente aceitou]"
+      },
+      {
+        "who": "bot",
+        "text": "Boa! 🎉 Anotei que o cliente aceitou os 3 orçamentos, R$ 638,00 no total.",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "3 serviços (mesinha + 2 aparadores)"
+      },
+      {
+        "ok": true,
+        "name": "2 aparadores reconhecidos"
+      },
+      {
+        "ok": true,
+        "name": "técnica verniz em todos"
+      },
+      {
+        "ok": true,
+        "name": "cliente Seu Roberto/Dona Jo"
+      },
+      {
+        "ok": true,
+        "name": "aparadores só no tampo"
+      },
+      {
+        "ok": true,
+        "name": "medida/porte de todas as peças"
+      },
+      {
+        "ok": true,
+        "name": "orçamento calculado para as 3 peças"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 3,
+        "naturalidade": 3,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 3,
+        "eficiencia": 2,
+        "conclusao": 4
+      },
+      "problemas": [
+        {
+          "turno": 4,
+          "gravidade": "media",
+          "classe": "suposicao_errada",
+          "descricao": "Perguntou se a mesinha era do Seu Roberto e os outros da Dona Jo, sendo que ele falou 'do seu Roberto e da Dona Jo' como casal; chutou em vez de tratar como um cliente só."
+        },
+        {
+          "turno": 8,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou quais eram os outros dois móveis, que ele já tinha dito no turno 5 (duas aparadoras, só o tampo)."
+        },
+        {
+          "turno": 16,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou o tamanho do tampo do 1º aparador depois de ele já ter dado 1,20 por 40 duas vezes; ele precisou reclamar 'já falei'."
+        },
+        {
+          "turno": 22,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou sobre buscar e entregar, que ele já tinha dito no turno 5; também ignorou o tempo de 3 a 5 dias e o material de 70 reais ditos várias vezes."
+        },
+        {
+          "turno": 25,
+          "gravidade": "baixa",
+          "classe": "insistencia",
+          "descricao": "Perguntou o custo do transporte, sem que ele tivesse falado de valor; depois de 'não sei' seguiu corretamente."
+        },
+        {
+          "turno": 28,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Disse que precisa comprar R$ 360 de material, contradizendo os 70 reais que ele informou e já ter o verniz; valor não explicado nem reconhecido."
+        },
+        {
+          "turno": 28,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Mensagem de orçamento longa e cheia de números e avisos (prejuízo, horas, frete), pesada para quem prefere conversa simples; sem explicar de onde vem o 378 da mesinha."
+        },
+        {
+          "turno": 33,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "Gerou 3 PDFs separados (um por peça) para um cliente só com orçamento único, após ter dito que seria um orçamento só."
+        },
+        {
+          "turno": 33,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Perdeu a nota da terça e o 'reparo da mesinha 3 horas / depende do que aparecer' não aparece no resumo final."
+        }
+      ],
+      "resumo": "Chegou ao fechamento e o cliente aceitou, mas a conversa foi ineficiente: o bot repetiu perguntas sobre dados já ditos (aparadores, tamanho, busca e entrega) e irritou o Adriano. O orçamento final mostra material de R$ 360 contra os 70 que ele disse, e a mensagem de contas é longa e pouco acessível. Os 3 PDFs contradizem o orçamento único."
+    },
+    "ms": 102663
+  },
+  {
+    "id": "admin-mesinha-criados",
+    "title": "Administrador: mesinha + 2 criados-mudos, medidas todas de uma vez",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Oi, tudo bem? Preciso de um orçamento. Trnho uma mesinha de centro redonda, com 2 metros de largura, o tampo meio judiado. Ela é pra lixar, acertar uns detalhes e envernizar. Também são dois criados-mudos, 80 cm de largura e 40 de altura, os dois iguais, só o tampo de cada um, pra lixar e envernizar. Já tenho o material, uns 70 reais. Eu falei pra cliente que demora uns 3 a 5 dias. Dá pra fazer a conta pra mim?\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Oi, tudo bem? Preciso de um orçamento. Trnho uma mesinha…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi! São 3 móveis para lixar e envernizar: uma mesinha de centro e 2 criados. Você quer saber quanto cobrar.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Perfeito 😄 Na mesinha de centro, você vai trabalhar só no tampo ou na mesinha inteira?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Na mesinha é ela inteira, pés e tampo. Os criados-mudos é só o tampo de cada um. Pode fazer a conta com isso. A cliente deixa tudo em casa e busca depois de pronto.\n   {entendido: Na mesinha de centro, trabalhar na mesinha inteira, pés e tampo. Nos 2 criados-mudos, só o tampo de cada um. Pode fazer a conta com isso. A cliente deixa tudo em casa e busca depois de pronto. · rota: pending_answer/service_scope_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Na mesinha é ela inteira, pés e tampo. Os criados-mudos…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: mesinha inteira, com pés e tampo, e só o tampo dos 2 criados. Assim eu consigo fechar a conta. 🛠️\n\nE os criados, como estão hoje? Algum precisa de reparo além do lixamento?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Os dois criados tão bons, só precisam de lixa e acertar uns detalhezinhos. Nada de reparo grande. E a mesinha também só precisa lixar e acertar uns detalhes. Já trnho o material, então é só fazer a conta mesmo.\n   {entendido: Os 2 criados-mudos estão bons; só precisam de lixa e acertar uns detalhes, sem reparo grande. A mesinha de centro também só precisa de lixa e acertar uns detalhes. O material já está comprado (cerca de 70 reais), então é só fazer a conta. · rota: active_goal/quote_request_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Os dois criados tão bons, só precisam de lixa e…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, anotado: os dois criados estão bons, só precisam de lixa e uns detalhes, sem reparo grande. 📏 A mesinha também só precisa de lixa e acertos, e o material você já tem.\n\nEsses móveis são de quem? Pode me passar só o nome do cliente, tipo \"da dona Maria\". 🙂",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Dona Carla. Os móveis são da dona Carla. Ela deixa tudo em casa e busca depois de pronto.\n   {entendido: Os móveis são da dona Carla. Ela deixa tudo em casa e busca depois de pronto. · rota: pending_answer/client_identity_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Dona Carla. Os móveis são da dona Carla. Ela deixa…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi 😄 Então fica assim:\n\n• Mesinha de centro: lixar e envernizar inteira, com reparo no tampo.\n• 2 criados: lixar e envernizar só o tampo, com reparos.\n\nEstá certo?",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, não é bem isso. A mesinha só precisa lixar e acertar uns detalhes, não tem reparo no tampo. E os criados também, só lixa e acerto, nada de reparo grande. Pode fazer a conta assim.\n   {entendido: corrigir: a mesinha de centro (inteira, com pés e tampo) só precisa de lixa e acertos de detalhes, sem reparo no tampo; os 2 criados-mudos (só o tampo de cada um) também só precisam de lixa e acertos de detalhes, sem reparo grande. Pode fazer a conta assim. · rota: active_goal/quote_request_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, não é bem isso. A mesinha só precisa lixar…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ah, entendi, errei na leitura 😄 Então fica assim: a mesinha de centro é só lixar e acertar uns detalhes, sem reparo no tampo, e os 2 criados também só lixa e acerto, sem reparo grande. Está certo agora?",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Certo]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, então agora as medidas, que fazem diferença no preço. 📏 Quais são as medidas da mesinha de centro? Por exemplo: \"45 de altura, 1 metro de largura e 60 de fundura\". Se não tiver certeza, pode dizer só pequena, média ou grande.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "A mesinha é redonda, tem 2 metros de largura. Os dois criados têm 80 cm de largura e 40 de altura, iguais. Pincel e uma faca pra raspar, já trnho tudo. Pode fazer a conta.\n   {entendido: A mesinha de centro é redonda, com 2 metros de largura. Os 2 criados têm 80 cm de largura e 40 cm de altura, iguais entre si. Método: pincel; também vou usar faca pra raspar. Já tem todo o material. Pode fazer a conta. · rota: pending_answer/item_dimensions_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"A mesinha é redonda, tem 2 metros de largura. Os…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quanto tempo você acha que leva pra acertar os detalhes de todas as peças, somando tudo? 🛠️ Por exemplo: \"3 horas\". Se não souber, tudo bem.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Uns 6 horas no total, contando lixa e os acertos das três peças. A mesinha é uma parte maior, uns 3 horas, e cada criado umas 1h30. Se quiser fechar a conta com 10% de desconto, pode fazer, dona Carla é cliente antiga.\n   {entendido: Total de 6 horas somando as três peças (lixar e acertar os detalhes). Mesinha de centro: 3 horas. Cada criado: 1h30. Desconto de 10% para a dona Carla (cliente antiga), para o sistema aplicar na conta. · rota: pending_answer/repair_hours_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Uns 6 horas no total, contando lixa e os acertos…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei o que você falou do estado 👍 Já já te pergunto de qual peça é.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas dos 2 móveis!\n\n• Mesinha de centro: R$ 1.043,00\n• Os 2 criados: R$ 331,00\n\n💰 Total sugerido: R$ 1.374,00\n\n⚠️ Menos que R$ 1.116,00 no total você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 377,00 de material.\n⏱️ Dá umas 22 horas de trabalho.\n📏 Fiz com a medida aproximada, então pode variar um pouco.\n🧾 Você comentou uns R$ 70,00 de material; pela minha conta o material usado dá uns R$ 239,00.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:ef4d3c6d-dd9b-407b-b687-f4decc6a0aac"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:ef4d3c6d-dd9b-407b-b687-f4decc6a0aac"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:ef4d3c6d-dd9b-407b-b687-f4decc6a0aac"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: ➖ Dar desconto]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza! Quanto de desconto você quer dar? 🙂\n\nPode falar em reais, tipo \"50 reais\", ou em porcentagem, tipo \"10%\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "10%, a dona Carla é cliente antiga, pode fazer assim.\n   {entendido: desconto de 10%; a cliente é antiga · rota: active_goal/quote_decision_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0002-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅\n\nValor final: R$ 1.236,60 (R$ 1.374,00 com R$ 137,40 de desconto)\n\n📄 Os 2 PDFs (um por peça) já estão prontos pra você encaminhar pra Carla.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quando a cliente responder, me avisa aqui: 👇",
+        "buttons": [
+          {
+            "text": "👍 Cliente aceitou",
+            "data": "outcome:acceptall:x"
+          },
+          {
+            "text": "👎 Cliente recusou",
+            "data": "outcome:rejectall:x"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Cliente aceitou]"
+      },
+      {
+        "who": "bot",
+        "text": "Boa! 🎉 Anotei que a Carla aceitou os 2 orçamentos, R$ 1.236,60 no total.\n\nQuando você quiser, pode me mandar o próximo serviço ou registrar algum gasto ou pagamento. 🛠️",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": false,
+        "name": "3 serviços",
+        "detail": "2"
+      },
+      {
+        "ok": false,
+        "name": "2 criados-mudos",
+        "detail": "[{\"type\":\"mesa\",\"descriptors\":[\"de centro\"]},{\"type\":\"mesa_cabeceira\",\"descriptors\":[],\"quantity\":2}]"
+      },
+      {
+        "ok": true,
+        "name": "cliente Dona Carla"
+      },
+      {
+        "ok": true,
+        "name": "medidas das 3 peças"
+      },
+      {
+        "ok": true,
+        "name": "sem frete (cliente traz e busca)"
+      },
+      {
+        "ok": true,
+        "name": "PDF gerado após o desconto"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 2,
+        "naturalidade": 3,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 2,
+        "eficiencia": 2,
+        "conclusao": 3
+      },
+      "problemas": [
+        {
+          "turno": 3,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Resumo diz 'lixar e envernizar' para os 3 móveis e chama de '2 criados' sem 'mudos'. Também ignora que o tampo da mesinha está 'meio judiado' e o prazo de 3 a 5 dias."
+        },
+        {
+          "turno": 4,
+          "gravidade": "media",
+          "classe": "pergunta_desnecessaria",
+          "descricao": "Pergunta se é só o tampo ou a mesinha inteira, mas ele já tinha dito que a mesinha é inteira e os criados só o tampo. Isso mostra que o bot não entendeu a primeira fala."
+        },
+        {
+          "turno": 10,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta o estado de peças que ele já tinha descrito (lixar e acertar detalhes). Depois pergunta de quem são os móveis, o que é aceitável, mas o fluxo repete informação já dada."
+        },
+        {
+          "turno": 13,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Resumo de confirmação inventa 'reparo no tampo' e 'reparos' nos criados, contra o que ele disse (só lixar e acertar detalhes). Obrigou o usuário a corrigir."
+        },
+        {
+          "turno": 18,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pede as medidas da mesinha, que ele já tinha dado no primeiro áudio (redonda, 2 metros). O exemplo de resposta também é técnico demais."
+        },
+        {
+          "turno": 21,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta o tempo dos detalhes depois que ele já tinha dito o prazo de 3 a 5 dias. Mesmo assim é razoável pedir horas de trabalho. Ele já tinha dado as medidas dos criados no turno 19, e o bot ignorou isso."
+        },
+        {
+          "turno": 24,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Diz 'Já já te pergunto de qual peça é', mas nunca pergunta. Ignora o desconto de 10% e o detalhamento de horas por peça que ele já tinha dado no turno 22."
+        },
+        {
+          "turno": 25,
+          "gravidade": "alta",
+          "classe": "jargao",
+          "descricao": "Mensagem de orçamento é longa, com prejuízo, material a comprar, divergência de R$ 70 e R$ 239, 'medida aproximada'. Contradiz o que ele disse (já tem o material) e confunde. O total de 22 horas também destoa das 6 horas que ele informou."
+        },
+        {
+          "turno": 28,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta o valor do desconto, que ele já tinha dito no turno 22 (10%, cliente antiga). Ele teve que repetir."
+        },
+        {
+          "turno": 30,
+          "gravidade": "alta",
+          "classe": "perdeu_informacao",
+          "descricao": "Gera 2 PDFs (um por peça) quando eram 3 peças em 2 serviços (mesinha + 2 criados). O banco confirma que o resultado falhou: apenas 2 serviços, sem os 3 móveis. Os criados aparecem sem 'só o tampo'."
+        },
+        {
+          "turno": 34,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Registra que o cliente aceitou e fala em '2 orçamentos'. Isso reforça a estrutura errada dos serviços."
+        }
+      ],
+      "resumo": "O bot chegou ao valor e aplicou os 10% de desconto, mas com muito atrito. Repetiu perguntas sobre dados que o usuário já tinha dado, inventou 'reparo' no resumo e mostrou uma mensagem de orçamento longa e técnica. Gerou 2 PDFs em vez de 3 peças e falhou nas conferências de serviços. As 22 horas calculadas contradizem as 6 horas informadas."
+    },
+    "ms": 89929
+  },
+  {
+    "id": "admin-comoda-carla",
+    "title": "Cômoda da Dona Carla (pátina), gavetão, correção e logística do cliente",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Ô, chegou uma cômoda aqui da dona Carla pra patinar. Ela tem uns 80 por 1 metro, mais ou menos. Ela tem 4 gavetas e um gavetão. Tá boazinha, só precisa de pátina por fora, não tem conserto nenhum. Vou fazer com pincel e vou usar o estilete pra raspar. Ela que traz e busca quando tiver pronta.\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, chegou uma cômoda aqui da dona Carla pra patinar.…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei um serviço novo:\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 0,8 m, largura 1 m\n• inclui 1 gavetão\n• também vai usar: estilete pra raspar\n\nAgora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 393,00 e R$ 520,00. Com o resto das respostas eu fecho o valor.\n\nÚltima coisinha: a cômoda vai ser trabalhada só por fora, ou a parte de dentro (prateleiras, gavetas) também?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Só por fora mesmo. As gavetas por dentro não precisa mexer, tá limpinha. Ah, e as medidas que eu falei, 80 por 1 metro, era a largura por a altura, tá certo assim. Ela busca quando tiver pronta, ela mesma traz e busca.\n   {entendido: (igual) · rota: pending_answer/service_scope_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Só por fora mesmo. As gavetas por dentro não precisa…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: só por fora.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 0,8 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Opa, ta quase! So uma correcao: a altura e 1 metro e a largura 80 cm, que e o contrario do que ta ai. Fora isso ta certo. Pode calcular depois que corrigir.\n   {entendido: corrigir: a altura é 1 metro e a largura é 80 cm (o contrário do que está anotado: altura 0,8 m, largura 1 m). Fora isso, está certo. Pode calcular depois de corrigir. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Opa, ta quase! So uma correcao: a altura e 1…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado, Adriano! Ajustei as medidas pra altura 1 m e largura 1 m (antes estava altura 0,8 m, largura 1 m). Guardei a correção. 🪵",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, ficou errado a largura. A largura é 80 cm, a altura é 1 metro. Agora tá certo. Pode calcular.\n   {entendido: (igual) · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, ficou errado a largura. A largura é 80 cm,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido, Adriano! Ficou assim: medidas: altura 0,8 m, largura 1 m (antes: medidas: altura 1 m, largura 1 m). Guardei o histórico. 🪵",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 0,8 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, ficou trocado de novo! A altura é 1 metro e a largura é 80 cm. Não é 0,8 de altura, é 0,8 de largura. Corrige aí, por favor, e depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, ficou trocado de novo! A altura é 1 metro…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, troquei aqui: medidas: altura 1 m, largura 1 m (antes: medidas: altura 0,8 m, largura 1 m). Guardei o histórico. 🪵",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, de novo não! Altura é 1 metro e largura é 80 cm. Tá errado de novo aí. Por favor, arruma pra altura 1 m e largura 0,8 m, aí pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, de novo não! Altura é 1 metro e largura…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A altura é 1 metro e a largura é 80 cm. Não é 1 por 1, é 1 de altura e 0,8 de largura. Arruma isso aí, por favor, e depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A altura é 1 metro e…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A largura é 80 cm, não 1 metro. Altura 1 metro, largura 0,8. Arruma aí, por favor, e depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A largura é 80 cm, não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A largura é 80 cm, não 1 metro. Altura 1 metro, largura 0,8. Por favor, arruma isso aí e depois eu pode calcular. Tá dando confusão no bot hoje, viu.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (a largura é 80 cm, não 1 m). Depois pode calcular. Comentário dele: tá dando confusão no bot hoje. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A largura é 80 cm, não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A largura é 0,8 m, não 1 metro. Altura 1 metro, largura 0,8 metro. Arruma isso aí, por favor. Ele não tá trocando, só não tá pegando a largura. Depois pode calcular.\n   {entendido: (igual) · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A largura é 0,8 m, não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: medidas: altura 0,8 m, largura 1 m (antes: medidas: altura 1 m, largura 1 m). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 0,8 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! Não é altura 0,8, é altura 1 metro e largura 0,8. Eu falei duas vezes, a altura é 1 metro e a largura é 80 centímetros. Arruma isso aí, por favor, e depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! Não é altura 0,8, é altura…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Feito, Adriano! ✅ Corrigi as medidas: altura 1 m, largura 1 m (antes estava altura 0,8 m, largura 1 m).\n\nO histórico já ficou guardado. 📏",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ainda tá errado, viu. A largura é 80 centímetros, não 1 metro. Altura 1 metro, largura 0,8. Arruma isso aí, por favor, que depois eu pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm) · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ainda tá errado, viu. A largura é 80 centímetros, não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo! A largura tá 1 metro e tem que ser 80 centímetros, 0,8. Altura é 1 metro. Arruma isso aí, por favor. O bot tá pegando errado a largura, eu já falei três vezes. Depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Antes estava largura 1 m. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo! A largura tá 1 metro e tem…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A largura é 80 centímetros, 0,8 metro. Altura é 1 metro. Arruma isso aí, por favor. Ele não tá trocando a largura, o bot tá pegando 1 metro no lugar de 0,8. Depois pode calcular.\n   {entendido: corrigir: a largura é 0,8 m (80 centímetros) e a altura é 1 m. O bot pegou 1 m de largura no lugar de 0,8 m. Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A largura é 80 centímetros, 0,8…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, corrigido! ✅ Medidas: altura 1,6 m, largura 1 m (antes estava altura 1 m, largura 1 m). Guardei o histórico. 📏",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1,6 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! Não é altura 1,6, é altura 1 metro. Largura é 80 centímetros, 0,8. Arruma isso aí, por favor, e depois pode calcular.\n   {entendido: (igual) · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! Não é altura 1,6, é altura…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, Adriano, foi mal de novo! 😅 Agora ficou assim: altura 1 m, largura 1 m (antes estava altura 1,6 m, largura 1 m). Guardei o histórico. 📏",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A largura é 80 centímetros, 0,8 metro. Altura é 1 metro, isso tá certo. Você não tá trocando a largura, o bot tá pegando 1 metro no lugar de 0,8. Arruma isso aí, por favor, e depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 centímetros). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A largura é 80 centímetros, 0,8…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! A largura é 80 centímetros, 0,8 metro. Altura é 1 metro. Já falei três vezes, o bot não tá pegando a largura. Arruma isso aí, por favor, e depois pode calcular.\n   {entendido: (igual) · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! A largura é 80 centímetros, 0,8…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: medidas: altura 0,8 m, largura 1 m (antes: medidas: altura 1 m, largura 1 m). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 0,8 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo errado! Agora trocou a altura. A altura é 1 metro, a largura é 80 centímetros, 0,8. Arruma isso aí, por favor. Depois pode calcular.\n   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (antes estava altura 0,8 m, largura 1 m). Depois pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo errado! Agora trocou a altura. A altura…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido, Adriano! 📏 Agora ficou: medidas: altura 1 m, largura 1 m (antes estava altura 0,8 m, largura 1 m). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:\n\n• móvel: cômoda (raspagem com estilete)\n• trabalho: pátina\n• cliente: Dona Carla\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• sem frete\n• medidas: altura 1 m, largura 1 m\n• observações: inclui 1 gavetão; também vai usar: estilete pra raspar\n• só por fora\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "1 serviço"
+      },
+      {
+        "ok": true,
+        "name": "cômoda"
+      },
+      {
+        "ok": true,
+        "name": "pátina"
+      },
+      {
+        "ok": true,
+        "name": "5 gavetas (4 + gavetão)"
+      },
+      {
+        "ok": true,
+        "name": "gavetão nas observações"
+      },
+      {
+        "ok": true,
+        "name": "estilete nas observações"
+      },
+      {
+        "ok": true,
+        "name": "pincel"
+      },
+      {
+        "ok": true,
+        "name": "sem frete"
+      },
+      {
+        "ok": false,
+        "name": "medidas 1 m × 0,8 m",
+        "detail": "{\"height\":\"1\",\"width\":\"1\"}"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 1,
+        "naturalidade": 2,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 1,
+        "eficiencia": 1,
+        "conclusao": 1
+      },
+      "problemas": [
+        {
+          "turno": 3,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Inverteu as medidas logo de início: Adriano disse 80 por 1 metro (largura 80, altura 1 m) e o bot anotou altura 0,8 m, largura 1 m. Também pôs 'raspagem com estilete' como tipo de móvel e 'sem frete' sem ele ter dito assim."
+        },
+        {
+          "turno": 4,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Deu faixa de preço (R$ 393 a 520) calculada com medidas erradas, e chamou de 'última coisinha' uma pergunta que já tinha sido respondida no áudio inicial (só por fora)."
+        },
+        {
+          "turno": 7,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Anotou só 'só por fora'. Ignorou a confirmação das medidas (largura por altura) e a repetição de que a cliente traz e busca."
+        },
+        {
+          "turno": 11,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Disse que ajustou para altura 1 m e largura 1 m, mudando a largura de 80 cm para 1 m. Valor errado inventado, ao contrário do que o usuário pediu."
+        },
+        {
+          "turno": 15,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Voltou para altura 0,8 m e largura 1 m, repetindo o erro original e alegando 'corrigido'. Falsa confirmação de correção."
+        },
+        {
+          "turno": 19,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Voltou a 1 m por 1 m e disse 'troquei', mas a largura 0,8 m nunca foi gravada. Loop de erro."
+        },
+        {
+          "turno": 23,
+          "gravidade": "alta",
+          "classe": "travou",
+          "descricao": "Ignorou o pedido, sem avisar da correção, e repetiu o mesmo resumo errado (1 m por 1 m). Texto longo repetido pela quarta vez."
+        },
+        {
+          "turno": 26,
+          "gravidade": "alta",
+          "classe": "travou",
+          "descricao": "Quarta correção pedida e nenhuma resposta; o orçamento nunca é calculado nem ele consegue concordar com o valor. Ele repete a mesma correção cinco vezes e o bot não muda."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "texto_longo",
+          "descricao": "Repete o resumão inteiro a cada correção em vez de resposta curta. Pergunta 'tá tudo certo?' mesmo depois de ele já ter dito 'pode calcular depois de corrigir'."
+        }
+      ],
+      "resumo": "Falha total. O bot inverteu as medidas no começo (80 cm largura e 1 m altura virou 0,8 m de altura) e nunca conseguiu corrigir. Quatro correções claras do Adriano geraram resultados errados, falsas confirmações e um resumo repetido, depois silêncio. Nunca calculou o orçamento, e o faixa de preço inicial estava baseada em medidas erradas."
+    },
+    "ms": 114635
+  },
+  {
+    "id": "abreu-isa-casal",
+    "title": "Mesa de cabeceira do Seu Abreu e da Dona Isa (casal), cor e tempo estimado",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, tudo bem? Queria saber se dá pra fazer um orçamento novo. É a mesa de cabeceira do seu Abreu e da dona Isa, eles querem lixar e pintar de azul marinho. Tá boa, só por fora, sem conserto nenhum.\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, tudo bem? Queria saber se dá pra fazer…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei um serviço novo:\n• móvel: criado-mudo (novo, azul)\n• trabalho: pintura\n• cliente: Seu Abreu\n• só por fora\n• estado: bom\n• sem consertos\n• cor: azul marinho\n• também citado: Dona Isa\n\nVou te perguntando o resto aos pouquinhos, tá? Pode responder do jeito que for mais fácil, áudio ou texto.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quase lá! Agora falta o tamanho, que mexe bastante no preço. Se tiver as medidas, manda assim: \"1,80 de altura, 1 metro de largura e 40 de fundura\". Se não tiver, só pequeno, médio ou grande já serve. 📏",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Médio, não sei a medida exata. Tá boa, só lixar e pintar mesmo, sem conserto. Pincel. Acho que leva uns 3 a 5 dias, e ela não precisa buscar nem entregar, eu que levo pra eles depois.\n   {entendido: tamanho: médio (não sabe a medida exata); pintura só por fora, lixar e pintar, sem conserto; ferramenta: pincel; prazo estimado: 3 a 5 dias; sem busca nem entrega pelo cliente, o próprio Adriano leva depois · rota: pending_answer/item_dimensions_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Médio, não sei a medida exata. Tá boa, só lixar…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ops, entendi errado aqui 😅 Antes eu anotei cliente: Seu Abreu, mas agora apareceu cliente: Próprio Adriano. Qual está certo?",
+        "buttons": [
+          {
+            "text": "Vale o novo",
+            "data": "fact:new"
+          },
+          {
+            "text": "Fica como estava",
+            "data": "fact:old"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Fica como estava]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, mantive o cliente como Seu Abreu. 👍",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "💰 Pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 270,00 e R$ 484,00 (sem contar frete). Com o resto das respostas eu fecho o valor.\n\nE pra fechar: como o criado-mudo chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz? 🚚",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ela não precisa buscar nem entregar, eu que busco e levo pra eles depois. Acho que fica entre 3 e 5 dias, a cor é azul marinho. Ah, e aquele negócio do cliente ali, pode deixar o Seu Abreu mesmo.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ela não precisa buscar nem entregar, eu que busco e…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, anotei o prazo: 3 a 5 dias, ela não precisa buscar nem entregar, e você busca e leva pra eles depois. A cor é azul marinho e o cliente continua sendo o Seu Abreu. 🙌\n\nSó falta saber: como o criado-mudo chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz? 🚚",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, não precisa buscar nem entregar. Eu busco e levo pra eles depois. Pode fechar aí que tá bom.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei, não precisa buscar nem entregar. Eu busco e…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, você busca e leva pra eles depois, então não precisa perguntar isso de novo. 😄\n\nSó confirmando a última coisa: na volta, você entrega ou o cliente vem pegar? 🚚",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já entendi, Adriano. Eu busco e levo pra eles depois, pode fechar. Sem pressa, pode fechar aí mesmo.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já entendi, Adriano. Eu busco e levo pra eles depois,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, você busca e leva pra eles depois. Mas ainda falta uma coisa: na volta, você entrega ou o cliente vem pegar? 🚚",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já entendi, pode fechar sim. Eu busco e levo pra eles depois. Valor a gente vê aí, você que manda nas contas.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já entendi, pode fechar sim. Eu busco e levo pra…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, você busca e leva. Só falta uma coisa: na volta, você entrega ou o cliente vem pegar? 🚚",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já entendi, pode deixar assim. Eu busco e levo pra eles. Pode seguir aí com o valor que o sistema calcular.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já entendi, pode deixar assim. Eu busco e levo pra…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, você busca e leva, então o cliente não precisa vir até aqui. 🚚\n\nSó falta uma coisa: na volta, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei duas vezes: eu busco e levo pra eles. Não precisa perguntar de novo. Pode seguir com o valor.\n   {entendido: Eu busco e levo o móvel pro cliente depois; não precisa perguntar de novo. Pode seguir com o valor. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei duas vezes: eu busco e levo pra eles.…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, você busca e leva, pode deixar. 😄\n\nSó pra eu fechar certinho: depois que você levar, o cliente fica com a peça ou vem pegar aqui?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei duas vezes, pode ignorar isso. Eu busco e levo pra eles, o cliente fica com a mesa. Pode seguir com o valor que o sistema calcular. Ah, a mesa tá boa, só vou lixar e pintar de azul marinho, tamanho médio, sem conserto nenhum, só por fora. Pincel. Acho que leva uns 3 a 5 dias.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei duas vezes, pode ignorar isso. Eu busco e…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei duas vezes, mano, você tá perguntando de novo. Eu busco e levo, o cliente fica com a mesa. Pode seguir com o valor, por favor. E aí, vc tá bem?\n   {entendido: Eu busco e levo a peça depois; o cliente não precisa vir buscar nem entregar. Pode seguir com o valor. Também pergunta: tudo bem com você? · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei duas vezes, mano, você tá perguntando de novo.…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Faz sentido perguntar 🙂 Se você precisar buscar ou entregar, o transporte é um custo que entra no orçamento. Se o cliente traz e busca, não entra.\n\nComo o criado-mudo chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei umas três vezes: eu busco e levo pra eles, o cliente fica com a mesa. Não precisa mais perguntar isso. Pode seguir com o valor, por favor. E aí, vc tá bem? Ah, a cor vai ser azul marinho, a mesa tá boa, só lixar e pintar, tamanho médio, sem conserto. Pincel. Acho que leva de 3 a 5 dias.\n   {entendido: Ele busca e leva o móvel (criado-mudo) de volta ao cliente; o cliente não vem buscar nem entregar. Não perguntar mais sobre transporte; seguir com o valor. Mensagem social: \"E aí, vc tá bem?\". Dados: a cor é azul marinho; a peça está boa, só lixar e pintar, tamanho médio, sem conserto; aplicação com pincel; prazo estimado de 3 a 5 dias. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei umas três vezes: eu busco e levo pra…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, Adriano. 🙂 Antes eu tinha anotado o cliente como Seu Abreu, mas agora apareceu Cliente. Qual dos dois está certo?",
+        "buttons": [
+          {
+            "text": "Vale o novo",
+            "data": "fact:new"
+          },
+          {
+            "text": "Fica como estava",
+            "data": "fact:old"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Vale o novo]"
+      },
+      {
+        "who": "bot",
+        "text": "Atualizado: cliente: Cliente. O valor anterior ficou guardado no histórico. 📝",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre o criado-mudo de Cliente. Dá uma conferida:\n\n• móvel: criado-mudo (novo, azul)\n• trabalho: pintura\n• cliente: Cliente\n• só por fora\n• estado: bom\n• sem consertos\n• observações: cor: azul marinho; também citado: Dona Isa; tempo que ele estima: 3 a 5 dias\n• tamanho: medio\n• aplicação: pincel\n• prazo: Ela não precisa buscar nem entregar, eu que busco e levo pra eles depois. Acho que fica entre 3 e 5 dias, a cor é azul marinho. Ah, e aquele negócio do cliente ali, pode deixar o Seu Abreu mesmo\n• buscar\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Quero corrigir]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, o que você quer corrigir? Pode falar do jeito que preferir, por exemplo: \"a altura é 1,90\" ou \"vai ser decapê\". 🛠️",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Corrige o seguinte: o cliente é Seu Abreu e Dona Isa, não só Cliente. E no prazo tira essa parte da entrega, eu busco e levo, o cliente fica com a mesa. O resto tá certo: criado-mudo, pintura, só por fora, estado bom, sem conserto, azul marinho, tamanho médio, pincel, uns 3 a 5 dias.\n   {entendido: corrigir: o cliente é Seu Abreu e Dona Isa (não só Cliente). Corrigir o prazo: remover a parte sobre entrega; ele busca e leva o criado-mudo, o cliente fica com a mesa. O resto está certo: criado-mudo (novo, azul), pintura, só por fora, estado bom, sem consertos, cor azul marinho, tamanho médio, aplicação pincel, prazo de 3 a 5 dias. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Corrige o seguinte: o cliente é Seu Abreu e Dona…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: cliente é Seu Abreu (antes estava Cliente). Guardei o histórico. ✅",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: móvel criado-mudo (novo, azul), do jeito que estava. Guardei o histórico. 🪵",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre o criado-mudo do Seu Abreu. Dá uma conferida:\n\n• móvel: criado-mudo (novo, azul)\n• trabalho: pintura\n• cliente: Seu Abreu\n• só por fora\n• estado: bom\n• sem consertos\n• observações: cor: azul, azul marinho; também citado: Dona Isa, Seu Abreu; tempo que ele estima: 3 a 5 dias\n• tamanho: medio\n• aplicação: pincel\n• prazo: Ela não precisa buscar nem entregar, eu que busco e levo pra eles depois. Acho que fica entre 3 e 5 dias, a cor é azul marinho. Ah, e aquele negócio do cliente ali, pode deixar o Seu Abreu mesmo\n• buscar\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Pode calcular]"
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas do criado-mudo do Seu Abreu!\n\n💰 Minha sugestão é cobrar R$ 484,00.\n\n⚠️ Menos que R$ 390,00 você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 211,00 de material.\n⏱️ Dá umas 8 horas de trabalho.\n🚚 O frete não está na conta. Se for cobrar, é só acrescentar.\n📏 Fiz com a medida aproximada, então pode variar um pouco.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:15f91163-516a-4bda-8953-8cb1f5769d42"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:15f91163-516a-4bda-8953-8cb1f5769d42"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:15f91163-516a-4bda-8953-8cb1f5769d42"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅ Valor final: R$ 484,00 📄 Te mandei o PDF do orçamento pra você encaminhar pro Seu Abreu.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quando o cliente responder, me avisa aqui: 👇",
+        "buttons": [
+          {
+            "text": "👍 Cliente aceitou",
+            "data": "outcome:accept:15f91163-516a-4bda-8953-8cb1f5769d42"
+          },
+          {
+            "text": "👎 Cliente recusou",
+            "data": "outcome:reject:15f91163-516a-4bda-8953-8cb1f5769d42"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Cliente aceitou]"
+      },
+      {
+        "who": "bot",
+        "text": "Boa! ✅ Anotei que o orçamento do criado-mudo do Seu Abreu foi aceito por R$ 484,00.\n\nEntrada recomendada: R$ 211,00. 💰",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "1 serviço (casal = 1 cliente)"
+      },
+      {
+        "ok": true,
+        "name": "cor azul marinho anotada"
+      },
+      {
+        "ok": true,
+        "name": "tempo estimado anotado"
+      },
+      {
+        "ok": true,
+        "name": "segundo dono não se perdeu"
+      },
+      {
+        "ok": true,
+        "name": "porte médio usado"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 1,
+        "naturalidade": 1,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 1,
+        "eficiencia": 1,
+        "conclusao": 1
+      },
+      "problemas": [
+        {
+          "turno": 7,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Inventou conflito de cliente ('Próprio Adriano') que ele não disse, e pediu confirmação desnecessária."
+        },
+        {
+          "turno": 10,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou como a peça chega e volta, sendo que ele já disse no turno 5 que não precisa buscar nem entregar e que ele leva."
+        },
+        {
+          "turno": 13,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Confirmou a informação de busca e entrega e logo perguntou de novo a mesma coisa."
+        },
+        {
+          "turno": 16,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Repetiu a pergunta sobre busca e entrega com outra frase (turnos 16, 19, 22, 25, 28, 31, 34), mesmo ele reclamando várias vezes."
+        },
+        {
+          "turno": 16,
+          "gravidade": "alta",
+          "classe": "travou",
+          "descricao": "Ignorou os pedidos repetidos de fechar o orçamento e ficou preso num loop sem avançar."
+        },
+        {
+          "turno": 34,
+          "gravidade": "media",
+          "classe": "nao_entendeu",
+          "descricao": "Tratou a pergunta social 'vc tá bem?' como dúvida sobre o transporte, sem responder ao cumprimento, e repetiu a mesma pergunta."
+        },
+        {
+          "turno": 37,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Inventou de novo uma troca de cliente ('Cliente') a partir de nada."
+        },
+        {
+          "turno": 39,
+          "gravidade": "alta",
+          "classe": "perdeu_informacao",
+          "descricao": "Trocou o cliente Seu Abreu por 'Cliente' após um botão induzido, perdendo um dado correto."
+        },
+        {
+          "turno": 40,
+          "gravidade": "alta",
+          "classe": "travou",
+          "descricao": "Terminou com 'Pronto' sem mostrar o valor final nem pedir concordância, objetivo não atingido."
+        },
+        {
+          "turno": 4,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "Tom correto, mas ele já tinha dito tudo e o bot ficou repetindo 'Só falta' em vez de fechar."
+        }
+      ],
+      "resumo": "O bot entrou em loop perguntando a mesma coisa sobre busca e entrega mais de sete vezes, apesar de Adriano responder e pedir para fechar. Inventou conflitos de cliente duas vezes e acabou trocando Seu Abreu por 'Cliente'. Nunca apresentou o valor final nem pediu a concordância, então o objetivo não foi cumprido."
+    },
+    "ms": 103059
+  },
+  {
+    "id": "licele-cama",
+    "title": "Cama queen da Dona Licele (medida do colchão é só referência)",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, tudo bem? Queria registrar um serviço aqui, é um móvel da dona Licele. Vou te falar por partes, tá?\n   {entendido: E aí, tudo bem? Quero registrar um serviço, é um móvel da dona Licele. Vou falar por partes. · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, tudo bem? Queria registrar um serviço aqui, é…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Claro, bora nessa! 🪵 Qual é o móvel da Dona Licele?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, é uma cama queen. Vou lixar e envernizar ela inteira, cabeceira e peseira. Tem uns riscos, então precisa lixar bem antes. Eu uso pincel. Não precisa de frete, eu mesmo levo.\n   {entendido: (igual) · rota: pending_answer/answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, é uma cama queen. Vou lixar e envernizar ela…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, serviço novo anotado:\n• móvel: cama\n• trabalho: verniz\n• cliente: Dona Licele\n• estado: bom\n\nVou te perguntando o resto aos pouquinhos, tá? Pode responder do jeito que for mais fácil, áudio ou texto.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: cama queen, lixar e envernizar inteira, com cabeceira e peseira. 🪵 Você vai trabalhar a cama toda (cabeceira, peseira e laterais) ou só a cabeceira?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Toda a cama, cabeceira e peseira. Os riscos são só na parte de cima mesmo, mas quero lixar bem a peça inteira pra ficar uniforme.\n   {entendido: Toda a cama (cabeceira, peseira e laterais). Os riscos são só na parte de cima, mas quer lixar a peça inteira para ficar uniforme. · rota: pending_answer/service_scope_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Toda a cama, cabeceira e peseira. Os riscos são só…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, então é a cama inteira, com cabeceira, peseira e laterais. Lixar tudo pra ficar uniforme faz sentido. 🪵\n\nEssa cama é qual destas: cama de solteiro, cama de casal padrão, cama queen ou cama king?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, é queen sim, eu já falei. E não tem lateral não, é só cabeceira e peseira. Lixa tudo pra ficar uniforme, mas é isso.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, é queen sim, eu já falei. E não tem…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Não entendi bem o que mudar. Pode me dizer de outro jeito, tipo: \"a altura é 1,90\" ou \"a cliente é a dona Ana\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, entendi, errei eu. É cama queen, sem lateral, só cabeceira e peseira. Lixar tudo pra ficar uniforme, e envernizar. Pode seguir.\n   {entendido: corrigir: a cama é queen, sem laterais, só cabeceira e peseira. Lixar a peça inteira pra ficar uniforme e envernizar. Pode seguir. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, entendi, errei eu. É cama queen, sem lateral, só…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: tamanho grande, então.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: móvel cama (do jeito que já estava). Guardei o histórico. 🪵",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 376,00 e R$ 654,00 (sem contar frete). Com o resto das respostas eu fecho o valor.\n\nFalta pouquinho. Tem algum conserto pra fazer antes? Uma perna bamba, uma lasca, uma tábua solta. Se não tiver, só \"não\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Não, não tem conserto nenhum. Só os riscos mesmo, que é pra lixar bem antes. A cama tá firme.\n   {entendido: não tem conserto; só os riscos, que devem ser lixados bem antes. A cama está firme. · rota: pending_answer/job_field_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, não tem conserto nenhum. Só os riscos mesmo, que…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Show! Anotei: sem consertos. 👌\nAnotei também: móvel: cama (riscos para lixar, cama firme, sem conserto).\n\nEssa cama é qual destes: cama de solteiro, cama de casal padrão, cama queen ou cama king?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei que é queen, Dona Licele... quer dizer, é cama queen sim. Sem lateral, só cabeceira e peseira. Pode anotar e seguir.\n   {entendido: cama queen; sem lateral, só cabeceira e peseira · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei que é queen, Dona Licele... quer dizer, é…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: cama queen, sem lateral, só cabeceira e peseira. 🛏️\n\nQueen normalmente é o colchão de 158 × 198 cm, mas a estrutura da cama costuma ser um pouco maior.\n\nVocê consegue me passar a largura e o comprimento da estrutura, por fora? 📏\n\nPode ser aproximado, em centímetros ou metros.\n\nSe não tiver como medir agora, tudo bem: uso a medida do colchão como referência e deixo isso anotado.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Não sei de cabeça não, tô na oficina e não medi. Acho que uns 170 de largura e uns 210 de comprimento, mas pode usar o colchão mesmo, tudo bem.\n   {entendido: Não sei de cabeça, não medi (estou na oficina). Acho que a estrutura tem uns 170 cm de largura e uns 210 cm de comprimento, mas pode usar a medida do colchão mesmo, tudo bem. · rota: pending_answer/item_dimensions_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não sei de cabeça não, tô na oficina e não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: 1,7 × 2,1 m. 📏\n\nQuase lá! Você vai aplicar o verniz com pincel, rolo ou pistola?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Pincel. Não precisa de frete, a Dona Licele vem buscar na oficina. Pode fechar o valor aí.\n   {entendido: pincel; sem frete, a cliente Dona Licele vem buscar na oficina; pode fechar o valor · rota: pending_answer/application_method_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Pincel. Não precisa de frete, a Dona Licele vem buscar…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: pincel. ✅\n\nÚltima coisinha: o transporte. Você vai precisar buscar a cama, ou o cliente traz? E depois, você entrega ou ela vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ela vem buscar na oficina, não precisa de frete nenhum. Pode fechar o valor aí.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ela vem buscar na oficina, não precisa de frete nenhum.…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: a Dona Licele vem buscar na oficina quando ficar pronto. 🚚 E pra chegar até você: ela traz a cama ou você precisa buscar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, ela vem buscar na oficina, não precisa de frete. Pode fechar o valor. A cama já tá aqui comigo, ela trouxe e deixou.\n   {entendido: Ela já trouxe a cama e deixou na oficina; não precisa de frete para chegar até mim. A Dona Licele vem buscar na oficina quando ficar pronto. Pode fechar o valor. · rota: pending_answer/logistics_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei, ela vem buscar na oficina, não precisa de…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, sem frete. 👍",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cama da Dona Licele. Dá uma conferida:\n\n• móvel: cama (riscos para lixar, cama firme, sem conserto)\n• trabalho: verniz\n• cliente: Dona Licele\n• estado: bom\n• trabalho na peça inteira\n• tamanho: grande\n• sem consertos\n• medidas: largura 1,7 m, fundura 2,1 m\n• aplicação: pincel\n• sem frete\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Pode calcular]"
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas da cama da Dona Licele!\n\n💰 Minha sugestão é cobrar R$ 792,00.\n\n⚠️ Menos que R$ 654,00 você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 250,00 de material.\n⏱️ Dá umas 12 horas de trabalho.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:5fa5ce04-a81f-4b88-9ac0-fd2579d8a213"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:5fa5ce04-a81f-4b88-9ac0-fd2579d8a213"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:5fa5ce04-a81f-4b88-9ac0-fd2579d8a213"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅ Valor final: R$ 792,00.\n\nSó não consegui gerar o PDF agora. 😕 Já avisei o administrador, e o valor ficou guardado.",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "1 serviço"
+      },
+      {
+        "ok": true,
+        "name": "cama"
+      },
+      {
+        "ok": true,
+        "name": "Dona Licele"
+      },
+      {
+        "ok": true,
+        "name": "verniz"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 2,
+        "naturalidade": 2,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 2,
+        "eficiencia": 2,
+        "conclusao": 4
+      },
+      "problemas": [
+        {
+          "turno": 6,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Resumo inicial diz 'estado: bom' sem que ele tenha dito; não registra queen, cabeceira e peseira, riscos."
+        },
+        {
+          "turno": 10,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Incluiu 'laterais' que o Adriano nunca falou e ainda perguntou sobre elas no turno 7."
+        },
+        {
+          "turno": 10,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou o tamanho da cama (queen) que ele já tinha dito duas vezes (turnos 4 e 8)."
+        },
+        {
+          "turno": 13,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Não entendeu a correção sobre lateral e queen; respondeu com exemplo irrelevante ('altura é 1,90')."
+        },
+        {
+          "turno": 16,
+          "gravidade": "media",
+          "classe": "nao_entendeu",
+          "descricao": "Respondeu 'tamanho grande' e 'Corrigido: móvel cama', confuso e sem mostrar que removeu laterais."
+        },
+        {
+          "turno": 21,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Repetiu a pergunta do tamanho da cama pela terceira vez, mesmo já respondida."
+        },
+        {
+          "turno": 24,
+          "gravidade": "media",
+          "classe": "texto_longo",
+          "descricao": "Mensagem longa com medidas de colchão e explicação; pergunta de medida com várias instruções."
+        },
+        {
+          "turno": 27,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Registrou 1,7 × 2,1 m como medida firme, mas ele disse 'acho' e preferiu usar o colchão; não deixou a referência anotada."
+        },
+        {
+          "turno": 30,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou transporte/frete após ele já ter dito que não precisa de frete (turnos 4 e 28), e ignorou o 'pode fechar o valor'."
+        },
+        {
+          "turno": 33,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Insistiu perguntando como a cama chegou, repetindo a mesma questão de frete."
+        },
+        {
+          "turno": 37,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "Resumo em lista seca, com 'fundura', 'estado: bom' inventado e entradas duplicadas; pouco natural."
+        },
+        {
+          "turno": 39,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "Valor R$ 792 fica acima da faixa estimada de R$ 376–654 sem explicação, e 'prejuízo' em tom seco."
+        },
+        {
+          "turno": 41,
+          "gravidade": "baixa",
+          "classe": "travou",
+          "descricao": "PDF não gerado; apenas avisou o administrador, objetivo parcial."
+        }
+      ],
+      "resumo": "O Adriano chegou ao valor e concordou (R$ 792), mas o bot repetiu perguntas já respondidas (tamanho três vezes, frete duas), inventou 'laterais' e 'estado: bom', não entendeu a correção e tratou a medida 'acho que' como firme. O ritmo foi lento e irritou o usuário. Deve ser mais atento ao que já foi dito."
+    },
+    "ms": 81911
+  },
+  {
+    "id": "preco-material-solvente",
+    "title": "Preço de material na hora do orçamento: 'duas latas por 150' e 'não uso solvente'",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, tudo certo? Peguei uma mesa da dona Ana pra envernizar. Ela tá boa, só precisa passar verniz por fora, sem conserto nenhum. O tampo é 1 metro por 60 cm, e ela tem 75 de altura. Vou usar pincel e não tem frete. Dá pra você me ajudar a fazer o orçamento?\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, tudo certo? Peguei uma mesa da dona Ana…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, serviço novo anotado:\n• móvel: mesa (sem conserto, verniz por fora, sem frete)\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 0,75 m\n\nAgora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Boa, Adriano! Anotei a mesa da dona Ana pra envernizar, por fora, sem conserto e sem frete. 🎨\n\nEssa mesa é qual destes tipos: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha? 🪵",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "É uma mesa de cozinha, retangular, com tampo de 1 metro por 60 cm. Tem 75 de altura, como já falei.\n   {entendido: mesa de cozinha, retangular; tampo de 1 m por 60 cm; altura 75 cm (0,75 m) · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei também: móvel: mesa (sem conserto, verniz por fora, sem frete, cozinha, retangular).\n\nOpa, essa eu não entendi bem. O estado da peça muda o tempo de preparo: uma peça bem judiada leva bem mais horas.\n\nPor exemplo: \"está bom\", \"precisa de reparos\" ou \"está bem estragado\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, tá boa mesmo, sem nada quebrado, só o verniz gasto por fora. Pode colocar como 'está bom'.\n   {entendido: estado: está bom; sem nada quebrado, só o verniz gasto por fora · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Certo, estado: danificado. 👍\n\nVocê vai trabalhar só no tampo ou na mesa de cozinha inteira?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Não, é a mesa inteira, tampo e pés, tudo por fora. O tampo é 1 metro por 60, a altura 75. Só o verniz por fora mesmo, sem mexer em mais nada. Ah, e o estado tá bom, não danificado, só o verniz gasto.\n   {entendido: corrigir: o estado é \"está bom\", não danificado; só o verniz está gasto por fora. Resposta: é a mesa inteira, tampo e pés, tudo por fora, só verniz, sem mexer em mais nada. Tampo 1 metro por 60, altura 75. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, é a mesa inteira, tampo e pés, tudo por…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ajustei: medidas: altura 1 m (antes: medidas: altura 0,75 m). Histórico guardado. 📏",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ajustei: móvel: mesa (antes: móvel: mesa (sem conserto, verniz por fora, sem frete, cozinha, retangular)). Histórico guardado. 🪵",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Falta só mais uma coisa: o transporte. O cliente traz a mesa aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar? 🚚",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Não, não precisa buscar nem entregar, a dona Ana traz a mesa aqui e ela vem pegar depois de pronta. Sem frete mesmo. Ah, e tem mais uma coisa: o estado é bom, não danificado, só o verniz gasto. Já falei isso, mas quero deixar certo.\n   {entendido: Transporte: a cliente (dona Ana) traz a mesa até a oficina e vem buscar depois de pronta; sem frete. Estado: bom, não danificado, só o verniz gasto por fora. · rota: pending_answer/logistics_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, não precisa buscar nem entregar, a dona Ana traz…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, sem frete. 👍\n\nEssa mesa é qual destas: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Isso, mesa de cozinha retangular, já falei. Tampo 1 metro por 60, altura 75. Sem frete, a dona Ana traz e pega aqui. O estado é bom, só o verniz gasto por fora, sem conserto. Verniz eu já comprei, duas latas de 900 ml, deu 150 reais no total. Solvente eu não uso nesse. Pincel, tá certo.\n   {entendido: mesa de cozinha retangular; tampo 1 metro por 60; corrigir: altura 75 (não 1 m); sem frete, a dona Ana traz a mesa e pega aqui depois de pronta; corrigir: estado bom, não danificado, só o verniz gasto por fora, sem conserto; verniz já comprado: 2 latas de 900 ml, gasto total de 150 reais; não usa solvente nesse; aplicação com pincel, confirmado. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Isso, mesa de cozinha retangular, já falei. Tampo 1 metro…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ótimo, você não precisa comprar agora. Vou incluir o valor do verniz usado no orçamento, porque ele tem custo de reposição.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Isso, já falei: mesa de cozinha retangular. Tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz já comprei, duas latas de 900 ml, deu 150 reais. Solvente não uso nessa. Pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento.\n   {entendido: mesa de cozinha retangular; tampo 1 m por 60 cm, altura 75 cm; estado bom, só o verniz gasto por fora, sem conserto; verniz já comprado, duas latas de 900 ml, total R$ 150,00; sem solvente; aplicação com pincel; sem frete, a dona Ana traz a mesa e pega aqui depois de pronta; pode seguir com o orçamento · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Isso, já falei: mesa de cozinha retangular. Tampo 1 metro…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Boa! Então você não precisa comprar mais verniz agora. 🎨 Vou incluir no orçamento o valor das duas latas, porque ele tem custo de reposição.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, mesa de cozinha retangular. Tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz eu já comprei, duas latas de 900 ml, deu 150 reais. Solvente não uso nessa. Pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento.\n   {entendido: mesa de cozinha retangular; tampo 1 metro por 60, altura 75; estado bom, só o verniz gasto por fora, sem conserto; verniz já comprado, duas latas de 900 ml, total 150 reais; sem solvente; aplicação com pincel; sem frete, a dona Ana traz e pega aqui depois de pronta; pode seguir com o orçamento · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei, mesa de cozinha retangular. Tampo 1 metro por…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Boa, então você não precisa comprar verniz agora. 🎨 Vou incluir no orçamento o valor das duas latas, porque ele tem custo de reposição.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Rapaz, eu já falei isso umas três vezes! É mesa de cozinha retangular. Tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz eu já comprei, duas latas de 900 ml, deu 150 reais no total. Solvente não uso nessa, só pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento, por favor.\n   {entendido: mesa de cozinha retangular; tampo 1 metro por 60, altura 75; estado bom, só o verniz gasto por fora, sem conserto; verniz já comprado, duas latas de 900 ml, total 150 reais; sem solvente, só pincel; sem frete, a dona Ana traz e pega aqui depois de pronta; pode seguir com o orçamento. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Rapaz, eu já falei isso umas três vezes! É mesa…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ótimo, você não precisa comprar agora. Vou incluir o valor do verniz usado no orçamento, porque ele tem custo de reposição.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: mesa de cozinha retangular. Pode seguir?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Pô, desculpa, é isso mesmo: mesa de cozinha retangular, tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz já comprei, duas latas de 900 ml, deu 150 reais no total. Solvente não uso nessa, só pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento.\n   {entendido: Sim, confirmo: mesa de cozinha retangular, tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz já comprado: duas latas de 900 ml, total 150 reais. Sem solvente, só pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Pô, desculpa, é isso mesmo: mesa de cozinha retangular, tampo…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ótimo, então você não precisa comprar verniz agora. 🎨 Vou incluir no orçamento o valor das duas latas, porque ele tem custo de reposição.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "mesa de cozinha\n   {entendido: (igual) · rota: active_goal/collecting_continue}"
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: mesa de cozinha. 🪵\n\nVocê vai trabalhar só no tampo ou na mesa de cozinha inteira?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Na mesa inteira, por fora. Tampo e pés, só o verniz. Sem conserto nem nada.\n   {entendido: Mesa inteira, por fora: tampo e pés, só o verniz. Sem conserto. · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: a peça inteira.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: danificado\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Opa, quase! Tá errado: a altura é 75 cm, não 1 m. O tampo é 1 metro por 60 cm. E a mesa tá em bom estado, só o verniz gasto por fora. Fora isso tá certo, pode calcular.\n   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m); o tampo tem 1 metro por 60 cm; o estado da mesa é bom, só o verniz gasto por fora (não danificado); o resto está certo; pode calcular. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Opa, quase! Tá errado: a altura é 75 cm, não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: móvel: mesa (antes: móvel: mesa). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: danificado\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, não, tá errado ainda! A altura é 75 cm, não 1 metro. O tampo é 1 metro por 60 cm. E a mesa tá em bom estado, só o verniz gasto por fora, sem conserto. Fora isso tá certo. Pode corrigir aí e me mostra de novo.\n   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m). O tampo tem 1 metro por 60 cm. A mesa está em bom estado, só o verniz gasto por fora, sem conserto. O resto está certo. Mostrar o resumo corrigido de novo. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, não, tá errado ainda! A altura é 75 cm,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: móvel: mesa (novo) (antes: móvel: mesa). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: estado: bom (antes: estado: danificado). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa (novo)\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: bom\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ainda tá errado a altura, mano! Tá 1 metro, tem que ser 75 cm. O tampo é 1 metro por 60 cm, e a mesa de cozinha tá boa, só o verniz gasto por fora. Corrige a altura pra 75 cm e me mostra de novo. Pincel, sem frete, sem conserto, já tenho o verniz, duas latas de 900 ml que comprei por 150 reais.\n   {entendido: corrigir: a altura é 75 cm (não 1 m). O tampo é 1 metro por 60 cm. A mesa de cozinha está em bom estado, só o verniz gasto por fora, sem conserto. Trabalho: verniz, aplicação com pincel, sem frete, trabalho na peça inteira. Já tem o verniz: duas latas de 900 ml, compradas por R$ 150. Mostrar os dados corrigidos de novo. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ainda tá errado a altura, mano! Tá 1 metro, tem…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa (novo)\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: bom\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ainda não corrigiu a altura, cara! Tá com 1 metro, tem que ser 75 cm. O tampo é 1 metro por 60 cm, a mesa de cozinha tá boa, só o verniz gasto por fora. Muda a altura pra 75 cm, aí você me mostra de novo. Pincel, sem frete, sem conserto, já tenho o verniz: duas latas de 900 ml que comprei por 150 reais no total.\n   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m). O tampo é 1 m por 60 cm. A mesa de cozinha está em bom estado, só o verniz gasto por fora, sem conserto. Aplicação: pincel. Sem frete. Já tem o verniz: duas latas de 900 ml, compradas por 150 reais no total. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ainda não corrigiu a altura, cara! Tá com 1 metro,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: móvel: mesa (antes: móvel: mesa (novo)). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: bom\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ainda tá 1 metro, cara! A altura é 75 cm. O tampo é 1 metro por 60 cm, a mesa tá boa, só o verniz gasto por fora, sem conserto. Pincel, sem frete, já tenho o verniz, duas latas de 900 ml por 150 reais no total. Muda a altura pra 75 cm e me mostra de novo.\n   {entendido: corrigir: a altura é 75 cm (não 1 m). O tampo é 1 metro por 60 cm. A mesa está boa, só o verniz gasto por fora, sem conserto. Aplicação: pincel. Sem frete. Já tem o verniz: duas latas de 900 ml, por 150 reais no total. Mostrar o resumo de novo com a altura 75 cm. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ainda tá 1 metro, cara! A altura é 75 cm.…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: móvel: mesa (novo) (antes: móvel: mesa). Guardei o histórico. 👍",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa (novo)\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: bom\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Cara, o sistema continua mostrando altura 1 m! Não é 1 metro, é 75 cm. O tampo é 1 metro por 60 cm, a mesa tá boa, só o verniz gasto por fora, sem conserto. Pincel, sem frete, já tenho o verniz, duas latas de 900 ml por 150 reais no total. Por favor, muda a altura pra 75 cm e me mostra de novo.\n   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m). O tampo tem 1 metro por 60 cm. A mesa está boa, só o verniz está gasto por fora, sem conserto. Aplicação com pincel, sem frete. Já tem o verniz: duas latas de 900 ml, compradas por 150 reais no total. Mostrar o orçamento de novo com a altura em 75 cm. · rota: active_goal/confirm_calc_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Cara, o sistema continua mostrando altura 1 m! Não é…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:\n\n• móvel: mesa (novo)\n• trabalho: verniz\n• cliente: Dona Ana\n• aplicação: pincel\n• sem consertos\n• medidas: altura 1 m\n• estado: bom\n• sem frete\n• já tem o material\n• trabalho na peça inteira\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "ok": false,
+        "name": "verniz = R$ 75 por lata (150 ÷ 2)",
+        "detail": "{\"p\":null,\"s\":\"0.9\"}"
+      },
+      {
+        "ok": true,
+        "name": "embalagem 900 ml"
+      },
+      {
+        "ok": true,
+        "name": "solvente continua sem preço (não usa)"
+      },
+      {
+        "ok": false,
+        "name": "solvente fora deste orçamento",
+        "detail": "\"{}\""
+      },
+      {
+        "ok": false,
+        "name": "orçamento calculado"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 1,
+        "naturalidade": 1,
+        "acessibilidade": 2,
+        "uma_pergunta_por_vez": 2,
+        "sem_invencao": 1,
+        "eficiencia": 1,
+        "conclusao": 1
+      },
+      "problemas": [
+        {
+          "turno": 8,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Ele pediu 'está bom' e o bot registrou 'danificado', trocando o estado da peça."
+        },
+        {
+          "turno": 11,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Mudou a altura de 0,75 m para 1 m sem ele ter dito isso. Os 60 cm do tampo também nunca foram registrados."
+        },
+        {
+          "turno": 12,
+          "gravidade": "alta",
+          "classe": "perdeu_informacao",
+          "descricao": "O ajuste do móvel apagou os detalhes anteriores (cozinha, retangular, sem frete) e ignorou 'tampo e pés, tudo por fora'."
+        },
+        {
+          "turno": 6,
+          "gravidade": "media",
+          "classe": "nao_entendeu",
+          "descricao": "Ele já tinha dito 'mesa de cozinha, retangular' e o bot respondeu 'não entendi' sobre o estado, o que não faz sentido. A pergunta sobre o estado também só veio depois da pergunta sobre o tipo."
+        },
+        {
+          "turno": 16,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou de novo o tipo da mesa, que ele já tinha dito no turno 5. Repetiu essa mesma pergunta nos turnos 20, 24 e 28 mesmo com ele respondendo todas as vezes."
+        },
+        {
+          "turno": 19,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Entendeu errado o preço do verniz: disse 'você não precisa comprar agora' e falou em 'custo de reposição', quando ele só informou que já comprou duas latas por 150 reais."
+        },
+        {
+          "turno": 19,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Usou 'custo de reposição' e 'valor do verniz usado', jargão que confunde o Adriano."
+        },
+        {
+          "turno": 32,
+          "gravidade": "alta",
+          "classe": "travou",
+          "descricao": "Ficou em laço, sem avançar para as contas do orçamento depois de ele dar tudo diversas vezes. Ele perdeu a paciência no turno 29."
+        },
+        {
+          "turno": 14,
+          "gravidade": "media",
+          "classe": "tom",
+          "descricao": "Ele insiste em corrigir o estado e o bot ignora a correção. Também não reconhece a frustração dele nem pede desculpa."
+        }
+      ],
+      "resumo": "A conversa travou em laço: o bot repetiu a pergunta do tipo da mesa cinco vezes e ainda gravou dados errados (estado 'danificado', altura 1 m). Não registrou o preço do verniz (150 reais por duas latas) como preço, nem a informação de que não usa solvente. O orçamento não foi calculado e o Adriano acabou irritado."
+    },
+    "ms": 133797
+  },
+  {
+    "id": "pagamento-gasto",
+    "title": "Pagamento e gasto no dia a dia",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Oi, e aí! Então, a dona Maria da cristaleira pagou a entrada hoje, duzentos reais. Quero registrar isso aí pra não esquecer.\n   {entendido: Registrar pagamento de entrada da dona Maria, referente à cristaleira: 200 reais, pago hoje. · rota: global/register_payment}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Oi, e aí! Então, a dona Maria da cristaleira pagou…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano! Vou anotar: recebi R$ 200,00 da Dona Maria, referente à cristaleira da Dona Maria (S-0001). 💰\n\nTá certo? Pode responder \"sim\" ou \"não\".",
+        "buttons": [
+          {
+            "text": "Sim, pode anotar",
+            "data": "pay:confirm"
+          },
+          {
+            "text": "Não, corrigir o valor",
+            "data": "pay:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Sim, pode anotar]"
+      },
+      {
+        "who": "bot",
+        "text": "Anotado! 💰 Recebido até agora: R$ 200,00. Ainda não temos o valor fechado desse serviço.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Isso, e também gastei 90 reais em verniz numa loja hoje, quero anotar esse gasto também.\n   {entendido: Registrar gasto de R$ 90,00 em verniz numa loja hoje. · rota: global/register_expense}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Isso, e também gastei 90 reais em verniz numa loja…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Só para eu aprender direitinho, Adriano: foram quantas embalagens de verniz e qual era o tamanho de cada uma?\n\nPor exemplo: “1 lata de 900 ml” ou “2 galões de 3,6 litros”.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, foi uma lata só de 900 ml, de verniz fosco. Não lembro a marca direito, foi a loja ali do centro, se precisar eu vejo a nota depois.\n   {entendido: 1 lata de 900 ml de verniz fosco; marca não lembrada, loja do centro; nota pode ser vista depois. · rota: pending_answer/answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, foi uma lata só de 900 ml, de verniz…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Esse gasto de R$ 90,00 é para qual serviço?",
+        "buttons": [
+          {
+            "text": "A cristaleira da Dona Maria",
+            "data": "exp:job:ddacb0a1-99f4-42ee-8453-b2182f7019ce"
+          },
+          {
+            "text": "Estoque geral (sem serviço)",
+            "data": "exp:job:geral"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Estoque geral (sem serviço)]"
+      },
+      {
+        "who": "bot",
+        "text": "Anotado, Adriano: compra de verniz, R$ 90,00, para o estoque geral. 🎨\n\nTá certo? Pode responder \"sim\" ou \"não\".",
+        "buttons": [
+          {
+            "text": "Sim, pode anotar",
+            "data": "exp:confirm"
+          },
+          {
+            "text": "Não, corrigir o valor",
+            "data": "exp:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Sim, pode anotar]"
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: compra de verniz, R$ 90,00. 🎨\n\nTambém atualizei o preço de reposição desse material com o que você confirmou. Obrigado por me ensinar! 🙂\n\nIsso conta como dinheiro que saiu. O valor do material usado em cada serviço entra no orçamento separado, sem contar duas vezes.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Valeu, Adriano! Então tá: 200 da Dona Maria registrado e os 90 do verniz também. Não precisa se preocupar com a nota, pode deixar isso pra depois. Era isso que você queria anotar hoje.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Por nada, Adriano! Quando precisar, é só chamar. 😊",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "pagamento de R$ 200"
+      },
+      {
+        "ok": true,
+        "name": "gasto de R$ 90"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 4,
+        "naturalidade": 3,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 4,
+        "eficiencia": 3,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 8,
+          "gravidade": "media",
+          "classe": "pergunta_desnecessaria",
+          "descricao": "Perguntou quantidade e tamanho das embalagens antes de registrar o gasto; ele só queria anotar os 90 reais. Soa como interrogatório e atrasa. Também a justificativa \"para eu aprender\" é vaga."
+        },
+        {
+          "turno": 11,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou para qual serviço era o gasto só depois de várias perguntas; podia ter perguntado logo, e ele tinha acabado de falar da cristaleira, o que já sugeria o contexto."
+        },
+        {
+          "turno": 13,
+          "gravidade": "baixa",
+          "classe": "confirmacao_redundante",
+          "descricao": "Pediu confirmação dupla (pagamento e gasto) com botão \"Não, corrigir o valor\" mesmo quando o erro seria de outro campo; texto \"responda sim ou não\" repetitivo."
+        },
+        {
+          "turno": 15,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Mensagem longa com \"preço de reposição\" e explicação de contabilidade (\"dinheiro que saiu\", \"sem contar duas vezes\"), técnica demais para ele."
+        },
+        {
+          "turno": 5,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "\"Ainda não temos o valor fechado desse serviço\" é informação não pedida e meio burocrática."
+        },
+        {
+          "turno": 17,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Fechamento seco; não retomou que a nota ficou para depois nem resumiu o que foi registrado."
+        }
+      ],
+      "resumo": "Os dois registros ficaram corretos no banco e o objetivo foi atingido. A conversa teve perguntas demais para um gasto simples (embalagens, serviço, confirmações duplas) e textos com jargão contábil, o que quebra a naturalidade de um parceiro de oficina."
+    },
+    "ms": 31036
+  },
+  {
+    "id": "andamento-nao-andamento",
+    "title": "Andamento: 'comecei' muda; 'quando ficar pronta ela busca' não muda",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Oi, tudo bem? Então, comecei hoje a cristaleira da dona Maria. Tirei a tinta velha e comecei a lixar, ainda tá no meio. Quando ficar pronta ela vem buscar. Anota aí pra mim.\n   {entendido: (igual) · rota: global/job_progress}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Oi, tudo bem? Então, comecei hoje a cristaleira da dona…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: a cristaleira da Dona Maria está em execução. 🛠️\n\nVou marcar assim, certo?",
+        "buttons": [
+          {
+            "text": "Confirmar",
+            "data": "prog:confirm"
+          },
+          {
+            "text": "Cancelar",
+            "data": "cmd:cancel"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Confirmar]"
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, a cristaleira da Dona Maria agora está em execução. 🛠️",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Isso, pode deixar. Só queria ver uma coisa: a cristaleira ainda não tá pronta, né? Então anota só que começou e que tá lixando, e que a dona Maria vem buscar quando ficar pronta, sem marcar nada como concluído.\n   {entendido: (igual) · rota: global/job_progress}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Isso, pode deixar. Só queria ver uma coisa: a cristaleira…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Vou marcar a cristaleira da Dona Maria como concluído. Confirma?",
+        "buttons": [
+          {
+            "text": "Confirmar",
+            "data": "prog:confirm"
+          },
+          {
+            "text": "Cancelar",
+            "data": "cmd:cancel"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Cancelar]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, cancelei. Nada foi anotado. 👍\n\nQuando quiser, é só me contar outra coisa.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Isso mesmo, a cristaleira ainda não tá pronta. Ela continua em execução, lixando, e a dona Maria vem buscar quando ficar pronta. Não marquei nada como concluído, só o andamento que você falou. Pode deixar assim?\n   {entendido: (igual) · rota: global/query_status}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "A cristaleira da Dona Maria — pátina (S-0001)\nSituação: Em execução\nJá anotado: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina\nAinda falta saber: como o móvel está; o tamanho do móvel; se é só por fora ou por dentro também; se precisa de conserto",
+        "buttons": [
+          {
+            "text": "Continuar este",
+            "data": "cmd:continue"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Continuar este]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, vamos seguir! Da cristaleira da Dona Maria eu já tenho: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina. 🎨",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "E como ela está hoje? Tá em bom estado ou precisa de reparos ou tá bem estragada?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ela tá bem estragada na parte de cima, a tinta tava descascando em um monte de lugar. A estrutura tá firme, nada solto. Só tem umas duas portinhas que rangem, mas isso eu vejo depois.\n   {entendido: (igual) · rota: pending_answer/item_condition_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ela tá bem estragada na parte de cima, a tinta…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: estado danificado, com a tinta descascando em vários pontos da parte de cima. 📝\n\nE de tamanho, como ela é? Pode dar uma medida aproximada ou só \"pequeno, médio ou grande\", o que for mais fácil pra você.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, tem um detalhe que esqueci de falar: ela é grande, tem uns 2 metros de altura e uns 1,20 de largura. E se eu lembrar de mais alguma coisa, te falo depois. Por enquanto é isso.\n   {entendido: tamanho: grande; cerca de 2 metros de altura e 1,20 metro de largura; ele pode lembrar de mais detalhes depois · rota: pending_answer/item_dimensions_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, tem um detalhe que esqueci de falar: ela é…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, medidas: altura 2 m, largura 1,2 m. 👍\n\n💰 Pra você já ir tendo uma ideia: pelo que eu já tenho, deve ficar entre R$ 711,00 e R$ 1.034,00 (sem contar frete). Com o resto das respostas eu fecho o valor.\n\nA cristaleira vai ser trabalhada só por fora, ou a parte de dentro (prateleiras, gavetas) também?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Só por fora mesmo, a parte de dentro tá em ordem. As portinhas que rangem eu vejo depois, pode anotar isso também.\n   {entendido: só por fora; a parte de dentro está em ordem. Anotar também: duas portinhas que rangem (ver depois). · rota: pending_answer/service_scope_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Só por fora mesmo, a parte de dentro tá em…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, então é por dentro e por fora. 🎨",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quase lá! Você falou que ela está precisando de cuidado. O que vai precisar consertar antes do acabamento? Tipo colar, trocar tábua, passar massa. 🛠️",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Não, só por fora mesmo, a parte de dentro tá em ordem. As portinhas que rangem eu vejo depois, pode anotar. Conserto de estrutura não precisa, a estrutura tá firme, nada solto. Só tem as portinhas que rangem.\n   {entendido: corrigir: o trabalho é só por fora, a parte de dentro está em ordem. Não precisa de conserto de estrutura: a estrutura está firme, nada solto. Só tem as portinhas que rangem, para ver depois (anotar). · rota: pending_answer/job_field_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, só por fora mesmo, a parte de dentro tá…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: estado: reparos (antes era danificado). Histórico guardado. 👍",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: sem consertos. As portinhas que rangem ficam para depois, como você pediu. 🛠️",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Falta pouquinho! E pra aplicar, vai de pincel, rolo ou pistola? Se for mais de um, pode falar. 🎨",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Pincel mesmo, só pincel. Tem umas partes com detalhe, então rolo não ia pegar direito. Já comecei a lixar hoje, ainda tá no começo. Quando ficar pronta a Dona Maria vem buscar.\n   {entendido: pincel; só pincel, porque tem partes com detalhe e o rolo não pegaria direito. Já comecei a lixar hoje, ainda está no começo. Quando ficar pronta, a Dona Maria vem buscar. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Pincel mesmo, só pincel. Tem umas partes com detalhe, então…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi! Vou considerar pincel e rolo. Pra conta uso o pincel, que é o mais demorado, pra você não sair no prejuízo.\n\nÚltima coisinha 📦: o transporte: o cliente traz a cristaleira aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, e tem outra coisa: hoje eu comecei a lixar a cristaleira, ainda tá no começo. Quando ficar pronta a Dona Maria vem buscar. Quanto ao transporte, ela traz aí no meu espaço, não precisa buscar. E na entrega, ela vem pegar mesmo.\n   {entendido: Transporte: a Dona Maria traz a cristaleira até a oficina, não precisa buscar. Entrega: a Dona Maria vem pegar. Também: hoje comecei a lixar a cristaleira, ainda está no começo. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, e tem outra coisa: hoje eu comecei a lixar…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, anotei: a Dona Maria traz a cristaleira aqui e também vem buscar quando ficar pronta, então sem frete. 🚚",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cristaleira da Dona Maria. Dá uma conferida:\n\n• móvel: cristaleira\n• cliente: Dona Maria\n• trabalho: pátina\n• estado: reparos\n• medidas: altura 2 m, largura 1,2 m\n• por dentro e por fora\n• sem consertos\n• aplicação: pincel\n• sem frete\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Pode calcular]"
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas da cristaleira da Dona Maria!\n\n💰 Minha sugestão é cobrar R$ 1.752,00.\n\n⚠️ Menos que R$ 1.430,00 você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 445,00 de material.\n⏱️ Dá umas 27 horas de trabalho.\n📏 Fiz com a medida aproximada, então pode variar um pouco.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:fcabcd04-d83d-4f40-8f31-879b082fbd65"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:fcabcd04-d83d-4f40-8f31-879b082fbd65"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:fcabcd04-d83d-4f40-8f31-879b082fbd65"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅\n\n💰 Valor final: R$ 1.752,00\n\n📄 Te mandei o PDF do orçamento pra você encaminhar pra Dona Maria.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quando a Dona Maria responder, me avisa aqui: 👇",
+        "buttons": [
+          {
+            "text": "👍 Cliente aceitou",
+            "data": "outcome:accept:fcabcd04-d83d-4f40-8f31-879b082fbd65"
+          },
+          {
+            "text": "👎 Cliente recusou",
+            "data": "outcome:reject:fcabcd04-d83d-4f40-8f31-879b082fbd65"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Opa, valeu! Só uma coisa: a Dona Maria ainda não respondeu nada, ela só vai ver o orçamento depois que eu encaminhar. Quando ela responder eu te aviso por aqui, pode deixar.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Que bom que ajudou! Quando a Dona Maria responder, é só me avisar por aqui. 😊",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Beleza, valeu! Então fica anotado: a Dona Maria ainda não respondeu, e eu aviso aqui quando ela responder. Só mais uma coisa: hoje comecei a lixar a cristaleira, ainda tá no começo, então ela não tá pronta ainda, tá?\n   {entendido: (igual) · rota: global/job_progress}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Beleza, valeu! Então fica anotado: a Dona Maria ainda não…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Qual deles? 🤔",
+        "buttons": [
+          {
+            "text": "A cristaleira da Dona Maria",
+            "data": "job:open:9d64aec7-3927-456e-97a6-f470c9378a91"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Isso mesmo, a cristaleira da Dona Maria. Hoje eu comecei a lixar, ainda tá no começo, então ela não tá pronta. Quando ficar pronta ela vem buscar. Pode anotar aí.\n   {entendido: (igual) · rota: global/job_progress}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Isso mesmo, a cristaleira da Dona Maria. Hoje eu comecei…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado! Vou marcar a cristaleira da Dona Maria como em andamento, já que você começou a lixar hoje. 🪵\n\nConfirma pra mim?",
+        "buttons": [
+          {
+            "text": "Confirmar",
+            "data": "prog:confirm"
+          },
+          {
+            "text": "Cancelar",
+            "data": "cmd:cancel"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Confirmar]"
+      },
+      {
+        "who": "bot",
+        "text": "Hmm, agora não dá pra mudar a cristaleira da Dona Maria direto pra esse estado, porque ela já está em execução. 🪵",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "serviço em execução (não concluído)"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 1,
+        "naturalidade": 2,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 1,
+        "eficiencia": 1,
+        "conclusao": 1
+      },
+      "problemas": [
+        {
+          "turno": 8,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Adriano pediu para anotar só que começou, que está lixando e que a Dona Maria busca, sem marcar concluído. O bot propôs marcar como concluído, o oposto do pedido."
+        },
+        {
+          "turno": 24,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Ele disse 'só por fora' e o bot anotou 'por dentro e por fora', invertendo o fato. Isso afeta o orçamento e entrou no resumo final."
+        },
+        {
+          "turno": 28,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Mudou o estado de 'danificado' para 'reparos' sem ele pedir, tratando como correção. Ele falava de conserto de estrutura, não do estado."
+        },
+        {
+          "turno": 25,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Repetiu a pergunta sobre conserto e por fora/dentro, que ele já tinha respondido, e ignorou o 'só por fora'."
+        },
+        {
+          "turno": 33,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Ele disse 'só pincel' e o bot anotou 'pincel e rolo', contrariando o que foi dito."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Após o cancelamento, a resposta foi um cartão de serviço com 'Ainda falta saber' e o botão 'Continuar este'. Não respondeu à dúvida dele e reabriu o questionário sobre algo já em execução."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Não guardou que a Dona Maria vem buscar quando ficar pronta como observação. Também registrou o trabalho como 'pátina', sem ele ter dito isso."
+        },
+        {
+          "turno": 29,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Ele pediu para anotar as portinhas que rangem. O bot disse 'sem consertos' e deixou para depois, mas esse detalhe não aparece no resumo final."
+        },
+        {
+          "turno": 21,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "Deu faixa de preço antes de fechar as respostas, com dados errados, o que confunde. A mensagem final também ficou truncada, com 'F'."
+        },
+        {
+          "turno": 37,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "O resumo final traz dados errados (por dentro e por fora, estado reparos, pincel) e o orçamento de R$ 1.752 sai desses dados. O andamento 'lixando' não foi registrado."
+        }
+      ],
+      "resumo": "O bot errou o andamento: propôs 'concluído' quando ele pediu só 'começou/lixando'. Depois inverteu fatos que ele disse claramente (por fora, só pincel, estado) e repetiu perguntas já respondidas. O resumo e o orçamento saíram com dados errados e o objetivo não foi atingido."
+    },
+    "ms": 104539
+  },
+  {
+    "id": "fora-do-roteiro",
+    "title": "Fora do roteiro: oi, teste de áudio, conversa social e recomeçar",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "oi",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Oi, Adriano! Que bom ter você por aqui. 😊\n\nEu sou o assistente da adripatina. Eu anoto seus serviços, faço as contas dos orçamentos e deixo tudo organizado pra você.\n\nComo funciona:\n1. Você me conta sobre o móvel, por áudio ou escrevendo, do seu jeito.\n2. Eu faço algumas perguntas, uma de cada vez.\n3. No final, eu calculo o orçamento e preparo o PDF pra você mandar ao cliente.\n\nTambém posso anotar gastos e pagamentos que você receber.\n\nPra começar, é só me contar. Por exemplo:\n\"Peguei uma cômoda da dona Ana para fazer pátina.\"",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "oi, tudo bem? testando aqui o áudio, cê consegue me ouvir direitinho? depois te conto da cadeira do seu João",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"oi, tudo bem? testando aqui o áudio, cê consegue me…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Tá chegando direitinho! 🎧 Pode mandar áudio à vontade que eu transcrevo.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Opa, tudo bem sim! Tô por aqui. Então é isso, tá me ouvindo bem. Agora me conta da cadeira do seu João: é pra pintar, né? Quero começar essa.\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Opa, tudo bem sim! Tô por aqui. Então é isso,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei um serviço novo:\n• móvel: cadeira\n• trabalho: pintura\n• cliente: Seu Joao\n\nAgora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: cadeira do Seu João, pintura. Como ela está hoje? Tá em bom estado, precisa de uns reparos ou tá bem estragada? 🪑",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Tô bem sim, obrigado! Ela tá meio judiada, com umas pernas bambas e a pintura descascando em alguns pontos. Acho que precisa de reparo nas pernas antes de pintar. Mas no começo deixa eu pensar nisso, quero que você veja a cadeira comigo. Quer que eu comece de novo, do zero, que eu me perdi um pouco.\n   {entendido: Estado da cadeira: está meio judiada, com as pernas bambas e a pintura descascando em alguns pontos. Acha que precisa de reparo nas pernas antes de pintar. Quer pensar nisso no começo e ver a cadeira junto com o assistente. Também pediu para recomeçar do zero, porque se perdeu um pouco. · rota: pending_answer/item_condition_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Tô bem sim, obrigado! Ela tá meio judiada, com umas…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: estado: reparos. 📝\nTambém anotei: móvel: cadeira (meio judiada, pernas bambas).\n\nE de tamanho, como ela é? Medida aproximada ou só \"pequeno, médio ou grande\", o que for mais fácil pra você. 🪑",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, agora eu quero recomeçar do zero, que me perdi um pouco. Pode apagar essa cadeira e começar de novo. Mas antes, só um detalhe: a cadeira tá com as pernas bambas e a pintura descascando, então depois a gente vê o reparo. Por enquanto, recomeça aí.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, agora eu quero recomeçar do zero, que me perdi…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, Adriano! 😄 Quer recomeçar a cadeira do Seu Joao do zero? Eu tiro ele da lista (fica guardado no histórico) e você me conta tudo de novo. 🪑",
+        "buttons": [
+          {
+            "text": "Recomeçar do zero",
+            "data": "rst:yes"
+          },
+          {
+            "text": "Continuar de onde parei",
+            "data": "cmd:continue"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Recomeçar do zero]"
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, recomecei. 👍\n\nMe conta: qual é o móvel, de quem é e o que vai fazer nele? Pode ser por áudio.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Beleza, recomeçou então. Pode apagar mesmo, e aquela parte das pernas bambas e da pintura descascando a gente vê depois, com calma. Agora me fala: é a cadeira do seu João de novo, pra pintar, e ela é pequena, média ou grande? Tem umas pernas bambas e tá com a pintura descascando, isso eu quero que tu anote no meio do orçamento, tá?\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Beleza, recomeçou então. Pode apagar mesmo, e aquela parte das…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano! 😄 Acho que você está falando da cadeira do Seu João que a gente já anotou. É essa mesma? 🪑",
+        "buttons": [
+          {
+            "text": "Sim, é essa",
+            "data": "match:yes"
+          },
+          {
+            "text": "Não, é outro serviço",
+            "data": "match:no"
+          },
+          {
+            "text": "Não tenho certeza",
+            "data": "match:unsure"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Não, é outro serviço]"
+      },
+      {
+        "who": "bot",
+        "text": "Show! Anotei:\n• móvel: cadeira (grande, pequena, novo)\n• trabalho: pintura\n• cliente: Seu Joao\n• tamanho: pequeno\n\nAgora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, Adriano! 📝 O serviço é só na madeira, só no estofado ou nos dois? 🪑",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, errei o botão, Adriano, não é outro serviço, é a mesma cadeira do Seu João. E o tamanho não é pequeno, é médio, eu nem tinha dito isso. O serviço é só na madeira, sem estofado. Pode anotar a pintura descascando e as pernas bambas no meio do orçamento, tá?\n   {entendido: corrigir: é a mesma cadeira do Seu João, não é outro serviço. O tamanho é médio, não pequeno. O serviço é só na madeira, sem estofado. Anotar no meio do orçamento: pintura descascando e pernas bambas. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, errei o botão, Adriano, não é outro serviço, é…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido! 📝 Ficou assim: móvel: cadeira (pequeno) (antes: móvel: cadeira (grande, pequena, novo)). Guardei o histórico. ✅",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 163,00 e R$ 340,00 (sem contar frete). Com o resto das respostas eu fecho o valor.\n\nComo tá o estado dela? Pode descrever do seu jeito, tipo \"tá bem judiada\" ou \"só uns riscos\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, errei de novo, Adriano. A cadeira é a mesma do Seu João, o tamanho é médio, não pequeno, e o serviço é só na madeira, sem estofado. Pode anotar a pintura descascando e as pernas bambas no meio do orçamento, tá? A cadeira tá bem judiada, as pernas bambas mesmo, e a pintura tá saindo em muita parte. Esse reparo das pernas a gente vê depois, com calma.\n   {entendido: (igual) · rota: pending_answer/item_condition_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, errei de novo, Adriano. A cadeira é a mesma…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ajustei aqui: móvel: cadeira (pequeno, novo) (antes: móvel: cadeira (pequeno)). Guardei o histórico. 📝",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei aqui: estado: danificado. 🪑",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Falta pouquinho! 🛠️ E sobre os consertos: o que precisa arrumar nela? Pode contar do seu jeito.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ô Bot, tu tá me entendendo errado. Não é nova, é a mesma cadeira do Seu João. Tamanho médio, não pequeno. O serviço é só na madeira, sem estofado. As pernas tão bambas e a pintura tá saindo em muita parte. Esse reparo das pernas eu vejo depois, com calma. Pode anotar isso aí.\n   {entendido: corrigir: a cadeira é a mesma do Seu João (não é nova); tamanho: médio (não pequeno); serviço: pintura só na madeira, sem estofado; defeitos: pernas bambas e pintura saindo em muita parte; reparo das pernas fica para depois, com calma. · rota: pending_answer/job_field_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô Bot, tu tá me entendendo errado. Não é nova,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ajeitei aqui: móvel: cadeira (pequeno, nova) (antes: móvel: cadeira (pequeno, novo)). Guardei o histórico. 📝",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Feito: estado: reparos (antes: estado: danificado). Guardei o histórico. ✅",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Estamos quase lá! 🛠️ Você falou que ela tá precisando de cuidado. O que vai ter que consertar antes do acabamento? Tipo colar, trocar tábua, passar massa.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ô, de novo o bot se enrolou, viu. Não é nova nem pequena, é a mesma cadeira do Seu João, tamanho médio, e é só madeira, sem estofado. As pernas tão bambas, mas esse reparo eu vejo depois, com calma. Por enquanto só anota a pintura descascando em muita parte e as pernas bambas no meio do orçamento. Não precisa perguntar mais nada sobre conserto agora, é isso.\n   {entendido: (igual) · rota: pending_answer/job_field_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ô, de novo o bot se enrolou, viu. Não é…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigi aqui: móvel: cadeira (pequena, nova, novo) (antes: móvel: cadeira (pequeno, nova)). Guardei o histórico. 📝",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quase lá! 🛠️ E sobre os consertos: o que precisa arrumar nela? Pode contar do seu jeito.",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": false,
+        "name": "depois de recomeçar não fica serviço aberto",
+        "detail": "{\"n\":1}"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 1,
+        "naturalidade": 2,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 1,
+        "eficiencia": 1,
+        "conclusao": 2
+      },
+      "problemas": [
+        {
+          "turno": 2,
+          "gravidade": "media",
+          "classe": "texto_longo",
+          "descricao": "Resposta a um simples 'oi' é uma apresentação longa com lista numerada, em vez de saudação curta."
+        },
+        {
+          "turno": 8,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Mensagens duplicadas (anotei + anotado) e comece a perguntas antes de ele terminar de falar; repete informação."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Ele disse que quer ver a cadeira junto e pensar depois; o bot registrou 'estado: reparos' e seguiu perguntando, ignorando a hesitação e o pedido de recomeçar."
+        },
+        {
+          "turno": 20,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Depois do recomeço, ele repete 'cadeira do seu João, pintura'. O bot trata como serviço já anotado e pergunta se é o mesmo, apesar do recomeço."
+        },
+        {
+          "turno": 22,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Registrou tamanho 'grande, pequena, novo' e 'pequeno' sem ele ter dito; ele nem tinha respondido o tamanho (só perguntou)."
+        },
+        {
+          "turno": 23,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Duas mensagens seguidas do bot, uma com perguntas de orientação e outra com nova pergunta; fluxo picotado."
+        },
+        {
+          "turno": 26,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Disse 'Corrigido' mantendo 'pequeno', quando ele corrigiu para médio; correção ignorada."
+        },
+        {
+          "turno": 27,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Deu faixa de preço R$163–340 sem dados suficientes; passa valor que ele não pediu e com base em dados errados."
+        },
+        {
+          "turno": 30,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Ele corrigiu pela segunda vez; o bot acrescentou 'novo' e continuou com 'pequeno'."
+        },
+        {
+          "turno": 32,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta o que consertar, mesmo ele já ter dito pernas bambas e pintura descascando e que o reparo vê depois."
+        },
+        {
+          "turno": 35,
+          "gravidade": "alta",
+          "classe": "nao_entendeu",
+          "descricao": "Na terceira correção o bot persiste em 'pequeno, nova', piorando; o usuário frustrado ('tu tá me entendendo errado') não é acolhido."
+        }
+      ],
+      "resumo": "O bot lidou bem com o teste de áudio, mas falhou no recomeço: tratou a cadeira como serviço já existente, inventou tamanho e 'novo', ignorou três correções de 'médio' e repetiu perguntas já respondidas. O usuário ficou frustrado e a conversa não se resolveu."
+    },
+    "ms": 87841
+  },
+  {
+    "id": "correcoes",
+    "title": "Correções do jeito dele no meio do orçamento",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Fala aí, tudo certo? Peguei uma cômoda pra pintar de branco, é da dona Ana. Vou te falar as medidas: 90 de altura, 1 metro de largura e 45 de fundura. Tá boa, sem conserto nenhum, só é pra pintar por fora. Vou usar pincel pra pintar.\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Fala aí, tudo certo? Peguei uma cômoda pra pintar de…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei um serviço novo:\n• móvel: cômoda (branco)\n• trabalho: pintura\n• cliente: Dona Ana\n• aplicação: pincel\n• estado: bom\n• sem consertos\n• medidas: altura 0,9 m, largura 1 m, fundura 0,45 m\n• cor: branco\n\nAgora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: cômoda branca da dona Ana, pintura com pincel, estado bom e sem consertos.\n\nQuantas gavetas ela tem? 📦",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, tem 4 gaveta. Mas peraí, na verdade a cliente é a dona Bia, não a Ana. E errei no pincel, é rolo mesmo. Sem frete, tá?\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, tem 4 gaveta. Mas peraí, na verdade a cliente…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Boa pergunta! Em armários, cômodas e cristaleiras, às vezes a parte de dentro (prateleiras, gavetas) também é trabalhada, e isso aumenta a área.\n\nVocê vai mexer só na parte de fora ou por dentro também (prateleiras, gavetas, portas por dentro)? 🎨",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Só por fora. Por dentro não mexe, nem gaveta nem prateleira.\n   {entendido: só por fora; por dentro não mexe, nem gavetas nem prateleiras · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: só por fora, por dentro não mexe.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, então é só a parte de fora. Quantas gavetas a cômoda tem? 📦",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já respondi a da gaveta lá em cima: são 4 gavetas. E anotei a correção: a cliente é a dona Bia, não a Ana, e é rolo, não pincel. Sem frete. Pode seguir.\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: cliente Dona Bia (antes era Dona Ana). Tudo certo por aqui. 🎨",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: aplicação com rolo (antes estava pincel). Histórico guardado. 🛠️",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quantas gavetas ela tem?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, são 4 gavetas. Tá tudo corrigido: dona Bia, rolo, sem frete. Pode seguir pro orçamento.\n   {entendido: São 4 gavetas. Correções já feitas: cliente Dona Bia, aplicação com rolo, sem frete. Pode seguir para o orçamento. · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Quantas gavetas ela tem?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, são 4 gavetas, tá? Pode seguir pro orçamento, por favor. Tá tudo certo: dona Bia, rolo, sem frete, só por fora.\n   {entendido: 4 gavetas. Pode seguir pro orçamento. Confirmo: cliente dona Bia, aplicação com rolo, sem frete, só por fora. · rota: active_goal/collecting_continue}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: 4 gavetas. 📦\n\nSó pra você ter uma ideia: pelo que já sei, deve ficar por volta de R$ 308,00 (sem contar frete). Com o resto das respostas eu fecho o valor. 💰\n\nÚltima coisinha: o transporte. O cliente traz a cômoda aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei: sem frete. A cliente traz a cômoda aqui na oficina e ela mesma vem pegar depois, não precisa buscar nem entregar. Tá tudo certo: dona Bia, rolo, 4 gavetas, só por fora. Pode fechar o orçamento.\n   {entendido: sem frete; a cliente traz a cômoda na oficina e ela mesma vem pegar depois, sem buscar nem entregar. Confirmado: dona Bia, rolo, 4 gavetas, só por fora. Pode fechar o orçamento. · rota: pending_answer/logistics_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei: sem frete. A cliente traz a cômoda aqui…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, anotado: sem frete, a cliente traz a cômoda e vem pegar depois. 🚚",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Bia. Dá uma conferida:\n\n• móvel: cômoda (branco)\n• trabalho: pintura\n• cliente: Dona Bia\n• aplicação: rolo\n• estado: bom\n• sem consertos\n• medidas: altura 0,9 m, largura 1 m, fundura 0,45 m\n• observações: cor: branco; também citado: Dona Bia\n• só por fora\n• sem frete\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Pode calcular]"
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas da cômoda da Dona Bia!\n\n💰 Minha sugestão é cobrar R$ 308,00.\n\n⚠️ Menos que R$ 249,00 você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 205,00 de material.\n⏱️ Dá umas 5 horas de trabalho.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:9a9844d4-ff57-49ff-b74b-0b8558865a4d"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:9a9844d4-ff57-49ff-b74b-0b8558865a4d"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:9a9844d4-ff57-49ff-b74b-0b8558865a4d"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅\n\n💰 Valor final: R$ 308,00\n\n📄 Te mandei o PDF do orçamento pra você encaminhar pra Dona Bia.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quando a Dona Bia responder, me avisa aqui: 👇",
+        "buttons": [
+          {
+            "text": "👍 Cliente aceitou",
+            "data": "outcome:accept:9a9844d4-ff57-49ff-b74b-0b8558865a4d"
+          },
+          {
+            "text": "👎 Cliente recusou",
+            "data": "outcome:reject:9a9844d4-ff57-49ff-b74b-0b8558865a4d"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Cliente aceitou]"
+      },
+      {
+        "who": "bot",
+        "text": "Que ótimo! 🎉 Anotei que a Dona Bia aceitou o orçamento da cômoda por R$ 308,00.\n\nEntrada recomendada: R$ 205,00. 💰",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "1 serviço"
+      },
+      {
+        "ok": true,
+        "name": "cliente corrigida para Dona Bia"
+      },
+      {
+        "ok": true,
+        "name": "método corrigido para rolo"
+      },
+      {
+        "ok": true,
+        "name": "cor branca anotada"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 3,
+        "naturalidade": 2,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 2,
+        "sem_invencao": 4,
+        "eficiencia": 2,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 10,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Bot repete a pergunta das gavetas, que Adriano já respondeu no turno 5 (4 gavetas), e ignora a resposta."
+        },
+        {
+          "turno": 14,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta das gavetas pela terceira vez, igual, mesmo depois de ele dizer que já respondeu."
+        },
+        {
+          "turno": 16,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Quarta vez a mesma pergunta das gavetas, sem reconhecer a frustração dele; só no turno 18 anota 4 gavetas."
+        },
+        {
+          "turno": 7,
+          "gravidade": "media",
+          "classe": "nao_entendeu",
+          "descricao": "No turno 5 ele deu gavetas, correção de cliente, rolo e sem frete de uma vez. O bot pulou para outra pergunta (por dentro ou por fora) e não confirmou nada na hora, só depois de ele reclamar."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Correções confirmadas só após insistência dele, em mensagens separadas, e logo seguidas da mesma pergunta repetida. O sem frete não foi reconhecido na hora."
+        },
+        {
+          "turno": 18,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta transporte com duas perguntas numa mensagem (traz? entrega?) mesmo ele já ter dito 'sem frete' duas vezes."
+        },
+        {
+          "turno": 22,
+          "gravidade": "baixa",
+          "classe": "perda_de_clareza",
+          "descricao": "O resumo traz 'observações: cor: branco; também citado: Dona Bia', texto estranho e redundante. As 4 gavetas não aparecem no resumo final."
+        },
+        {
+          "turno": 24,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "'Menos que R$ 249,00 você começa a ter prejuízo' é aceitável, mas o tom é mais de sistema do que de colega de oficina. Também não há tom de desculpa pelas repetições."
+        },
+        {
+          "turno": 30,
+          "gravidade": "baixa",
+          "classe": "decisao_dinheiro",
+          "descricao": "Sugere 'entrada recomendada R$ 205,00' sem ele pedir, mexendo em valor por conta própria."
+        }
+      ],
+      "resumo": "O fluxo chegou ao fim: valor R$ 308,00, PDF enviado, cliente aceitou, e o banco confere. As correções (Dona Bia, rolo, sem frete) foram aplicadas. Mas o bot ignorou que ele já tinha dito 'tem 4 gavetas' e repetiu a mesma pergunta quatro vezes, forçando Adriano a reclamar duas vezes. Também deixou 4 gavetas fora do resumo final e fez pergunta dupla no transporte. Conclusão boa, experiência frustrante."
+    },
+    "ms": 61487
+  },
+  {
+    "id": "decisao-valor",
+    "title": "Decisão do valor: desconto abaixo do mínimo e depois acréscimo de frete",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "e aí, tudo bem? to precisando de um orçamento pra um aparador do seu Luiz, é pra envernizar. ele ta bom, só precisa do verniz mesmo. dá pra fazer?\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"e aí, tudo bem? to precisando de um orçamento pra…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, serviço novo anotado:\n• móvel: aparador (só precisa de verniz, peça em bom estado)\n• trabalho: verniz\n• cliente: Seu Luiz\n\nAgora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: aparador do Seu Luiz, só verniz, peça em bom estado. 🪵\n\nComo tá o estado dele? Pode descrever do seu jeito, tipo \"tá bem judiado\" ou \"só uns riscos\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Tá bom, tá inteiro. Não tem conserto nenhum, só precisa do verniz mesmo. Ele tem 1,20 de largura, 40 de fundura e 80 de altura. Pincel, que é o jeito que eu gosto de fazer.\n   {entendido: Estado: tá inteiro, sem conserto nenhum, só precisa do verniz. Medidas: 1,20 de largura, 40 de profundidade e 80 de altura. Método: pincel. · rota: pending_answer/item_condition_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Tá bom, tá inteiro. Não tem conserto nenhum, só precisa…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, estado bom anotado. 👍\n\nTambém anotei: pincel e sem consertos.\n\nAgora as medidas: quanto ele tem de largura, fundura e altura? 📏\n\nPode falar em centímetros, mais ou menos mesmo.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei as medidas ali no áudio, tá: 1,20 de largura, 40 de fundura e 80 de altura. Pincel também. Dá pra seguir daí.\n   {entendido: medidas: 1,20 m de largura, 40 cm de fundura e 80 cm de altura; pincel; pode seguir. · rota: pending_answer/item_dimensions_answer}",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: 0,4 × 0,8 m. 📏\n\n💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 183,00 e R$ 317,00 (sem contar frete). Com o resto das respostas eu fecho o valor.\n\nFalta uma coisa: como o aparador chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. Esse frete é 60 reais, viu, quero cobrar isso. Ah, e a largura é 1,20, não 0,4, o 0,4 é a fundura. Dá pra conferir aí?\n   {entendido: (igual) · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Eu busco na casa do Seu Luiz e entrego depois,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Corrigido: medidas: altura 0,8 m, largura 1,2 m, fundura 0,4 m (antes: medidas: altura 0,8 m, fundura 0,4 m). Guardei o histórico.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Última coisinha: E o transporte: o cliente traz o aparador aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. Esse frete é 60 reais, viu, quero cobrar isso. As medidas tão certas agora: 1,20 de largura, 40 de fundura e 80 de altura. Pincel, sem conserto, só verniz.\n   {entendido: Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. Frete: R$ 60,00, quero cobrar isso. Medidas confirmadas: altura 0,8 m, largura 1,2 m, fundura 0,4 m. Aplicação: pincel. Sem consertos. Trabalho: verniz. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Eu busco na casa do Seu Luiz e entrego depois,…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei isso, tá? Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. O frete é 60 reais, quero cobrar isso. O resto tá certo.\n   {entendido: Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. O frete é R$ 60,00, quero cobrar isso. O resto está certo. · rota: active_goal/collecting_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei isso, tá? Eu busco na casa do Seu…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Já falei, tá? Eu busco e entrego eu mesmo. O frete é 60 reais, quero cobrar isso. O resto tá certo, pode seguir pro valor.\n   {entendido: (igual) · rota: pending_answer/logistics_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Já falei, tá? Eu busco e entrego eu mesmo. O…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Show! Anotei: buscar e entregar. 👌",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, Adriano! Já tenho o que preciso sobre o aparador do Seu Luiz. Dá uma conferida:\n\n• móvel: aparador (só precisa de verniz, peça em bom estado)\n• trabalho: verniz\n• cliente: Seu Luiz\n• estado: bom\n• aplicação: pincel\n• sem consertos\n• medidas: altura 0,8 m, largura 1,2 m, fundura 0,4 m\n• buscar e entregar\n\nTá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".",
+        "buttons": [
+          {
+            "text": "Pode calcular",
+            "data": "calc:yes"
+          },
+          {
+            "text": "Quero corrigir",
+            "data": "calc:fix"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Pode calcular]"
+      },
+      {
+        "who": "bot",
+        "text": "🧮 Prontinho, fiz as contas do aparador do Seu Luiz!\n\n💰 Minha sugestão é cobrar R$ 282,00.\n\n⚠️ Menos que R$ 230,00 você começa a ter prejuízo.\n🛒 Vai precisar comprar uns R$ 130,00 de material.\n⏱️ Dá umas 4 horas de trabalho.\n🚚 O frete não está na conta. Se for cobrar, é só acrescentar.\n\nE aí, você concorda com esse valor? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "qa:ok:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "qa:disc:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "qa:add:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, valeu! Cara, 282 tá alto demais pra mim. Faz metade disso, 141 reais, que o Seu Luiz é conhecido meu.\n   {entendido: Não concordo com R$ 282,00, está alto demais. Quero cobrar R$ 141,00 porque o Seu Luiz é conhecido meu. · rota: active_goal/quote_decision_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, valeu! Cara, 282 tá alto demais pra mim. Faz…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Assim fica R$ 141,00. 😬\n\nSó que abaixo de R$ 230,00 você fica no prejuízo. Quer fechar assim mesmo?",
+        "buttons": [
+          {
+            "text": "Sim, fechar assim",
+            "data": "qa:force:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          },
+          {
+            "text": "Mudar o valor",
+            "data": "qa:redo:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Cara, então não dá pra fechar em 141 não, o prejuízo come tudo. Esquece o desconto, fica no valor cheio de 282 e acrescenta os 60 do frete. Pode fazer assim pra mim?\n   {entendido: não fecho em R$ 141,00, o prejuízo come tudo. Cancelo o desconto, fica o valor cheio de R$ 282,00 e acrescenta R$ 60,00 de frete. Pode fazer assim? · rota: active_goal/quote_decision_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Cara, então não dá pra fechar em 141 não, o…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅\n\n💰 Valor final: R$ 342,00 (R$ 282,00 + R$ 60,00 de frete)\n\n📄 Te mandei o PDF do orçamento pra você encaminhar pro Seu Luiz.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quando o cliente responder, me avisa aqui: 👇",
+        "buttons": [
+          {
+            "text": "👍 Cliente aceitou",
+            "data": "outcome:accept:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          },
+          {
+            "text": "👎 Cliente recusou",
+            "data": "outcome:reject:3d6284f8-a672-41d4-a410-5e43ec4469d8"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Valeu, tá fechado! Pode mandar o PDF que eu encaminho pro Seu Luiz. Quando ele responder eu te aviso por aqui.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Por nada, Adriano! Qualquer coisa é só chamar. 😊",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "PDF gerado"
+      },
+      {
+        "ok": true,
+        "name": "orçamento fechado"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 2,
+        "naturalidade": 3,
+        "acessibilidade": 4,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 3,
+        "eficiencia": 1,
+        "conclusao": 4
+      },
+      "problemas": [
+        {
+          "turno": 9,
+          "gravidade": "alta",
+          "classe": "perdeu_informacao",
+          "descricao": "Anotou só 0,4 × 0,8 m, perdendo a largura de 1,20 que o Adriano já tinha dito no áudio. Ainda deu faixa de preço com base em medidas incompletas."
+        },
+        {
+          "turno": 9,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pediu as medidas de novo depois que ele já tinha dado tudo no áudio (turno 5). Também já tinha perguntado como o aparador chega e volta, e depois voltou a perguntar a mesma coisa."
+        },
+        {
+          "turno": 13,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou de novo sobre o transporte, que ele já tinha respondido no turno 10, e juntou duas perguntas numa mensagem."
+        },
+        {
+          "turno": 16,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Só registrou que ele busca e voltou a perguntar sobre a entrega, que ele já tinha dito. Repetiu igual no turno 19, e ele ficou irritado."
+        },
+        {
+          "turno": 19,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Repetiu exatamente a mesma pergunta do turno 16, ignorando que ele dissera que busca e entrega. Ele precisou falar quatro vezes."
+        },
+        {
+          "turno": 22,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Os 60 reais de frete, que ele disse que quer cobrar, nunca foram anotados no resumo. Só apareceu 'buscar e entregar'."
+        },
+        {
+          "turno": 28,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "O 'Assim fica R$ 141,00 😬' soa meio estranho. O aviso de prejuízo em si foi correto."
+        },
+        {
+          "turno": 32,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "Fechou direto sem confirmar o acréscimo do frete nem mostrar o valor antes do PDF. Deu certo, mas foi sem checagem."
+        },
+        {
+          "turno": 35,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "Respondeu 'Qualquer coisa é só chamar' como se fosse despedida, sem reforçar que ficará aguardando a resposta do cliente."
+        }
+      ],
+      "resumo": "O orçamento fechou certo, com valor cheio de R$ 282 mais R$ 60 de frete, R$ 342, e PDF gerado. O caminho foi ruim: o bot perdeu a largura, repetiu perguntas sobre transporte e medidas até o Adriano se irritar, e não anotou o frete no resumo. A parte do desconto abaixo do mínimo foi bem tratada, com aviso claro de prejuízo."
+    },
+    "ms": 76735
+  },
+  {
+    "id": "consulta",
+    "title": "Consultas: quais serviços eu tenho e quanto falta receber",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Oi, tudo bem? Me fala aí, quais serviços eu tenho anotados? Acho que são dois, a cristaleira da Dona Maria e a mesa do Seu João. E quanto a Dona Maria ainda deve, ela não pagou nada ainda, né?\n   {entendido: (igual) · rota: global/list_jobs}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Oi, tudo bem? Me fala aí, quais serviços eu tenho…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Aqui estão seus serviços:\n\n• A cristaleira da Dona Maria — em orçamento\n• A mesa do Seu João — em orçamento\n\nToca em um deles pra ver os detalhes. 👇",
+        "buttons": [
+          {
+            "text": "A cristaleira da Dona Maria — Em orçamento",
+            "data": "job:open:05132cf7-79fd-401c-bc83-3f3f2c1c4af5"
+          },
+          {
+            "text": "A mesa do Seu João — Em orçamento",
+            "data": "job:open:2e433f27-fe3b-4582-9ede-e5edfb9f344e"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: A cristaleira da Dona Maria — Em orçamento]"
+      },
+      {
+        "who": "bot",
+        "text": "A cristaleira da Dona Maria — pátina (S-0001)\nSituação: Em orçamento\nJá anotado: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina\nAinda falta saber: como o móvel está; o tamanho do móvel; se é só por fora ou por dentro também; se precisa de conserto",
+        "buttons": [
+          {
+            "text": "Continuar este",
+            "data": "cmd:continue"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Então, a cristaleira da Dona Maria é pátina, ela ainda não pagou nada. Agora eu vou te falar do móvel: ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. É uma cristaleira média, mais ou menos 1,80 de altura. A pátina é só por fora mesmo. Não precisa de conserto. Quando tiver o valor, eu te falo.\n   {entendido: (igual) · rota: global/new_job}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Então, a cristaleira da Dona Maria é pátina, ela ainda…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: são 2 móveis para pátina 🎨: uma cristaleira e outra cristaleira, para a Dona Maria.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: a 1ª cristaleira leva pátina inteira e está bem danificada. A 2ª cristaleira também leva pátina inteira, sem reparos grandes. Certo? ✅",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: Corrigir]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, então vamos ajustar. O que ficou diferente? Pode me falar do seu jeito, por exemplo: \"a cômoda também precisa de reparo\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Não, não é isso não. É uma cristaleira só, da Dona Maria. Ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tem uns 1,80 de altura, tamanho médio. A pátina é só por fora, não precisa de conserto. Esse é o único móvel dela. E o Seu João é a mesa, em orçamento também. Me diz aí quanto a Dona Maria ainda deve, ela não pagou nada.\n   {entendido: corrigir: é uma cristaleira só, da Dona Maria (não são duas). Estado: em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tamanho médio, cerca de 1,80 de altura. Serviço: pátina só por fora, sem conserto. Esse é o único móvel dela. Outro cliente: Seu João, com a mesa, também em orçamento. Pergunta: quanto a Dona Maria ainda deve? Ela não pagou nada. · rota: pending_answer/item_condition_answer}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, não é isso não. É uma cristaleira só, da…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Qual deles, então?",
+        "buttons": [
+          {
+            "text": "A cristaleira da Dona Maria",
+            "data": "job:open:05132cf7-79fd-401c-bc83-3f3f2c1c4af5"
+          }
+        ]
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: a 1ª cristaleira: fazer pátina inteira, sem reparos grandes; a 2ª cristaleira: fazer pátina inteira, sem reparos grandes. Certo?",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, é uma cristaleira só, da Dona Maria. Ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tem uns 1,80 de altura, tamanho médio. A pátina é só por fora, não precisa de conserto. Esse é o único móvel dela. Pode corrigir aí, e me diz quanto a Dona Maria ainda deve, ela não pagou nada.\n   {entendido: corrigir: é uma cristaleira só, da Dona Maria. Ela está em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tem cerca de 1,80 de altura, tamanho médio. A pátina é só por fora, sem conserto. Esse é o único móvel dela. Também quer saber quanto a Dona Maria ainda deve; ela não pagou nada. · rota: active_goal/quote_request_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, é uma cristaleira só, da Dona Maria. Ela tá…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: a 1ª cristaleira: fazer pátina inteira, sem reparos grandes; a 2ª cristaleira: fazer pátina inteira, sem reparos grandes. Certo?",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Não, para! Só tem uma cristaleira, da Dona Maria. Ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Uns 1,80 de altura, tamanho médio. Pátina só por fora, sem conserto. O Seu João é a mesa, em orçamento também. Agora me diz quanto a Dona Maria ainda deve, ela não pagou nada.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Não, para! Só tem uma cristaleira, da Dona Maria. Ela…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: a cristaleira da Dona Maria leva pátina (S-0001) 🎨\n\nSituação: em orçamento\nJá anotado: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina\nAinda falta saber: como o móvel está; o tamanho do móvel; se é só por fora ou por dentro também; se precisa de conserto\n\nMe conta esses detalhes que a gente segue daqui.",
+        "buttons": [
+          {
+            "text": "Continuar este",
+            "data": "cmd:continue"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, agora foi! Só uma cristaleira, da Dona Maria, em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Uns 1,80 de altura, tamanho médio. Pátina só por fora, sem conserto. O Seu João é a mesa, em orçamento também. Quanto a Dona Maria ainda deve? Ela não pagou nada ainda.\n   {entendido: Só uma cristaleira, da Dona Maria, em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Uns 1,80 de altura, tamanho médio. Pátina só por fora, sem conserto. O Seu João é a mesa, em orçamento também. Pergunta: quanto a Dona Maria ainda deve? Ela não pagou nada ainda. · rota: active_goal/quote_request_continue}",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, agora foi! Só uma cristaleira, da Dona Maria, em…\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Entendi: a 1ª cristaleira: fazer pátina inteira, sem reparos grandes; a 2ª cristaleira: fazer pátina inteira, sem reparos grandes. Certo?",
+        "buttons": [
+          {
+            "text": "Certo",
+            "data": "qr:review_yes"
+          },
+          {
+            "text": "Corrigir",
+            "data": "qr:review_no"
+          }
+        ]
+      }
+    ],
+    "checks": [],
+    "judge": {
+      "notas": {
+        "entendimento": 1,
+        "naturalidade": 2,
+        "acessibilidade": 2,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 1,
+        "eficiencia": 1,
+        "conclusao": 1
+      },
+      "problemas": [
+        {
+          "turno": 8,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Inventou uma segunda cristaleira ('uma cristaleira e outra cristaleira') quando o Adriano falou de uma só, duplicando o móvel."
+        },
+        {
+          "turno": 9,
+          "gravidade": "alta",
+          "classe": "inventou",
+          "descricao": "Disse que a 1ª cristaleira está 'bem danificada', contrariando o que ele disse (bom estado, sem nada quebrado), e criou uma 2ª cristaleira."
+        },
+        {
+          "turno": 14,
+          "gravidade": "media",
+          "classe": "nao_entendeu",
+          "descricao": "Perguntou 'Qual deles, então?' com um só botão, sem sentido diante da correção clara dele."
+        },
+        {
+          "turno": 15,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Repetiu a mesma confirmação errada (duas cristaleiras) nos turnos 15, 18 e 24, ignorando as correções repetidas dele."
+        },
+        {
+          "turno": 21,
+          "gravidade": "alta",
+          "classe": "perdeu_informacao",
+          "descricao": "Depois de ele ter dado todos os detalhes (bom estado, 1,80 m, só por fora, sem conserto), pediu de novo esses mesmos detalhes como se faltassem."
+        },
+        {
+          "turno": 3,
+          "gravidade": "alta",
+          "classe": "nao_respondeu",
+          "descricao": "Em nenhum momento respondeu quanto a Dona Maria ainda deve, pedido feito em quase todas as mensagens; também não houve resposta sobre o valor ou a situação do pagamento."
+        },
+        {
+          "turno": 24,
+          "gravidade": "alta",
+          "classe": "travou",
+          "descricao": "Fluxo em loop: a conversa terminou voltando ao erro das duas cristaleiras, frustrando o usuário ('Não, para!') sem saída."
+        },
+        {
+          "turno": 11,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "Exemplo de correção ('a cômoda também precisa de reparo') não tem relação com o caso e as perguntas de detalhe interromperam a consulta que ele queria."
+        },
+        {
+          "turno": 5,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Mostra código S-0001 e a lista 'Ainda falta saber' em formato de ficha, pouco natural para ele."
+        }
+      ],
+      "resumo": "Conversa falhou: o Adriano só queria ver os serviços e saber quanto a Dona Maria deve. A lista inicial foi ok, mas depois o bot inventou uma 2ª cristaleira e um estado 'bem danificado', repetiu a mesma confirmação errada várias vezes, pediu de novo detalhes já dados e nunca respondeu sobre o valor devido. Ele ficou irritado e o objetivo não foi atingido."
+    },
+    "ms": 78235
+  }
+]
