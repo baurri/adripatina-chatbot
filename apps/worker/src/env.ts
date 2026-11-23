@@ -21,6 +21,7 @@ export interface Env {
   ADMIN_DEV_BYPASS_EMAIL: string;
   TELEGRAM_MODE: string;
   DAILY_SUMMARY_HOUR: string;
+  PHRASING_VARIETY?: string;
   // segredos
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
@@ -48,6 +49,8 @@ export const ConfigSchema = z.object({
   adminDevBypassEmail: z.string(),
   telegramMode: z.enum(["mock", "live"]),
   dailySummaryHour: z.number(),
+  /** varia a forma das perguntas (testes usam false para textos estáveis) */
+  phrasingVariety: z.boolean(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
@@ -70,5 +73,6 @@ export function loadConfig(env: Partial<Env>): Config {
     adminDevBypassEmail: environment === "local" || environment === "test" ? (env.ADMIN_DEV_BYPASS_EMAIL ?? "") : "",
     telegramMode: env.TELEGRAM_MODE === "live" ? "live" : "mock",
     dailySummaryHour: intStr(7).parse(env.DAILY_SUMMARY_HOUR),
+    phrasingVariety: env.PHRASING_VARIETY !== "false",
   });
 }

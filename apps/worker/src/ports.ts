@@ -38,6 +38,10 @@ export interface ExtractionProvider {
   readonly name: string;
   /** Retorna JSON bruto (validado pelo chamador com Zod). */
   extract(text: string): Promise<unknown>;
+  /** interpreta a resposta a uma pergunta específica (JSON validado pelo chamador) */
+  interpretAnswer?(field: string, question: string, answer: string): Promise<unknown>;
+  /** reescreve uma pergunta de forma natural (validada pelo chamador) */
+  rephrase?(text: string): Promise<string>;
 }
 
 export interface VisionProvider {

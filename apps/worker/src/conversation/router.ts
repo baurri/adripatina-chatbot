@@ -44,6 +44,8 @@ const SIDE_FLOWS: readonly Flow[] = ["expense", "payment", "learning_time"];
 /** Interrupção só com sinal claro. */
 export function isStrongInterruption(nlu: NluResult, pending: PendingQuestion | null): boolean {
   const e = nlu.entities;
+  // intenção sugerida só pela IA nunca interrompe um fluxo (precisa de padrão literal no texto)
+  if (nlu.source === "ai") return false;
   switch (nlu.intent) {
     case "register_payment":
       return e.amountCents !== undefined && nlu.confidence >= 0.85;

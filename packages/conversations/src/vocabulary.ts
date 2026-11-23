@@ -101,3 +101,34 @@ export function techniquesLabel(keys: readonly string[]): string {
   if (labels.length <= 1) return labels[0] ?? "";
   return `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1]}`;
 }
+
+/**
+ * Perfil de cada móvel: o que faz sentido perguntar. Cama, cadeira, mesa etc.
+ * não têm "parte de dentro" — perguntar isso confunde e soa robótico.
+ */
+const HAS_INTERIOR = new Set(["cristaleira", "guarda_roupa", "comoda", "mesa_cabeceira", "armario", "estante", "buffet", "aparador", "penteadeira", "bau", "oratorio", "rack", "sapateira", "escrivaninha"]);
+
+export function furnitureHasInterior(key: string | null | undefined): boolean | null {
+  if (!key) return null;
+  return FURNITURE[key] ? HAS_INTERIOR.has(key) : null;
+}
+
+/** Medidas padrão de colchão no Brasil (largura × comprimento, metros). */
+export const BED_SIZES: Record<string, { label: string; width: string; length: string }> = {
+  solteiro: { label: "solteiro", width: "0.88", length: "1.88" },
+  viuva: { label: "viúva", width: "1.28", length: "1.88" },
+  casal: { label: "casal", width: "1.38", length: "1.88" },
+  queen: { label: "queen", width: "1.58", length: "1.98" },
+  king: { label: "king", width: "1.93", length: "2.03" },
+};
+
+/** "cama de casal queen" → queen (o tamanho mais específico vence). */
+export function detectBedSize(text: string): keyof typeof BED_SIZES | null {
+  const n = normalizeText(text);
+  if (/\b(super ?king|king ?size|king)\b/.test(n)) return "king";
+  if (/\bqueen\b/.test(n)) return "queen";
+  if (/\bviuva\b/.test(n)) return "viuva";
+  if (/\b(de )?solteiro\b/.test(n)) return "solteiro";
+  if (/\b(de )?casal\b/.test(n)) return "casal";
+  return null;
+}

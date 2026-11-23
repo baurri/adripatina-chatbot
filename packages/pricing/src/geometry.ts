@@ -9,6 +9,22 @@ export interface GeometryInput {
   sizeClass?: "pequeno" | "medio" | "grande" | null;
   /** "tampo": só a face superior é trabalhada */
   part?: "tampo" | "inteiro" | null;
+  /** perfil do móvel: cama não é uma caixa (cabeceira, peseira e laterais) */
+  profile?: "bed" | null;
+}
+
+/**
+ * Cama: cabeceira (largura × 1,0 m) + peseira (largura × 0,45 m) + 2 laterais
+ * (comprimento × 0,30 m), frente e verso das peças. Fatores NÃO CALIBRADOS.
+ * Usa largura e comprimento do colchão (depth = comprimento).
+ */
+const BED_FACTORS = { headboard: "1.0", footboard: "0.45", rail: "0.30", sides: "2" };
+function estimateBedArea(g: GeometryInput): AreaInput | null {
+  const w = Dec.tryParse(g.width ?? null);
+  const l = Dec.tryParse(g.depth ?? null);
+  if (!w || !l || !w.gt(0) || !l.gt(0)) return null;
+  const oneSide = w.mul(BED_FACTORS.headboard).add(w.mul(BED_FACTORS.footboard)).add(l.mul(BED_FACTORS.rail).mul(2));
+  return { kind: "exact", m2: oneSide.mul(BED_FACTORS.sides).round(3).toString() };
 }
 
 /** Fração do porte correspondente ao tampo — hipótese NÃO CALIBRADA. */
@@ -42,6 +58,10 @@ function estimateTopArea(g: GeometryInput, s: PricingSettings): AreaInput | null
  */
 export function estimateArea(g: GeometryInput, s: PricingSettings): AreaInput | null {
   if (g.part === "tampo") return estimateTopArea(g, s);
+  if (g.profile === "bed") {
+    const bed = estimateBedArea(g);
+    if (bed) return bed;
+  }
   const w = Dec.tryParse(g.width ?? null);
   const h = Dec.tryParse(g.height ?? null);
   const d = Dec.tryParse(g.depth ?? null);

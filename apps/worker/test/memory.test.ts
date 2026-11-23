@@ -178,7 +178,7 @@ describe("Memória contextual e prevenção de duplicidades", () => {
     const r = await h.click("match:yes");
     const text = h.allText(r);
     expect(text).toMatch(/vamos continuar com a cristaleira da Dona Maria/);
-    expect(text).toMatch(/por dentro também/); // próxima pendência real
+    expect(text).toMatch(/parte de dentro/); // próxima pendência real
     expect(text).not.toMatch(/Qual é o móvel|De quem é o móvel/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM jobs")).toBe(1);
     const s = await h.ctx.db.first<{ active_job_id: string }>("SELECT active_job_id FROM conversation_sessions");

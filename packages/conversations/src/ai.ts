@@ -109,5 +109,6 @@ export function mergeNlu(rules: NluResult, ai: AiExtraction | null): NluResult {
   } else if (ai.intent === rules.intent) {
     confidence = Math.max(confidence, Math.min(0.95, (confidence + ai.confidence) / 2 + 0.1));
   }
-  return { intent, confidence, entities: EntitiesSchema.parse(e), source: "merged" };
+  // "ai" quando a intenção final veio só da IA (não pode interromper fluxos — ver router)
+  return { intent, confidence, entities: EntitiesSchema.parse(e), source: intent !== rules.intent ? "ai" : "merged" };
 }

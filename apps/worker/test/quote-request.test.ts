@@ -23,6 +23,7 @@ async function session(h: Harness) {
 /** Conversa completa até o cálculo, como no fluxo esperado da especificação. */
 async function fullConversation(h: Harness, grouping = "um para cada cliente") {
   await h.send(REAL);
+  await h.send("são dois clientes");
   await h.send("Isso.");
   await h.send("Uma cômoda e um aparador.");
   await h.send("Nela inteira, mas o tampo precisa de reparos. Os outros estão melhores.");
@@ -50,6 +51,10 @@ describe("Ajuste 2 — caso real de produção (não pode virar 'em execução')
     expect(t1).toMatch(/24\/11\/2026/);
     // 31. nenhuma entidade definitiva criada antes das confirmações
     expect(await count(h, "SELECT COUNT(*) AS n FROM jobs")).toBe(0);
+    // nomes ditos juntos: casal ou dois clientes? (nunca adivinhar)
+    expect(t1).toMatch(/são um casal, um cliente só\? Ou são dois clientes diferentes/);
+    expect(buttonsOf(first.at(-1))).toEqual(["qr:couple", "qr:separate"]);
+    await h.send("são dois clientes");
 
     const reply = await h.send(REPLY);
     const t2 = h.allText(reply);
@@ -68,6 +73,7 @@ describe("Ajuste 2 — caso real de produção (não pode virar 'em execução')
   it("32. auditoria guarda intenção bruta, contextual e decisão de roteamento", async () => {
     const h = await setup();
     await h.send(REAL);
+    await h.send("dois clientes");
     await h.send(REPLY);
     const row = await h.ctx.db.first<{ intent: string; contextual_intent: string; route: string; routing_json: string }>(
       "SELECT intent, contextual_intent, route, routing_json FROM conversation_messages WHERE direction = 'in' AND text LIKE 'Um deles%'",
@@ -85,7 +91,8 @@ describe("Ajuste 2 — caso real de produção (não pode virar 'em execução')
 describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => {
   it("10/11. pergunta de quem é cada peça e 'isso' confirma a proposta", async () => {
     const h = await setup();
-    const r = await h.send(REAL);
+    await h.send(REAL);
+    const r = await h.click("qr:separate");
     expect(h.allText(r)).toMatch(/a mesinha de centro é do Seu Roberto e os outros dois móveis são da Dona Jo\?/);
     expect(buttonsOf(r.at(-1))).toEqual(["qr:owner_yes", "qr:owner_no"]);
     const next = await h.send("Isso.");
@@ -95,6 +102,7 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
   it("'não' leva a perguntar o dono de cada peça, uma por vez", async () => {
     const h = await setup();
     await h.send(REAL);
+    await h.send("são dois clientes diferentes");
     const r = await h.send("não");
     expect(h.allText(r)).toMatch(/A mesinha de centro é de quem/);
     const r2 = await h.send("da dona Jo");
@@ -104,6 +112,7 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
   it("12/29. resposta de estado interpretada como estado, com 'os outros'", async () => {
     const h = await setup();
     await h.send(REAL);
+    await h.send("dois clientes");
     await h.send("isso");
     await h.send("uma cômoda e um aparador");
     const r = await h.send("Nela inteira, mas o tampo precisa de reparos. Os outros estão melhores.");
@@ -257,7 +266,7 @@ describe("Ajuste 2 — fluxo simples (legado) também respeita o contexto", () =
     const t = h.allText(done);
     expect(t).toMatch(/agora está em execução/);
     expect(t).toMatch(/Agora, voltando/);
-    expect(t).toMatch(/Como o móvel está hoje/);
+    expect(t).toMatch(/como ela está hoje/);
   });
 
   it("andamento 'ainda não comecei' não muda o status", async () => {
@@ -278,5 +287,45 @@ describe("Ajuste 2 — fluxo simples (legado) também respeita o contexto", () =
     expect(await count(h, "SELECT COUNT(*) AS n FROM purchases")).toBe(1);
     expect(await count(h, "SELECT COUNT(*) AS n FROM material_price_history WHERE source = 'telegram_confirmed'")).toBe(1);
     await processOutbox(h.ctx);
+  });
+});
+
+describe("Casal ou dois clientes (nomes ditos juntos)", () => {
+  it("casal: vira um cliente só, sem perguntar de quem é cada peça nem agrupamento", async () => {
+    const h = await setup();
+    await h.send(REAL);
+    const r = await h.send("é um casal");
+    const t = h.allText(r);
+    expect(t).toMatch(/Seu Roberto e Dona Jo ficam como um cliente só/);
+    expect(t).not.toMatch(/de quem é cada peça/);
+    const s = await session(h);
+    const qr = s.ctx.quoteRequest as unknown as { draft: { clients: { name: string }[]; items: { ownerRef: string; ownerConfirmed: boolean }[] }; clientsRelation: string };
+    expect(qr.clientsRelation).toBe("couple");
+    expect(qr.draft.clients.map((c) => c.name)).toEqual(["Seu Roberto e Dona Jo"]);
+    expect(qr.draft.items.every((i) => i.ownerConfirmed && i.ownerRef === "c1")).toBe(true);
+  });
+
+  it("botão 'Dois clientes' segue para de quem é cada peça", async () => {
+    const h = await setup();
+    await h.send(REAL);
+    const r = await h.click("qr:separate");
+    expect(h.allText(r)).toMatch(/Certo, são dois clientes/);
+    expect(h.allText(r)).toMatch(/de quem é cada peça/);
+  });
+
+  it("'é dos dois' depois de 'dois clientes' pergunta antes de juntar (não contraria em silêncio)", async () => {
+    const h = await setup();
+    await h.send(REAL);
+    await h.send("são dois clientes");
+    const r = await h.send("a mesinha é dos dois");
+    expect(h.allText(r)).toMatch(/quer que eu junte Seu Roberto e Dona Jo como um cliente só/);
+    const yes = await h.send("sim");
+    expect(h.allText(yes)).toMatch(/ficam como um cliente só/);
+  });
+
+  it("nomes em orações separadas não disparam a pergunta do casal", async () => {
+    const h = await setup();
+    const r = await h.send("Peguei uma mesa do Seu Roberto e uma cômoda da Dona Jo para envernizar, quanto cobro?");
+    expect(h.allText(r)).not.toMatch(/casal/);
   });
 });

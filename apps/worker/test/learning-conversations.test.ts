@@ -26,10 +26,9 @@ describe("Aprendizado curioso e histórico administrativo", () => {
     await h.send("Peguei uma mesa da dona Ana para envernizar");
     await h.send("está boa");
     await h.send("1 metro de largura e 80 cm de altura");
-    await h.send("só por fora");
     await h.send("não");
     const sourceQuestion = await h.send("não");
-    expect(h.allText(sourceQuestion)).toMatch(/verniz.*estoque|estoque.*verniz/s);
+    expect(h.allText(sourceQuestion)).toMatch(/verniz.*(estoque|em casa|comprar)/s);
     await h.send("vou precisar comprar o verniz");
     expect(await count(h, "SELECT COUNT(*) AS n FROM learning_observations WHERE kind = 'MATERIAL_SOURCE' AND entity_key = 'verniz'")).toBe(1);
   });

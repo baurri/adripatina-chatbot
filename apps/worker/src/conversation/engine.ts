@@ -1,4 +1,15 @@
 import {
+  BED_SIZES,
+  FIELD_EXPLANATION,
+  asksForPrice,
+  detectBedSize,
+  findMethods,
+  furnitureHasInterior,
+  isQuestionToBot,
+  naturalAck,
+  naturalQuestion,
+  type ParsedAnswer,
+  type QuestionContext,
   clientMatches,
   decideMatch,
   describeFact,
@@ -15,7 +26,7 @@ import {
 import { nextQuestion, QUESTION_ORDER, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
 import { extractCount, formatBRL, formatDateBR, normalizeText } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
-import { interpret } from "../ai/service.js";
+import { aiInterpretAnswer, aiRephrase, interpret } from "../ai/service.js";
 import type { OutgoingMessage } from "../ports.js";
 import {
   addJobEvent,
@@ -34,7 +45,7 @@ import {
 import { GOAL_FLOWS, linkMessageToJob, loadSession, saveSession, type MentionSnapshot, type PendingQuestion, type PendingQuestionType, type Session } from "../repos/sessions.js";
 import type { User } from "../repos/users.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
-import { getActiveSettings, getMaterialByKey } from "../repos/catalog.js";
+import { getActiveSettings, getMaterialByKey, listMethods } from "../repos/catalog.js";
 import { recordSuspicion } from "../services/duplicates.js";
 import { learnFromConfirmedPurchase, recordMaterialSourceObservation, recordTechniqueTimeObservation } from "../services/learning.js";
 import {
@@ -74,6 +85,8 @@ export interface EngineInput {
 }
 
 const RESUME_GAP_HOURS = 6;
+/** campos que costumam ser respondidos antes da hora, com respostas bem reconhecíveis */
+const OUT_OF_ORDER_FIELDS: ProjectField[] = ["payment_terms", "deadline", "application_method"];
 
 export const MAIN_MENU: Button[][] = [
   [
@@ -363,6 +376,11 @@ export class Conversation {
       this.say(`Certo! ${GUIDE}`);
       return;
     }
+    // "testando o áudio", "tá funcionando?" → responder como gente, não como erro
+    if (/\b(testar|testando|teste|funcionando|ta me ouvindo|esta me ouvindo|ta ouvindo)\b/i.test(normalizeText(text))) {
+      this.say(`${this.input.kind === "voice" ? "Tá funcionando sim, ouvi direitinho! 😊" : "Tá funcionando sim! 😊"} Quando quiser, é só me contar de um móvel, um gasto ou um pagamento.\n\n${GUIDE}`);
+      return;
+    }
     this.say(`${this.input.kind === "voice" ? "Ouvi seu áudio direitinho! 🙂" : "Recebi sua mensagem! 🙂"} Só não entendi o que você quer que eu faça agora.
 
 ${GUIDE}`);
@@ -639,8 +657,10 @@ ${GUIDE}`);
       // ainda não sabemos o móvel: perguntar antes de cadastrar
       this.session.flow = "intake";
       this.session.context.mention = mention;
-      const q = questionFor("furniture_type");
-      this.say(`Vamos lá. ${q.text}`, q.buttons);
+      // já sabemos o cliente? pergunta direta e calorosa sobre o móvel
+      const cn = mention.clientName;
+      const who = cn ? ` d${/^(dona|sra|senhora)\b/i.test(cn) ? "a" : /^(seu|sr|senhor)\b/i.test(cn) ? "o" : "e"} ${cn}` : "";
+      this.say(who ? pick([`Claro! Qual é o móvel${who}?`, `Bora! E qual é o móvel${who}? Tipo "uma cômoda" ou "uma cama de casal".`], this.seed()) : `Vamos lá! ${naturalQuestion("furniture_type", { seed: this.seed() })}`);
       return;
     }
     await this.matchOrCreate(mention);
@@ -663,7 +683,7 @@ ${GUIDE}`);
         this.say("Sem problema. Me conta como é o móvel, do seu jeito (por exemplo: \"um armário de cozinha\").");
         return;
       }
-      this.say("Não entendi qual é o móvel. Pode dizer só o nome? Por exemplo: cristaleira, cômoda, cadeira.");
+      this.say(pick(["Hmm, não peguei qual é o móvel 😅 Pode dizer só o nome? Tipo cristaleira, cômoda, cama.", "Desculpa, não entendi o móvel. É uma mesa, um armário, uma cama?"], this.seed(1)));
       return;
     }
     await this.matchOrCreate(m);
@@ -729,9 +749,15 @@ ${GUIDE}`);
     this.session.context.questionHistory = [];
     if (mention.photoAttachmentId) await this.ctx.db.run("UPDATE attachments SET job_id = ? WHERE id = ?", job.id, mention.photoAttachmentId);
     const res = await this.applyMention(job.id, mention);
-    const fresh = (await getJob(this.ctx, job.id))!;
-    const noted = res.added.length ? `Anotei um serviço novo:\n${res.added.map((a) => `• ${a}`).join("\n")}` : "Anotei um serviço novo.";
-    this.say(`${noted}\n\nAgora vou te fazer algumas perguntas, uma de cada vez, para montar o orçamento. Pode responder por áudio ou escrevendo.`);
+    let fresh = (await getJob(this.ctx, job.id))!;
+    const bedNote = await this.applyBedSize(fresh, mention.text);
+    if (bedNote) fresh = (await getJob(this.ctx, job.id))!;
+    const noted = res.added.length ? `${pick(["Anotei um serviço novo:", "Beleza, serviço novo anotado:", "Show! Anotei:"], this.seed())}\n${res.added.map((a) => `• ${a}`).join("\n")}` : "Anotei um serviço novo.";
+    const intro = pick(
+      ["Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.", "Vou te perguntando o resto aos pouquinhos, tá? Pode responder do jeito que for mais fácil, áudio ou texto."],
+      this.seed(2),
+    );
+    this.say(`${noted}${bedNote ? `\n\n${bedNote}` : ""}\n\n${intro}`);
     if (res.conflict) return this.askContradiction(fresh, res.conflict);
     await this.askNext(fresh);
   }
@@ -899,19 +925,64 @@ ${GUIDE}`);
   }
 
   // ------------------------------------------------------- coleta de dados
+  /** Campos que não fazem sentido para este móvel (ex.: "parte de dentro" numa cama). */
+  skipFieldsFor(job: Job): ProjectField[] {
+    const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
+    const skip: ProjectField[] = [];
+    if (furnitureHasInterior(ft) === false) skip.push("surfaces");
+    return skip;
+  }
+
+  /** Semente da variação de texto: muda a cada mensagem (estável nos testes). */
+  seed(extra = 0): number {
+    if (!this.ctx.config.phrasingVariety) return extra;
+    let h = extra;
+    for (const ch of this.input.inboundMessageId) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return Math.abs(h);
+  }
+
+  questionContext(job: Job, seedOffset = 0): QuestionContext {
+    const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type ?? null;
+    return {
+      furnitureType: ft,
+      furnitureLabel: ft ? furnitureLabel(ft) : null,
+      feminine: furnitureArticleOf(ft) === "a",
+      condition: (job.facts.condition?.value as string | null | undefined) ?? null,
+      techniques: (job.facts.techniques?.value as string[] | null | undefined) ?? [],
+      clientName: (job.facts.client_name?.value as string | null | undefined) ?? job.clientName,
+      seed: this.seed(seedOffset),
+    };
+  }
+
+  /** Texto natural da pergunta (variação + reescrita opcional pela IA, sempre validada). */
+  async questionText(job: Job, field: ProjectField, seedOffset = 0): Promise<string> {
+    if (field === "material_status") {
+      const keys = materialKeysForJob(job);
+      const names = (await Promise.all(keys.map((key) => getMaterialByKey(this.ctx, key)))).filter(Boolean).map((m) => m!.name.toLowerCase().replace(/\s*\(.*\)$/, ""));
+      const subject = humanList(names);
+      const variants = [
+        `E o material${subject ? ` (${subject})` : ""}: você já tem aí em casa ou vai precisar comprar? Pode ser "já tenho tudo", "tenho uma parte" ou "vou comprar".`,
+        `Sobre ${subject || "o material"}: tem no estoque ou vai ter que comprar? Se for só uma parte, pode me dizer qual.`,
+      ];
+      return variants[this.seed(seedOffset) % variants.length]!;
+    }
+    return aiRephrase(this.ctx, naturalQuestion(field, this.questionContext(job, seedOffset)));
+  }
+
   async askNext(job: Job): Promise<void> {
-    const field = nextQuestion(job.facts);
+    const field = nextQuestion(job.facts, this.skipFieldsFor(job));
     this.session.context.unparsedCount = 0;
     if (!field) {
       if (this.ack) this.say(this.ack);
       this.ack = null;
       this.session.flow = "confirm_calc";
       this.session.lastQuestion = null;
+      this.clearPending();
       const s = summarizeJob(job);
       const unknown = Object.values(job.facts).filter((f) => f?.status === "unknown").map((f) => FIELD_LABEL[f!.field]);
-      const lines = [`Pronto, ${this.firstName}! Já tenho o que preciso sobre ${jobPhrase(job)}. Confere comigo:`, "", ...s.confirmed.map((c) => `• ${c}`)];
-      if (unknown.length) lines.push("", "Ficou para depois (sem problema):", ...unknown.map((u) => `• ${u}`));
-      lines.push("", "Se estiver tudo certo, me diga \"pode calcular\" que eu faço as contas do orçamento.", "Se quiser mudar alguma coisa, é só falar, por exemplo: \"a altura é 1,90\".");
+      const lines = [`Pronto, ${this.firstName}! Já tenho o que preciso sobre ${jobPhrase(job)}. Dá uma conferida:`, "", ...s.confirmed.map((c) => `• ${c}`)];
+      if (unknown.length) lines.push("", "Ficou pra depois (sem problema):", ...unknown.map((u) => `• ${u}`));
+      lines.push("", "Tá tudo certo? Se sim, me diz \"pode calcular\" que eu faço as contas. Se quiser mudar algo, é só falar, tipo \"a altura é 1,90\".");
       this.say(lines.join("\n"), [
         [
           { text: "Pode calcular", data: "calc:yes" },
@@ -925,22 +996,51 @@ ${GUIDE}`);
     const hist = this.session.context.questionHistory ?? [];
     if (hist[hist.length - 1] !== field) hist.push(field);
     this.session.context.questionHistory = hist.slice(-20);
-    const q = questionFor(field);
-    const p = questionProgress(job.facts);
+    const p = questionProgress(job.facts, this.skipFieldsFor(job));
     const ack = this.ack ? `${this.ack}\n\n` : "";
     this.ack = null;
     // linguagem natural em vez de "Pergunta 4 de 13" (o total muda conforme as respostas)
     const remaining = p.total - p.current;
-    const hint = remaining === 0 ? "Última pergunta: " : remaining <= 2 ? "Estamos quase lá. " : "";
+    const hint = remaining === 0 ? pick(["Última coisinha: ", "E pra fechar: "], this.seed()) : remaining <= 2 ? pick(["Estamos quase lá. ", "Falta pouquinho. "], this.seed()) : "";
     this.setPending({ type: FIELD_QUESTION_TYPE[field], entity: { kind: "job", id: job.id }, field });
-    if (field === "material_status") {
-      const keys = materialKeysForJob(job);
-      const names = (await Promise.all(keys.map((key) => getMaterialByKey(this.ctx, key)))).filter(Boolean).map((m) => m!.name.toLowerCase());
-      const subject = humanList(names);
-      this.say(`${ack}${hint}Para ${jobPhrase(job)}, você vai usar ${subject || "material"} que já tem no estoque, comprar tudo ou comprar só uma parte?\n\nPode responder do seu jeito, por exemplo: “já tenho tudo” ou “vou precisar comprar o verniz”.`);
-      return;
+    this.say(`${ack}${hint}${await this.questionText(job, field)}`);
+  }
+
+  /** "Como assim?" → explica por que pergunta e pergunta de outro jeito, sem gravar nada. */
+  async explainQuestion(job: Job, field: ProjectField): Promise<void> {
+    const opener = pick(["Boa pergunta! ", "Explico: ", "Faz sentido perguntar 🙂 "], this.seed(3));
+    this.say(`${opener}${FIELD_EXPLANATION[field]}\n\n${await this.questionText(job, field, 1)}`);
+  }
+
+  /** Pediu o valor no meio das perguntas: oferecer calcular já (estimativa) ou continuar. */
+  offerEarlyCalc(job: Job): void {
+    const pending = nextQuestion(job.facts, this.skipFieldsFor(job));
+    this.say(
+      pending
+        ? `Já já te passo! 😊 Ainda tem ${pending ? "algumas coisinhas" : "uma coisinha"} que deixam o valor mais certo, mas se quiser eu calculo agora com o que já sei (fica como estimativa).`
+        : "Claro! Já tenho tudo, vou fazer as contas.",
+      [
+        [
+          { text: "Calcular agora", data: "calc:yes" },
+          { text: "Responder as perguntas", data: "cmd:continue" },
+        ],
+      ],
+    );
+  }
+
+  /** Cama com tamanho padrão (casal, queen, king...) → usa a medida padrão, sem perguntar. */
+  async applyBedSize(job: Job, text: string): Promise<string | null> {
+    const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
+    if (ft !== "cama" || job.facts.dimensions?.status === "confirmed") return null;
+    const size = detectBedSize(text);
+    if (!size) return null;
+    const bed = BED_SIZES[size]!;
+    await setFact(this.ctx, job.id, "dimensions", { width: bed.width, depth: bed.length }, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, status: "unconfirmed", correction: true });
+    const fv = job.facts.furniture_type!.value as FactValueMap["furniture_type"];
+    if (!fv.descriptors?.includes(bed.label)) {
+      await setFact(this.ctx, job.id, "furniture_type", { ...fv, descriptors: [...(fv.descriptors ?? []), bed.label] }, { actor: this.input.user.id, source: this.sourceKind(), correction: true });
     }
-    this.say(`${ack}${hint}${q.text}`);
+    return `Cama ${bed.label} tem medida padrão (colchão de ${bed.width.replace(".", ",")} × ${bed.length.replace(".", ",")} m), então já vou usar essa. Se a sua for diferente, é só me falar.`;
   }
 
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
@@ -950,29 +1050,15 @@ ${GUIDE}`);
       this.session.activeJobId = null;
       return this.onText(text, false);
     }
+    const field = this.session.flow === "collecting" ? this.session.lastQuestion : null;
 
-    // outro móvel no meio da conversa → pausa este e verifica o novo
-    if (nlu.entities.furnitureType && nlu.intent === "new_job") {
-      const currentType = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
-      const sameType = !currentType || currentType === nlu.entities.furnitureType;
-      const currentClient = (job.facts.client_name?.value as string | undefined) ?? null;
-      const clientConflict = !!(nlu.entities.clientName && currentClient && clientMatches(currentClient, [], nlu.entities.clientName) < 0.85);
-      if (!sameType || clientConflict || nlu.entities.explicitNew) {
-        this.say(`Tudo bem, guardei ${jobPhrase(job)} para continuar depois.`);
-        this.session.flow = "idle";
-        return this.newJobMention(text, nlu);
-      }
-      // depois de um intervalo, confirmar antes de associar; na mesma conversa, repetição = continuidade
-      if (resuming) {
-        this.session.flow = "idle";
-        return this.matchOrCreate(this.mention(text, nlu));
-      }
-      return this.continueWithJob(job, this.mention(text, nlu), { quiet: true });
-    }
+    // pergunta de volta ("como assim? cama tem dentro e fora?") → explicar, nunca gravar
+    if (field && isQuestionToBot(text) && !asksForPrice(text)) return this.explainQuestion(job, field);
+    // pediu o valor no meio → oferecer calcular agora
+    if (asksForPrice(text)) return this.offerEarlyCalc(job);
 
     const backField = (this.session.context as { backField?: ProjectField }).backField;
     const correcting = nlu.intent === "correction" || !!backField || (this.session.context as { correctionMode?: boolean }).correctionMode === true;
-
     if (correcting) {
       delete (this.session.context as { backField?: ProjectField }).backField;
       delete (this.session.context as { correctionMode?: boolean }).correctionMode;
@@ -985,15 +1071,54 @@ ${GUIDE}`);
       return this.askNext((await getJob(this.ctx, job.id))!);
     }
 
-    if (nlu.entities.materialStatus && this.session.lastQuestion !== "material_status") {
+    // 1) a resposta à pergunta pendente vem antes de qualquer outra leitura
+    let ans: ParsedAnswer = field ? parseAnswer(field, text) : { kind: "unparsed" };
+    // texto livre só é aceito como resposta quando a mensagem não fala de outra coisa
+    // (móvel, técnica, material, dinheiro...) — senão vira "Mas e o valor?" gravado como pagamento
+    if (ans.kind === "value" && ans.strength === "free" && (hasProjectInfo(nlu) || !["unknown", "yes", "no", "dont_know"].includes(nlu.intent) || nlu.entities.amountCents !== undefined)) {
+      ans = { kind: "unparsed" };
+    }
+    // resposta de OUTRA pergunta dita fora de hora ("sem pressa" na pergunta do transporte,
+    // "metade agora, metade na entrega" na do prazo): guarda no campo certo e volta à pergunta atual
+    if (field && (ans.kind === "unparsed" || (ans.kind === "value" && ans.strength === "free"))) {
+      for (const other of OUT_OF_ORDER_FIELDS) {
+        if (other === field || job.facts[other]) continue;
+        const o = parseAnswer(other, text);
+        if (o.kind !== "value" || o.strength !== "specific") continue;
+        await setFact(this.ctx, job.id, o.field, o.value as never, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
+        this.ack = naturalAck(describeFact(o.field, o.value), this.seed(11));
+        return this.askNext((await getJob(this.ctx, job.id))!);
+      }
+    }
+    if (field && (ans.kind === "unparsed" || (ans.kind === "value" && ans.strength === "free"))) {
+      const ai = await aiInterpretAnswer(this.ctx, field, naturalQuestion(field, this.questionContext(job)), text);
+      if (ai) ans = ai;
+    }
+
+    // 2) só se não respondeu: outro móvel no meio da conversa ou repetição do mesmo
+    if (ans.kind === "unparsed" && nlu.entities.furnitureType && nlu.intent === "new_job") {
+      const currentType = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
+      const sameType = !currentType || currentType === nlu.entities.furnitureType;
+      const currentClient = (job.facts.client_name?.value as string | undefined) ?? null;
+      const clientConflict = !!(nlu.entities.clientName && currentClient && clientMatches(currentClient, [], nlu.entities.clientName) < 0.85);
+      if (!sameType || clientConflict || nlu.entities.explicitNew) {
+        this.say(`Tudo bem, guardei ${jobPhrase(job)} para continuar depois.`);
+        this.session.flow = "idle";
+        return this.newJobMention(text, nlu);
+      }
+      if (resuming) {
+        this.session.flow = "idle";
+        return this.matchOrCreate(this.mention(text, nlu));
+      }
+    }
+
+    if (nlu.entities.materialStatus && field !== "material_status" && ans.kind !== "value") {
       // "já tenho o verniz" em qualquer momento
-      const r = await setFact(this.ctx, job.id, "material_status", nlu.entities.materialStatus, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
-      void r;
+      await setFact(this.ctx, job.id, "material_status", nlu.entities.materialStatus, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
       this.say(stockExplanation(nlu.entities.materialStatus, nlu.entities.materialMention));
       return this.askNext((await getJob(this.ctx, job.id))!);
     }
 
-    const field = this.session.lastQuestion;
     if (this.session.flow === "confirm_calc" || !field) {
       // informação extra depois do resumo
       if (hasProjectInfo(nlu)) return this.continueWithJob(job, this.mention(text, nlu), { quiet: true });
@@ -1010,15 +1135,48 @@ ${GUIDE}`);
       return;
     }
 
-    const ans = parseAnswer(field, text);
+    if (ans.kind === "question") return this.explainQuestion(job, field);
     if (ans.kind === "dont_know") {
       await setFact(this.ctx, job.id, field, null, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
-      this.say(`${resuming ? `Continuando sobre ${jobPhrase(job)}. ` : ""}Sem problema! Deixei isso anotado como pendente e seguimos.`);
+      this.ack = `${resuming ? `Continuando sobre ${jobPhrase(job)}. ` : ""}${pick(["Sem problema! Deixo isso pendente e seguimos.", "Tranquilo, fica pra depois.", "Tudo bem, anotei como pendente."], this.seed(5))}`;
       return this.askNext((await getJob(this.ctx, job.id))!);
     }
+    if (ans.kind === "partial") {
+      // logística: juntar com o que já se sabia
+      const prev = (this.session.context as { partialLogistics?: { pickup?: boolean; delivery?: boolean } }).partialLogistics ?? {};
+      const known = { ...prev, ...ans.known };
+      if (known.pickup !== undefined && known.delivery !== undefined) {
+        ans = { kind: "value", field: "logistics", value: { pickup: known.pickup, delivery: known.delivery }, strength: "specific" };
+        delete (this.session.context as { partialLogistics?: unknown }).partialLogistics;
+      } else {
+        (this.session.context as { partialLogistics?: { pickup?: boolean; delivery?: boolean } }).partialLogistics = known;
+        const pron = furnitureArticleOf((job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type) === "a" ? "ela" : "ele";
+        this.say(
+          known.pickup === false
+            ? `Ah, beleza! Então você não precisa buscar, o cliente traz até você. 👍 E depois de pront${pron === "ela" ? "a" : "o"}, o cliente vem pegar ou você vai entregar?`
+            : known.pickup === true
+              ? "Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?"
+              : known.delivery === false
+                ? "Entendi, o cliente vem buscar quando ficar pronto. E pra chegar até você: ele traz ou você vai buscar?"
+                : "Certo, você entrega no final. E pra chegar até você: o cliente traz ou você vai buscar?",
+        );
+        return;
+      }
+    }
     if (ans.kind === "unparsed") {
-      // talvez tenha falado de outras coisas do projeto
-      if (hasProjectInfo(nlu)) return this.continueWithJob(job, this.mention(text, nlu), { quiet: true });
+      // informação nova do projeto dita fora de hora é guardada (sem repetir "já anotei" em looping)
+      if (hasProjectInfo(nlu)) {
+        const res = await this.applyMention(job.id, { ...this.mention(text, nlu), techniques: [] });
+        if (res.conflict) return this.askContradiction((await getJob(this.ctx, job.id))!, res.conflict);
+        if (res.added.length) this.ack = `Anotei também: ${res.added.join("; ")}.`;
+        // só repetiu o que já sabíamos: confirmar com naturalidade e seguir (sem "não entendi")
+        if (!res.added.length && res.repeated.length && !resuming) {
+          this.say(`Isso, já anotei: ${res.repeated.join("; ")}. 👍
+
+${await this.questionText(job, field, 4)}`);
+          return;
+        }
+      }
       if (resuming) {
         this.session.flow = "resume_prompt";
         this.say(`Oi, ${this.firstName}! Da última vez estávamos falando ${de(job)}. Quer continuar?`, [
@@ -1032,33 +1190,57 @@ ${GUIDE}`);
       }
       const count = (this.session.context.unparsedCount ?? 0) + 1;
       this.session.context.unparsedCount = count;
+      const ack = this.ack ? `${this.ack}\n\n` : "";
+      this.ack = null;
       const q = questionFor(field);
       this.say(
         count === 1
-          ? `Não consegui entender essa resposta. Pode tentar de novo? ${q.example ?? q.text}`
-          : `Tudo bem se não souber agora. É só dizer "não sei" que eu deixo anotado e seguimos.\n\n${q.text}`,
+          ? `${ack}${pick(["Hmm, não peguei essa parte 😅", "Desculpa, não entendi direito essa 😅", "Opa, essa eu não entendi bem."], this.seed(7))} ${FIELD_EXPLANATION[field]}\n\n${q.example ?? (await this.questionText(job, field, 2))}`
+          : `${ack}Tudo bem se não souber agora: é só dizer "não sei" que eu deixo anotado e seguimos.\n\n${await this.questionText(job, field, 3)}`,
       );
       return;
     }
-    const r = await setFact(this.ctx, job.id, ans.field, ans.value as never, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
+
+    // métodos: "pincel e rolo" → considera o mais demorado (seguro contra prejuízo)
+    let value = ans.value;
+    let methodNote: string | null = null;
+    if (ans.field === "application_method") {
+      const methods = findMethods(text);
+      if (methods.length > 1) {
+        const all = await listMethods(this.ctx);
+        const slowest = methods.map((m) => all.find((x) => x.key === m)).filter(Boolean).sort((a, b) => Number(a!.speedM2PerHour) - Number(b!.speedM2PerHour))[0];
+        if (slowest) {
+          value = slowest.key as never;
+          methodNote = `Vou considerar ${humanList(methods)}. Pra conta uso o ${slowest.key}, que é o mais demorado, pra você não sair no prejuízo.`;
+        }
+      }
+    }
+
+    const r = await setFact(this.ctx, job.id, ans.field, value as never, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
     const fresh = (await getJob(this.ctx, job.id))!;
     if (ans.field === "material_status") {
+      // só registra o que foi dito: materiais citados na resposta; se a resposta foi geral, os perguntados
+      const said = Object.entries(MATERIAL_WORDS).filter(([w]) => new RegExp(`\\b${w}\\b`).test(normalizeText(text))).map(([, k]) => k);
       await recordMaterialSourceObservation(this.ctx, {
         userId: this.input.user.id,
         jobId: job.id,
         messageId: this.input.inboundMessageId,
-        materialKeys: materialKeysForJob(fresh),
-        source: ans.value as "tem_tudo" | "tem_parte" | "precisa_comprar",
+        materialKeys: said.length ? [...new Set(said)] : materialKeysForJob(fresh),
+        source: value as "tem_tudo" | "tem_parte" | "precisa_comprar",
       });
     }
-    if (r.kind === "conflict") return this.askContradiction(fresh, { field: ans.field, oldValue: r.previous.value, newValue: ans.value });
+    if (r.kind === "conflict") return this.askContradiction(fresh, { field: ans.field, oldValue: r.previous.value, newValue: value });
     if (resuming) this.say(`Continuando sobre ${jobPhrase(job)}.`);
-    if (r.kind === "same") this.say(`Isso, já tinha anotado: ${describeFact(ans.field, ans.value)}.`);
-    else if (ans.field === "material_status") this.ack = stockExplanation(ans.value as string);
-    else this.ack = `Anotado: ${describeFact(ans.field, ans.value)}. ✅`;
-    // aproveita outras informações na mesma frase (sem repetir perguntas)
+    if (r.kind === "same") this.ack = `Isso, já tinha anotado: ${describeFact(ans.field, value)}.`;
+    else if (ans.field === "material_status") this.ack = stockExplanation(value as string);
+    else this.ack = methodNote ?? naturalAck(describeFact(ans.field, value), this.seed(9));
+    // cama com tamanho padrão dito junto ("cama de casal queen")
+    const bedNote = await this.applyBedSize(fresh, text);
+    if (bedNote) this.ack = `${this.ack}\n${bedNote}`;
+    // aproveita outras informações na mesma frase (sem repetir perguntas e sem trocar técnica por material)
     const extra = this.mention(text, nlu);
     delete extra.materialStatus;
+    extra.techniques = ans.field === "material_status" ? [] : extra.techniques;
     if (ans.field === "client_name") delete extra.clientName;
     if (ans.field === "techniques") extra.techniques = [];
     if (ans.field === "dimensions" || ans.field === "size_class") {
@@ -1066,9 +1248,10 @@ ${GUIDE}`);
       delete extra.sizeClass;
     }
     if (ans.field === "furniture_type") delete extra.furnitureType;
+    if (ans.field === "logistics" || ans.field === "deadline" || ans.field === "payment_terms") delete extra.furnitureType;
     if (hasProjectInfo({ ...nlu, entities: { ...nlu.entities, ...extra } as NluResult["entities"] })) {
       const res = await this.applyMention(job.id, extra);
-      if (res.added.length) this.say(`Anotei também: ${res.added.join("; ")}.`);
+      if (res.added.length) this.ack = `${this.ack}\nAnotei também: ${res.added.join("; ")}.`;
       if (res.conflict) return this.askContradiction((await getJob(this.ctx, job.id))!, res.conflict);
     }
     await this.askNext((await getJob(this.ctx, job.id))!);
@@ -1899,9 +2082,13 @@ const FIELD_LABEL: Record<ProjectField, string> = {
 };
 
 /** "Pergunta 3 de 11": deixa claro quanto falta (previsibilidade). */
-function questionProgress(facts: Job["facts"]): { current: number; total: number } {
+function pick<T>(list: readonly T[], seed: number): T {
+  return list[Math.abs(seed) % list.length]!;
+}
+
+function questionProgress(facts: Job["facts"], baseSkip: ProjectField[] = []): { current: number; total: number } {
   let remaining = 0;
-  const skip: ProjectField[] = [];
+  const skip: ProjectField[] = [...baseSkip];
   let f = nextQuestion(facts, skip);
   while (f && remaining < 30) {
     remaining++;

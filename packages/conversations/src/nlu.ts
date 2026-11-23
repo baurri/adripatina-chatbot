@@ -68,7 +68,12 @@ const NAME_STOP = new Set([
   "que", "para", "pra", "pro", "e", "com", "de", "do", "da", "dos", "das", "quer", "pagou", "me", "ja", "uma", "um", "a", "o",
   "hoje", "ontem", "agora", "reais", "real", "deu", "mandou", "trouxe", "vai", "esta", "ta", "ficou", "dela", "dele", "no", "na",
   "por", "porque", "mas", "pediu", "falou", "disse", "tem", "tinha", "precisa", "aquela", "aquele", "grande", "pequena",
+  "trouxeram", "querem", "pediram", "mandaram", "deixou", "deixaram", "vao", "tem", "comprou", "compraram", "ligou", "ligaram",
+  "precisam", "levou", "levaram", "chegou", "chegaram", "sao", "estao", "ele", "ela", "eles", "elas", "tambem", "ai", "aqui",
 ]);
+
+/** verbo conjugado no lugar do sobrenome ("Dona Jo trouxeram") */
+const VERB_LIKE = /(aram|eram|iram|ando|endo|indo|ou|eu)$/;
 
 function titleCase(s: string): string {
   return s
@@ -87,6 +92,7 @@ export function extractClientNames(text: string): string[] {
     const nameTokens: string[] = [];
     for (const t of (m[2] ?? "").split(" ")) {
       if (!t || NAME_STOP.has(t)) break;
+      if (nameTokens.length > 0 && VERB_LIKE.test(t)) break;
       nameTokens.push(t);
     }
     if (nameTokens.length === 0) continue;
@@ -146,6 +152,7 @@ export function extractClientName(text: string): string | undefined {
     const nameTokens: string[] = [];
     for (const t of nameRaw.split(" ")) {
       if (!t || NAME_STOP.has(t)) break;
+      if (nameTokens.length > 0 && VERB_LIKE.test(t)) break;
       nameTokens.push(t);
     }
     if (nameTokens.length === 0 && tokens.length === 0) continue;

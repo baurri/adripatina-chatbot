@@ -38,6 +38,8 @@ const LABELS: Record<string, string> = {
   "mp:resume": "pediu para continuar o orçamento",
   "mp:retry": "pediu para tentar recalcular de novo",
   "mp:cancel": "cancelou o orçamento",
+  "qr:couple": "disse que é um casal (um cliente só)",
+  "qr:separate": "disse que são dois clientes",
   "qr:owner_yes": "confirmou de quem é cada peça",
   "qr:owner_no": "corrigiu de quem é cada peça",
   "qr:review_yes": "confirmou o resumo dos móveis",

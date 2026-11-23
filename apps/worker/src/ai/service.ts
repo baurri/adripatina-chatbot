@@ -1,4 +1,5 @@
-import { interpretRules, mergeNlu, sanitizeAiExtraction, type NluResult } from "@adripatina/conversations";
+import { interpretRules, mergeNlu, sanitizeAiExtraction, supportsAiAnswer, validateAiAnswer, validateRephrase, type NluResult, type ParsedAnswer } from "@adripatina/conversations";
+import type { ProjectField } from "@adripatina/domain";
 import { newId } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { nowIso } from "../context.js";
@@ -166,5 +167,49 @@ export async function describeImage(ctx: Ctx, image: Uint8Array, mime: string): 
   } catch (err) {
     await logUsage(ctx, { model: v.name, task: "vision", success: false, latencyMs: Date.now() - started, errorCode: String(err instanceof Error ? err.message : err).slice(0, 60) });
     return null;
+  }
+}
+
+/**
+ * IA interpreta a resposta à pergunta pendente quando as regras não entenderam.
+ * Só valores permitidos para o campo; sem dinheiro; falha → null (fica com as regras).
+ */
+export async function aiInterpretAnswer(ctx: Ctx, field: ProjectField, question: string, answer: string): Promise<ParsedAnswer | null> {
+  const provider = ctx.ai.extraction;
+  if (!provider?.interpretAnswer || !supportsAiAnswer(field)) return null;
+  const now = ctx.clock().getTime();
+  if (breakerOpen(now)) return null;
+  const started = Date.now();
+  try {
+    await assertAiBudget(ctx);
+    const raw = await withTimeout(provider.interpretAnswer(field, question, answer), 6000);
+    const parsed = validateAiAnswer(field, raw);
+    await logUsage(ctx, { model: provider.name, task: "extraction", inputUnits: Math.ceil((question.length + answer.length) / 3) + 250, outputUnits: 40, unitKind: "tokens_estimados_resposta", success: !!parsed, latencyMs: Date.now() - started });
+    recordSuccess();
+    return parsed;
+  } catch (err) {
+    if (!(err instanceof AiBudgetExceeded)) {
+      recordFailure(now);
+      await logUsage(ctx, { model: provider.name, task: "extraction", success: false, latencyMs: Date.now() - started, errorCode: String(err instanceof Error ? err.message : err).slice(0, 60) });
+    }
+    return null;
+  }
+}
+
+/** Reescreve uma pergunta de forma natural. Só aceita reescritas seguras; senão devolve o texto-base. */
+export async function aiRephrase(ctx: Ctx, base: string): Promise<string> {
+  const provider = ctx.ai.extraction;
+  if (!provider?.rephrase || !ctx.config.phrasingVariety) return base;
+  const now = ctx.clock().getTime();
+  if (breakerOpen(now)) return base;
+  const started = Date.now();
+  try {
+    await assertAiBudget(ctx);
+    const candidate = await withTimeout(provider.rephrase(base), 2500);
+    const ok = validateRephrase(base, candidate);
+    await logUsage(ctx, { model: provider.name, task: "extraction", inputUnits: Math.ceil(base.length / 3) + 120, outputUnits: 60, unitKind: "tokens_estimados_reescrita", success: !!ok, latencyMs: Date.now() - started });
+    return ok ?? base;
+  } catch {
+    return base;
   }
 }

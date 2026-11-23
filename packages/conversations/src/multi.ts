@@ -38,7 +38,7 @@ export interface MentionedItem {
   sourceExcerpt: string;
 }
 
-export type Ambiguity = "item_owner_mapping" | "other_furniture_types" | "quote_grouping" | "item_scope" | "item_condition";
+export type Ambiguity = "clients_relation" | "item_owner_mapping" | "other_furniture_types" | "quote_grouping" | "item_scope" | "item_condition";
 
 export interface QuoteRequestDraft {
   wantsPrice: boolean;
@@ -47,6 +47,25 @@ export interface QuoteRequestDraft {
   date: DateMention | null;
   ambiguities: Ambiguity[];
   rawText: string;
+  /** dois nomes ditos juntos ("Seu Roberto e Dona Jo"): pode ser um casal (um cliente) ou dois clientes */
+  clientsJoined?: [string, string] | null;
+}
+
+/** Dois clientes citados lado a lado, ligados por "e": "o seu Roberto e a dona Jo". */
+export function detectJoinedClients(text: string, clients: MentionedClient[]): [string, string] | null {
+  if (clients.length !== 2) return null;
+  const norm = normalizeText(text).replace(/[.,!?;:]/g, " ").replace(/\s+/g, " ");
+  const [a, b] = clients.map((c) => normalizeText(c.name)) as [string, string];
+  const joined = (x: string, y: string) => new RegExp(`\\b${x}\\s+e\\s+(o\\s+|a\\s+)?${y}\\b`).test(norm);
+  return joined(a, b) || joined(b, a) ? [clients[0]!.ref, clients[1]!.ref] : null;
+}
+
+/** Resposta à pergunta "casal (um cliente) ou dois clientes?" */
+export function parseClientsRelation(text: string): "couple" | "separate" | null {
+  const n = normalizeText(text);
+  if (/\b(dois clientes|2 clientes|separad\w*|diferentes?|cada um|nao sao casal|nao e casal|nao sao um casal|sao dois)\b/.test(n)) return "separate";
+  if (/\b(casal|um cliente|1 cliente|cliente so|um so|uma so|mesmo cliente|juntos|marido|esposa|mulher dele|marido dela|casados|mesma casa|sao um so|familia)\b/.test(n)) return "couple";
+  return null;
 }
 
 const COUNT = "(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|\\d+)";
@@ -172,6 +191,8 @@ export function extractQuoteRequest(text: string, now: Date): QuoteRequestDraft 
   });
   const ambiguities: Ambiguity[] = [];
   const totalQty = items.reduce((a, i) => a + i.quantity, 0);
+  const clientsJoined = detectJoinedClients(text, clients);
+  if (clientsJoined) ambiguities.push("clients_relation");
   if (clients.length > 1 && items.some((i) => !i.ownerRef)) ambiguities.push("item_owner_mapping");
   if (items.some((i) => i.generic)) ambiguities.push("other_furniture_types");
   if (clients.length > 1) ambiguities.push("quote_grouping");
@@ -184,6 +205,7 @@ export function extractQuoteRequest(text: string, now: Date): QuoteRequestDraft 
     date: extractDateMention(text, now),
     ambiguities,
     rawText: text,
+    clientsJoined,
   };
 }
 
@@ -353,6 +375,8 @@ export function mergeAiQuoteRequest(draft: QuoteRequestDraft, raw: unknown): Quo
     }
   }
   if (parsed.data.wantsPrice && WANTS_PRICE.test(norm)) out.wantsPrice = true;
+  out.clientsJoined = detectJoinedClients(draft.rawText, out.clients);
+  if (out.clientsJoined && !out.ambiguities.includes("clients_relation")) out.ambiguities = ["clients_relation", ...out.ambiguities];
   if (out.clients.length > 1 && out.items.some((i) => !i.ownerRef) && !out.ambiguities.includes("item_owner_mapping")) out.ambiguities = [...out.ambiguities, "item_owner_mapping"];
   return out;
 }

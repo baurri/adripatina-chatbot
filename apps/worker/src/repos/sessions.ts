@@ -69,6 +69,7 @@ export interface SuspendedGoal {
 }
 
 export type QuoteRequestStep =
+  | "clients_relation"
   | "owner_confirm"
   | "owner_each"
   | "identity"
@@ -92,6 +93,8 @@ export interface QuoteRequestState {
   step: QuoteRequestStep;
   currentRefs: string[];
   ownerProposal?: Record<string, string>;
+  /** casal (um cliente só) ou dois clientes, quando os nomes vieram juntos */
+  clientsRelation?: "couple" | "separate";
   grouping?: "agrupado" | "por_cliente";
   groupingAsked?: boolean;
   reviewed?: boolean;
@@ -105,6 +108,7 @@ export interface QuoteRequestState {
   logisticsAsked?: boolean;
   transportAsked?: boolean;
   logistics?: { pickup: boolean; delivery: boolean };
+  partialLogistics?: { pickup?: boolean; delivery?: boolean };
   unparsed?: number;
 }
 

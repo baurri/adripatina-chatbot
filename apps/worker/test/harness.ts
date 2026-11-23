@@ -54,7 +54,7 @@ export async function createHarness(opts: { requireAdminReview?: boolean } = {})
   const clock = { now: new Date("2026-11-16T13:00:00Z") };
   const ctx: Ctx = {
     db: new Db(d1 as unknown as D1Database),
-    config: loadConfig({ ENVIRONMENT: "test", AI_ENABLED: "false", ADMIN_DEV_BYPASS_EMAIL: "", TELEGRAM_MODE: "mock" }),
+    config: loadConfig({ ENVIRONMENT: "test", AI_ENABLED: "false", ADMIN_DEV_BYPASS_EMAIL: "", TELEGRAM_MODE: "mock", PHRASING_VARIETY: "false" }),
     clock: () => clock.now,
     telegram,
     storage: bucket,

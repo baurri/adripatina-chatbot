@@ -43,3 +43,16 @@ Valores inventados para testes estão no catálogo **demo_only / calibrated=fals
 | D-030 | Limites configuráveis `priceSanity` (padrão R$ 1,00 a R$ 2.000,00 por embalagem) disparam **confirmação reforçada**, nunca rejeição silenciosa. Valor ≤ 0 é recusado. | Erros de transcrição ("R$ 90" → "R$ 9.000"). |
 | D-031 | Escopo "só o tampo" (`scope`) chega ao motor: área = largura × fundura; sem medidas, fração do porte (0,25, NÃO CALIBRADA, usando o maior valor da faixa). | Precificar corretamente peças em que só o tampo é trabalhado. |
 | D-032 | Sem "Pergunta X de Y": o total muda conforme as respostas; usa-se linguagem natural ("Estamos quase lá", "Última pergunta"). | Previsibilidade sem números que mudam. |
+
+## Rodada de 22/11/2026 — conversa mais intuitiva (feedback do teste real)
+
+| ID | Decisão | Motivo |
+|----|---------|--------|
+| D-033 | **Perfil do móvel** decide as perguntas: só móveis com parte interna (`furnitureHasInterior`: cristaleira, guarda-roupa, cômoda…) recebem "por dentro também?". Cama, mesa, cadeira não. | Pergunta "dentro/fora" para cama não fazia sentido. |
+| D-034 | **Cama com tamanho padrão** (solteiro, viúva, casal, queen, king) recebe a medida do colchão como fato **não confirmado** e a área usa o perfil `bed` (cabeceira + peseira + 2 laterais, frente e verso — fatores NÃO CALIBRADOS). | "Cama de casal queen" já diz a medida; sem inventar: o artesão pode corrigir. |
+| D-035 | A resposta à pergunta pendente é lida **primeiro**; texto livre só é aceito quando a mensagem não fala de outra coisa (móvel, técnica, material, dinheiro, intenção). Respostas de **outra pergunta** reconhecíveis (prazo, pagamento, método) ditas antes da hora vão para o campo certo. | "Mas e o valor?" virava prazo; "entrada agora, metade na entrega" virava prazo. |
+| D-036 | Pergunta do artesão ao bot ("pra que isso?") é **explicada**, nunca gravada; "quanto fica?" no meio da coleta oferece calcular já como estimativa. Informação repetida é confirmada ("Isso, já anotei") em vez de "não entendi". | Evitar becos sem saída. |
+| D-037 | **Logística parcial** ("ela vai deixar a cama na minha casa", "ela mesma busca") é entendida nos dois fluxos (um móvel e vários móveis); pergunta só a metade que falta. | Linguagem natural do Adriano. |
+| D-038 | **IA para preencher respostas** (`aiInterpretAnswer`) só quando as regras não entendem, validada contra a lista de valores do campo, sem dinheiro. **IA para variar a redação** (`aiRephrase`) só é aceita se mantiver números, nomes e a pergunta, sem citar preço novo; senão fica o texto-base (que também varia por sorteio com semente). Desligável por `PHRASING_VARIETY=false`. | Mensagens menos robóticas sem a IA decidir nada. |
+| D-039 | **Casal ou dois clientes**: dois nomes ditos juntos ("Seu Roberto e Dona Jo") geram a pergunta "são um casal, um cliente só? Ou dois clientes?" antes de qualquer associação. Casal → um cliente "Seu Roberto e Dona Jo", todas as peças dele, sem pergunta de agrupamento. "É dos dois" depois de "dois clientes" pergunta antes de juntar. | Nunca adivinhar a relação entre clientes. |
+| D-040 | Aprendizado de material só registra os materiais **citados** pelo artesão. | Lixa/massa apareciam como "precisa comprar" sem ele ter dito. |

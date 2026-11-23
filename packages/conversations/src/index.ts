@@ -5,3 +5,4 @@ export * from "./questions.js";
 export * from "./ai.js";
 export * from "./multi.js";
 export * from "./pricing-answers.js";
+export * from "./ai-answers.js";

@@ -39,3 +39,9 @@ Fluxo completo com dados fictícios: conversa → resumo → cálculo (piso R$ 5
 Novos arquivos de teste: `packages/conversations/test/multi.test.ts`, `apps/worker/test/router.test.ts`, `apps/worker/test/quote-request.test.ts` (caso real de produção reproduzido literalmente), `apps/worker/test/quote-pricing.test.ts` (25 cenários do Ajuste 1).
 
 Migration `0004_conversation_goals_pricing.sql` aplicada com sucesso no D1 local (Miniflare), incluindo recriação de `learning_observations` com cópia dos dados e índice único parcial. **Pendente em produção** (somente 0004).
+
+## 22/11/2026 — Conversa mais intuitiva (feedback do teste com a cama queen)
+
+Novos testes: `apps/worker/test/intuitive.test.ts` (12 cenários do diálogo real: cama queen sem "por dentro", pergunta ao bot explicada, "quanto fica?", "Mas e o valor?" não gravado, repetição confirmada, logística parcial, respostas fora de hora, pagamento ≠ prazo, aprendizado só do material citado, IA validada para respostas e reescrita), `packages/conversations/test/intuitive.test.ts` (tamanhos de cama, perfis, validadores de IA, casal × dois clientes, nomes seguidos de verbo), `packages/pricing/test/bed.test.ts` (geometria da cama), 4 cenários de casal em `quote-request.test.ts` e 1 no roteador (intenção só da IA não interrompe).
+
+Diálogos reproduzidos localmente do início ao fim (cama queen da Dona Licele; Seu Roberto e Dona Jo como casal até o orçamento final) sem becos sem saída.

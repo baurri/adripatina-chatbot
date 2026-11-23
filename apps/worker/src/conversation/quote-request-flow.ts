@@ -9,9 +9,11 @@ import {
   parseAnswer,
   parseFurnitureList,
   parseGrouping,
+  parseClientsRelation,
   parseItemStatements,
   partOf,
   techniqueLabel,
+  type MentionedClient,
   type MentionedItem,
   type NluResult,
   type QuoteRequestDraft,
@@ -51,11 +53,16 @@ function totalPieces(d: QuoteRequestDraft): number {
   return d.items.reduce((a, i) => a + i.quantity, 0);
 }
 
+/** "dos dois", "é dos dois", "ambos": a peça é do casal */
+const BOTH_OWNERS = /\b(dos dois|das duas|de ambos|ambos|os dois juntos|e do casal|do casal|deles dois|dos 2)\b/;
+
 function clientName(d: QuoteRequestDraft, ref: string | null): string | null {
   return ref ? (d.clients.find((c) => c.ref === ref)?.name ?? null) : null;
 }
 
 function deOf(name: string): string {
+  // casal tratado como um cliente: "do Seu Roberto e da Dona Jo"
+  if (/ e /.test(name)) return name.split(/ e /).map(deOf).join(" e ");
   const n = normalizeText(name);
   if (/^(dona|sra|senhora|doutora|dra|tia|professora)\b/.test(n)) return `da ${name}`;
   if (/^(seu|sr|senhor|doutor|dr|tio|professor)\b/.test(n)) return `do ${name}`;
@@ -152,6 +159,20 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
   }
   const d = qr.draft;
   qr.unparsed = 0;
+  // 0) nomes ditos juntos: casal (um cliente) ou dois clientes? Nunca adivinhar.
+  if (d.clientsJoined && !qr.clientsRelation && d.clients.length === 2) {
+    qr.step = "clients_relation";
+    const [a, b] = d.clients as [MentionedClient, MentionedClient];
+    const art = (x: MentionedClient) => (normalizeText(x.name).startsWith("dona") ? `a ${x.name}` : `o ${x.name}`);
+    c.setPending({ type: "confirmation", entity: { kind: "quote_request", id: qr.id } });
+    c.say(`Uma coisa antes: ${art(a)} e ${art(b)} são um casal, um cliente só? Ou são dois clientes diferentes, cada um com seus móveis?`, [
+      [
+        { text: "Um casal, cliente só", data: "qr:couple" },
+        { text: "Dois clientes", data: "qr:separate" },
+      ],
+    ]);
+    return persist(c);
+  }
   const unresolvedOwner = d.clients.length > 1 ? d.items.filter((i) => !i.ownerRef || !i.ownerConfirmed) : [];
 
   // 1) de quem é cada peça
@@ -337,9 +358,11 @@ export function isPlausibleQuoteRequestAnswer(c: Conversation, text: string, nlu
   if (!qr) return false;
   if (["yes", "no", "dont_know"].includes(nlu.intent)) return true;
   switch (qr.step) {
+    case "clients_relation":
+      return !!parseClientsRelation(text);
     case "owner_confirm":
     case "owner_each":
-      return !!matchClientInAnswer(text, qr.draft.clients);
+      return !!matchClientInAnswer(text, qr.draft.clients) || BOTH_OWNERS.test(normalizeText(text));
     case "identity":
       return parseFurnitureList(text).length > 0;
     case "scope":
@@ -357,8 +380,11 @@ export function isPlausibleQuoteRequestAnswer(c: Conversation, text: string, nlu
       return !!nlu.entities.method;
     case "material_source":
       return !!nlu.entities.materialStatus;
-    case "logistics":
-      return parseLogistics(text) !== null;
+    case "logistics": {
+      if (parseLogistics(text) !== null) return true;
+      const ans = parseAnswer("logistics", text);
+      return ans.kind === "partial" || ans.kind === "value";
+    }
     case "transport_cost":
       return nlu.entities.amountCents !== undefined || /\b\d+\b/.test(text);
     default:
@@ -441,7 +467,16 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
   }
 
   switch (qr.step) {
+    case "clients_relation": {
+      // "não" depois de "é dos dois?" (já sabemos que são dois clientes): volta a perguntar de quem é cada peça
+      if (nlu.intent === "no" && qr.clientsRelation === "separate") return onQuoteRequestCallback(c, "owner_no");
+      const rel = parseClientsRelation(text) ?? (nlu.intent === "yes" ? "couple" : null);
+      if (rel) return onQuoteRequestCallback(c, rel);
+      if (captured) return askQuoteRequestAgain(c);
+      return retry('Me diz só assim: "é um casal" ou "são dois clientes".');
+    }
     case "owner_confirm": {
+      if (BOTH_OWNERS.test(normalizeText(text))) return onBothOwners(c);
       if (nlu.intent === "yes") return onQuoteRequestCallback(c, "owner_yes");
       if (nlu.intent === "no") return onQuoteRequestCallback(c, "owner_no");
       // resposta direta ("a mesinha é da dona Jo")
@@ -452,6 +487,7 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
     }
     case "owner_each": {
       const it = d.items.find((i) => i.ref === qr.currentRefs[0]);
+      if (BOTH_OWNERS.test(normalizeText(text)) && d.clients.length === 2) return onBothOwners(c);
       const client = matchClientInAnswer(text, d.clients);
       if (it && client) {
         it.ownerRef = client.ref;
@@ -576,8 +612,29 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
       return nextQuoteRequestStep(c);
     }
     case "logistics": {
-      const l = dontKnow ? { pickup: false, delivery: false } : parseLogistics(text);
+      // linguagem natural primeiro ("ela vai deixar aqui", "ela mesma busca"), juntando o que já se sabia
+      const ans = dontKnow ? ({ kind: "unparsed" } as const) : parseAnswer("logistics", text);
+      let l: { pickup: boolean; delivery: boolean } | null = dontKnow ? { pickup: false, delivery: false } : null;
+      if (!l && ans.kind !== "partial" && ans.kind !== "value") l = parseLogistics(text);
+      if (!l) {
+        const known = { ...(qr.partialLogistics ?? {}), ...(ans.kind === "partial" ? ans.known : ans.kind === "value" ? (ans.value as { pickup: boolean; delivery: boolean }) : {}) };
+        if (known.pickup !== undefined && known.delivery !== undefined) l = { pickup: known.pickup, delivery: known.delivery };
+        else if (known.pickup !== undefined || known.delivery !== undefined) {
+          qr.partialLogistics = known;
+          c.say(
+            known.pickup === false
+              ? "Ah, beleza! Então o cliente traz até você. 👍 E depois de pronto, o cliente vem pegar ou você vai entregar?"
+              : known.pickup === true
+                ? "Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?"
+                : known.delivery === false
+                  ? "Entendi, o cliente vem buscar quando ficar pronto. E pra chegar até você: ele traz ou você vai buscar?"
+                  : "Certo, você entrega no final. E pra chegar até você: o cliente traz ou você vai buscar?",
+          );
+          return persist(c);
+        }
+      }
       if (!l) return retry('Pode dizer "buscar e entregar", "só buscar", "só entregar" ou "não precisa".');
+      delete qr.partialLogistics;
       qr.logisticsAsked = true;
       qr.logistics = l;
       for (const jobId of Object.values(qr.jobByRef ?? {})) await setFact(c.ctx, jobId, "logistics", l, { actor: c.input.user.id, source: c.sourceKind(), messageId: c.input.inboundMessageId });
@@ -683,6 +740,28 @@ export async function onQuoteRequestCallback(c: Conversation, action: string): P
     return;
   }
   switch (action) {
+    case "couple": {
+      // um cliente só com o nome dos dois; todas as peças são dele
+      qr.clientsRelation = "couple";
+      const d = qr.draft;
+      if (d.clients.length >= 2) {
+        const merged: MentionedClient = { ref: d.clients[0]!.ref, rawName: d.clients.map((x) => x.rawName).join(" e "), name: d.clients.map((x) => x.name).join(" e "), confidence: 1 };
+        d.clients = [merged];
+      }
+      for (const it of d.items) {
+        it.ownerRef = d.clients[0]?.ref ?? null;
+        it.ownerConfirmed = true;
+      }
+      d.ambiguities = d.ambiguities.filter((a) => !["clients_relation", "item_owner_mapping", "quote_grouping"].includes(a));
+      delete qr.ownerProposal;
+      c.ack = `Combinado: ${d.clients[0]?.name ?? "os dois"} ficam como um cliente só, com um orçamento só.`;
+      return nextQuoteRequestStep(c);
+    }
+    case "separate":
+      qr.clientsRelation = "separate";
+      qr.draft.ambiguities = qr.draft.ambiguities.filter((a) => a !== "clients_relation");
+      c.ack = "Certo, são dois clientes.";
+      return nextQuoteRequestStep(c);
     case "owner_yes":
       for (const it of qr.draft.items) {
         it.ownerRef = qr.ownerProposal?.[it.ref] ?? it.ownerRef;
@@ -711,6 +790,25 @@ export async function onQuoteRequestCallback(c: Conversation, action: string): P
       qr.grouping = "agrupado";
       return nextQuoteRequestStep(c);
   }
+}
+
+/**
+ * "É dos dois": se ele já disse que são dois clientes, não contrariar em silêncio —
+ * perguntar se quer tratar como um cliente só.
+ */
+async function onBothOwners(c: Conversation): Promise<void> {
+  const qr = c.session.context.quoteRequest!;
+  if (qr.clientsRelation !== "separate") return onQuoteRequestCallback(c, "couple");
+  const names = humanList(qr.draft.clients.map((x) => x.name));
+  qr.step = "clients_relation";
+  c.setPending({ type: "confirmation", entity: { kind: "quote_request", id: qr.id } });
+  c.say(`Entendi, é dos dois. Então quer que eu junte ${names} como um cliente só, com um orçamento só?`, [
+    [
+      { text: "Sim, um cliente só", data: "qr:couple" },
+      { text: "Não, separo as peças", data: "qr:owner_no" },
+    ],
+  ]);
+  return persist(c);
 }
 
 /** Cria um serviço por peça, com as associações confirmadas. */

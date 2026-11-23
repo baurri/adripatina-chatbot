@@ -20,6 +20,13 @@ describe("Política única de roteamento contextual", () => {
     expect(d.route).toBe("active_goal");
   });
 
+  it("intenção vinda só da IA nunca interrompe a pergunta pendente ('entrada agora, metade na entrega')", () => {
+    const rules = interpretRules("entrada agora metade na entrega");
+    const nlu = { ...rules, intent: "agenda" as const, confidence: 0.95, source: "ai" as const };
+    const d = decideRoute({ nlu, flow: "collecting", pendingQuestion: pending("deadline" as never), plausibleAnswer: false });
+    expect(d.route).not.toBe("interruption");
+  });
+
   it("18. comando inequívoco ainda funciona durante fluxo ativo", () => {
     const d = decideRoute({ nlu: interpretRules("cancelar"), flow: "quote_request", pendingQuestion: pending("item_owner"), plausibleAnswer: false });
     expect(d.route).toBe("universal");
