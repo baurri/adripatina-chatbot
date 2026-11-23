@@ -18,6 +18,7 @@ export type Flow =
   | "payment"
   | "confirm_calc"
   | "progress_confirm"
+  | "learning_time"
   | "resume_prompt"
   | "admin_confirm";
 
@@ -34,9 +35,20 @@ export interface SessionContext {
   candidateJobIds?: string[];
   disambiguation?: "client" | "date";
   contradiction?: { field: ProjectField; oldValue: unknown; newValue: unknown };
-  expense?: { amountCents?: number; description?: string; materialKey?: string | null; packages?: number | null; jobId?: string | null; step: "amount" | "job" | "confirm"; sequence?: number; duplicateOf?: string };
+  expense?: {
+    amountCents?: number;
+    description?: string;
+    materialKey?: string | null;
+    packages?: number | null;
+    packageSize?: string | null;
+    jobId?: string | null;
+    step: "amount" | "package" | "job" | "confirm";
+    sequence?: number;
+    duplicateOf?: string;
+  };
   payment?: { amountCents?: number; clientName?: string; jobId?: string | null; step: "amount" | "job" | "confirm"; sequence?: number; duplicateOf?: string };
   progress?: { jobId: string; to: "EM_EXECUCAO" | "CONCLUIDO" | "ENTREGUE" };
+  learning?: { jobId: string; step: "hours" };
   adminAction?: { kind: "approve"; quoteId: string };
   questionHistory?: ProjectField[];
   unparsedCount?: number;

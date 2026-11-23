@@ -36,6 +36,7 @@ import type { User } from "../repos/users.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { getActiveSettings, getMaterialByKey } from "../repos/catalog.js";
 import { recordSuspicion } from "../services/duplicates.js";
+import { learnFromConfirmedPurchase, recordMaterialSourceObservation, recordTechniqueTimeObservation } from "../services/learning.js";
 import {
   approveQuote,
   artisanQuoteSummary,
@@ -161,6 +162,7 @@ class Conversation {
     const flow = this.session.flow;
     if (flow === "expense") return this.expenseText(trimmed, nlu);
     if (flow === "payment") return this.paymentText(trimmed, nlu);
+    if (flow === "learning_time") return this.learningTimeText(trimmed);
     if (flow === "contradiction") return this.contradictionText(trimmed, nlu);
     if (["confirm_match", "choose_match", "confirm_new_similar"].includes(flow)) {
       if (nlu.intent === "yes") return this.onCallback(flow === "confirm_new_similar" ? "match:no" : "match:yes");
@@ -643,6 +645,13 @@ ${GUIDE}`);
     const p = questionProgress(job.facts);
     const ack = this.ack ? `${this.ack}\n\n` : "";
     this.ack = null;
+    if (field === "material_status") {
+      const keys = materialKeysForJob(job);
+      const names = (await Promise.all(keys.map((key) => getMaterialByKey(this.ctx, key)))).filter(Boolean).map((m) => m!.name.toLowerCase());
+      const subject = humanList(names);
+      this.say(`${ack}Pergunta ${p.current} de ${p.total}:\nPara ${jobPhrase(job)}, você vai usar ${subject || "material"} que já tem no estoque, comprar tudo ou comprar só uma parte?\n\nPode responder do seu jeito, por exemplo: “já tenho tudo” ou “vou precisar comprar o verniz”.`);
+      return;
+    }
     this.say(`${ack}Pergunta ${p.current} de ${p.total}:\n${q.text}`);
   }
 
@@ -745,6 +754,15 @@ ${GUIDE}`);
     }
     const r = await setFact(this.ctx, job.id, ans.field, ans.value as never, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
     const fresh = (await getJob(this.ctx, job.id))!;
+    if (ans.field === "material_status") {
+      await recordMaterialSourceObservation(this.ctx, {
+        userId: this.input.user.id,
+        jobId: job.id,
+        messageId: this.input.inboundMessageId,
+        materialKeys: materialKeysForJob(fresh),
+        source: ans.value as "tem_tudo" | "tem_parte" | "precisa_comprar",
+      });
+    }
     if (r.kind === "conflict") return this.askContradiction(fresh, { field: ans.field, oldValue: r.previous.value, newValue: ans.value });
     if (resuming) this.say(`Continuando sobre ${jobPhrase(job)}.`);
     if (r.kind === "same") this.say(`Isso, já tinha anotado: ${describeFact(ans.field, ans.value)}.`);
@@ -1092,17 +1110,35 @@ ${GUIDE}`);
     const materialKey = matWord ? (MATERIAL_WORDS[matWord] ?? null) : null;
     const packages = extractCount(text, /^(lata|latas|galao|galoes|pote|potes|frasco|frascos|caixa|caixas)$/) ?? (/\b(uma lata|um galao|um pote|um frasco)\b/.test(norm) ? 1 : null);
     const description = matWord ? `${matWord}${packages ? ` (${packages} emb.)` : ""}` : TRANSPORT_RE.exec(norm)?.[1] ?? text.slice(0, 80);
+    const packageSize = materialKey ? parsePackageSize(text, materialKey) : null;
     this.session.flow = "expense";
     this.session.context.expense = {
       ...(nlu.entities.amountCents ? { amountCents: nlu.entities.amountCents } : {}),
       description,
       materialKey,
       packages,
+      packageSize,
       step: "job",
     };
     if (!nlu.entities.amountCents) {
       this.session.context.expense.step = "amount";
       this.say(`Quanto foi ${matWord ? `o ${matWord}` : "esse gasto"}?`);
+      return;
+    }
+    return this.askExpensePackage();
+  }
+
+  async askExpensePackage(): Promise<void> {
+    const e = this.session.context.expense!;
+    if (!e.materialKey || TRANSPORT_RE.test(normalizeText(e.description ?? ""))) return this.askExpenseJob();
+    const needsSize = !["lixa", "folha_ouro"].includes(e.materialKey);
+    if (!needsSize && !e.packageSize) e.packageSize = (await getMaterialByKey(this.ctx, e.materialKey))?.packageSize ?? "1";
+    if (!e.packages || (needsSize && !e.packageSize)) {
+      e.step = "package";
+      const material = await getMaterialByKey(this.ctx, e.materialKey);
+      this.say(
+        `Só para eu aprender direitinho, ${this.firstName}: foram quantas embalagens de ${material?.name.toLowerCase() ?? e.description} e qual era o tamanho de cada uma?\n\nPor exemplo: “1 lata de 900 ml” ou “2 galões de 3,6 litros”.`,
+      );
       return;
     }
     return this.askExpenseJob();
@@ -1152,6 +1188,18 @@ Está certo? Pode responder "sim" ou "não".`, [
         e.description = mat ?? (TRANSPORT_RE.exec(normalizeText(text))?.[1] ?? "material");
         e.materialKey = mat ? (MATERIAL_WORDS[mat] ?? null) : null;
       }
+      return this.askExpensePackage();
+    }
+    if (e.step === "package") {
+      const count = extractPackageCount(text);
+      const size = e.materialKey ? parsePackageSize(text, e.materialKey) : null;
+      if (count) e.packages = count;
+      if (size) e.packageSize = size;
+      const needsSize = !!e.materialKey && !["lixa", "folha_ouro"].includes(e.materialKey);
+      if (!e.packages || (needsSize && !e.packageSize)) {
+        this.say(`Ainda faltou ${!e.packages ? "a quantidade de embalagens" : "o tamanho da embalagem"}. Pode me dizer, por exemplo: “1 lata de 900 ml”.`);
+        return;
+      }
       return this.askExpenseJob();
     }
     if (nlu.intent === "yes" && e.step === "confirm") return this.onExpense("confirm");
@@ -1187,6 +1235,17 @@ Está certo? Pode responder "sim" ou "não".`, [
     } else {
       const mat = e.materialKey ? await getMaterialByKey(this.ctx, e.materialKey) : null;
       result = await recordPurchase(this.ctx, { materialId: mat?.id ?? null, description: e.description ?? "material", amountCents: e.amountCents!, packages: e.packages ?? null, jobId: e.jobId ?? null, actor: this.input.user.id, idempotencyKey: key });
+      if (result.kind === "created" && e.materialKey && e.packages && e.packageSize) {
+        await learnFromConfirmedPurchase(this.ctx, {
+          userId: this.input.user.id,
+          jobId: e.jobId ?? null,
+          messageId: this.input.inboundMessageId,
+          materialKey: e.materialKey,
+          totalCents: e.amountCents!,
+          packages: e.packages,
+          packageSize: e.packageSize,
+        });
+      }
     }
     if (result.kind === "duplicate") {
       this.say(`Esse gasto (${e.description}, ${formatBRL(e.amountCents!)}) já está anotado hoje. Não vou lançar de novo. É um outro gasto igual?`, [
@@ -1202,7 +1261,7 @@ Está certo? Pode responder "sim" ou "não".`, [
     this.say(
       isTransport
         ? `Anotado: ${e.description}, ${formatBRL(e.amountCents!)}.`
-        : `Anotado: compra de ${e.description}, ${formatBRL(e.amountCents!)}. Isso conta como dinheiro que saiu. O valor do material usado em cada serviço entra no orçamento separado, sem contar duas vezes.`,
+        : `Anotado: compra de ${e.description}, ${formatBRL(e.amountCents!)}.${e.materialKey && e.packages && e.packageSize ? " Também atualizei o preço de reposição desse material com o que você confirmou. Obrigado por me ensinar! 🙂" : ""} Isso conta como dinheiro que saiu. O valor do material usado em cada serviço entra no orçamento separado, sem contar duas vezes.`,
     );
   }
 
@@ -1354,10 +1413,51 @@ Está certo? Pode responder "sim" ou "não".`, [
         const bal = await jobBalance(this.ctx, job.id);
         if (bal.balanceCents && bal.balanceCents > 0) this.say(`Lembrete: ainda falta receber ${formatBRL(bal.balanceCents)} desse serviço.`);
       }
+      if (p.to === "CONCLUIDO") {
+        this.session.flow = "learning_time";
+        this.session.context.learning = { jobId: job.id, step: "hours" };
+        this.say(`Que ótimo! 🎉 Só mais uma curiosidade para eu aprender com o seu jeito de trabalhar: mais ou menos quantas horas de trabalho você gastou ${em(job)}?\n\nPode responder, por exemplo: “6 horas”.`);
+      }
     } catch {
       const job = await getJob(this.ctx, p.jobId);
       this.say(`Não dá para mudar ${job ? jobPhrase(job) : "esse serviço"} direto para esse estado agora (está ${job ? JOB_STATUS_LABEL[job.status].toLowerCase() : "?"}).`);
     }
+  }
+
+  async learningTimeText(text: string): Promise<void> {
+    const learning = this.session.context.learning;
+    if (!learning) {
+      this.session.flow = "idle";
+      return this.greet();
+    }
+    if (/\b(nao sei|não sei|nao lembro|não lembro)\b/i.test(text)) {
+      delete this.session.context.learning;
+      this.session.flow = "idle";
+      this.say("Sem problema nenhum. Quando lembrar, pode me contar. Cada serviço me ajuda a entender melhor o seu trabalho. 🙂");
+      return;
+    }
+    const hours = parseHours(text);
+    if (!hours) {
+      this.say("Não consegui entender o tempo. Pode responder, por exemplo: “6 horas” ou “2 horas e meia”. Se não lembrar, pode dizer “não sei”.");
+      return;
+    }
+    const job = await getJob(this.ctx, learning.jobId);
+    if (!job) {
+      delete this.session.context.learning;
+      this.session.flow = "idle";
+      return;
+    }
+    const techniques = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
+    await recordTechniqueTimeObservation(this.ctx, {
+      userId: this.input.user.id,
+      jobId: job.id,
+      messageId: this.input.inboundMessageId,
+      techniqueKeys: techniques,
+      hours,
+    });
+    delete this.session.context.learning;
+    this.session.flow = "idle";
+    this.say(`Perfeito, anotei ${hours.replace(".", ",")} horas. Obrigado, ${this.firstName}! Vou comparar com os próximos serviços para aprender sem tirar conclusão por uma experiência só. 🧠`);
   }
 
   /** Para consultas e andamento: encontra o projeto citado (somente leitura até confirmar). */
@@ -1499,6 +1599,47 @@ function questionProgress(facts: Job["facts"]): { current: number; total: number
   return { current: answered + 1, total: answered + remaining };
 }
 
+const TECHNIQUE_MATERIALS: Record<string, string[]> = {
+  pintura_lisa: ["lixa", "fundo_preparador", "tinta_esmalte"],
+  patina: ["lixa", "fundo_preparador", "tinta_base_patina", "betume_patina"],
+  decape: ["lixa", "tinta_esmalte"],
+  folha_ouro: ["cola_mordente", "folha_ouro"],
+  verniz: ["verniz"],
+  cera: ["cera"],
+  restauracao: ["lixa", "massa_madeira"],
+};
+
+function materialKeysForJob(job: Job): string[] {
+  const techniques = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
+  return [...new Set(techniques.flatMap((key) => TECHNIQUE_MATERIALS[key] ?? []))];
+}
+
+function humanList(items: string[]): string {
+  if (items.length < 2) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} e ${items.at(-1)}`;
+}
+
+function extractPackageCount(text: string): number | null {
+  return (
+    extractCount(text, /^(lata|latas|galao|galoes|litro|litros|pote|potes|frasco|frascos|caixa|caixas|pacote|pacotes|embalagem|embalagens)$/) ??
+    (/\b(uma|um)\s+(lata|galao|pote|frasco|caixa|pacote|embalagem)\b/.test(normalizeText(text)) ? 1 : null)
+  );
+}
+
+/** Converte ml/L ou g/kg para a unidade base cadastrada (L ou kg). */
+function parsePackageSize(text: string, materialKey: string): string | null {
+  const norm = normalizeText(text).replace(/,/g, ".");
+  const m = /(\d+(?:\.\d+)?)\s*(ml|mililitros?|l|litros?|g|gramas?|kg|quilos?)\b/.exec(norm);
+  if (!m) return null;
+  let value = Number(m[1]);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const unit = m[2]!;
+  const liquid = !["massa_madeira", "cera"].includes(materialKey);
+  if (liquid && /^(ml|mililitro)/.test(unit)) value /= 1000;
+  if (!liquid && /^(g|grama)/.test(unit)) value /= 1000;
+  return String(Number(value.toFixed(4)));
+}
+
 async function listJobs2(ctx: Ctx): Promise<Job[]> {
   return (await listActiveJobs(ctx, 20)).filter((j) => ACTIVE_JOB_STATUSES.includes(j.status));
 }
@@ -1575,6 +1716,21 @@ function parseLooseAmount(text: string): number | null {
   const n = Number(normalized);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n * 100);
+}
+
+function parseHours(text: string): string | null {
+  const norm = normalizeText(text).replace(/,/g, ".");
+  const numeric = /(\d+(?:\.\d+)?)\s*(?:h|hora|horas)\b/.exec(norm);
+  if (numeric) {
+    let value = Number(numeric[1]);
+    if (/\b(e meia|e meio)\b/.test(norm)) value += 0.5;
+    return value > 0 && value <= 500 ? String(value) : null;
+  }
+  const words: Record<string, number> = { uma: 1, um: 1, duas: 2, dois: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, doze: 12 };
+  const word = /\b(uma|um|duas|dois|tres|quatro|cinco|seis|sete|oito|nove|dez|doze)\s+horas?\b/.exec(norm);
+  if (!word) return null;
+  const value = words[word[1]!]! + (/\b(e meia|e meio)\b/.test(norm) ? 0.5 : 0);
+  return String(value);
 }
 
 function friendlyDomainError(err: DomainError): string {

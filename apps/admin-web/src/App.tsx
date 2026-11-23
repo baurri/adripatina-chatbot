@@ -9,6 +9,7 @@ import { Duplicates } from "./pages/Duplicates";
 import { Reports } from "./pages/Reports";
 import { Admin } from "./pages/Admin";
 import { Clients } from "./pages/Clients";
+import { Conversations } from "./pages/Conversations";
 
 const NAV: [string, string][] = [
   ["#/", "Painel"],
@@ -18,6 +19,7 @@ const NAV: [string, string][] = [
   ["#/catalogo", "Materiais e estoque"],
   ["#/duplicidades", "Duplicidades"],
   ["#/relatorios", "Relatórios"],
+  ["#/conversas", "Conversas e aprendizado"],
   ["#/configuracoes", "Configurações"],
   ["#/administracao", "Usuários, auditoria e IA"],
 ];
@@ -60,6 +62,9 @@ export function App() {
       break;
     case "relatorios":
       page = <Reports />;
+      break;
+    case "conversas":
+      page = <Conversations />;
       break;
     case "configuracoes":
       page = <Settings />;

@@ -87,3 +87,7 @@ code { font-size: 13px; word-break: break-all; }
 }
 .request { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 10px 0; background: #fffdf8; }
 .request p { margin: 0 0 6px; }
+.conversation-log { max-height: 70vh; overflow-y: auto; padding-right: 8px; }
+.conversation-log li { border: 1px solid var(--line); }
+.learning-list { padding-left: 20px; }
+.learning-list li { margin: 10px 0; }

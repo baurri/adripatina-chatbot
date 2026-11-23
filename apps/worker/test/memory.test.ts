@@ -49,9 +49,11 @@ describe("Memória contextual e prevenção de duplicidades", () => {
 
     // gasto por áudio, regravado depois de "falha" (arquivo diferente, mesmo conteúdo)
     await h.voice("aud-2", "Gastei noventa reais num verniz");
+    await h.send("1 lata de 900 ml");
     await h.click(`exp:job:geral`);
     await h.click("exp:confirm");
     await h.voice("aud-3", "Gastei noventa reais num verniz");
+    await h.send("1 lata de 900 ml");
     await h.click("exp:job:geral");
     const dup = await h.click("exp:confirm");
     expect(h.allText(dup)).toMatch(/já está anotado/);

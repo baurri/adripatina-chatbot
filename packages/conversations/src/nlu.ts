@@ -119,8 +119,8 @@ function classify(norm: string, e: Entities): { intent: Intent; confidence: numb
   const money = e.amountCents !== undefined;
   if (/\b(recebi|pagou|me pagou|deu de entrada|deu entrada|adiantou|mandou o pix|fez o pix|fez um pix|depositou|acertou|quitou)\b/.test(trimmed) && money)
     return { intent: "register_payment", confidence: 0.9 };
-  if (/\b(gastei|comprei|paguei|compra de|comprado|torrei)\b/.test(trimmed) && money)
-    return { intent: "register_expense", confidence: 0.9 };
+  if (/\b(gastei|comprei|paguei|compra de|comprado|torrei)\b/.test(trimmed) && (money || e.materialMention))
+    return { intent: "register_expense", confidence: money ? 0.9 : 0.82 };
   if (/\b(registrar|anotar) (gasto|despesa|compra)\b/.test(trimmed)) return { intent: "register_expense", confidence: 0.85 };
   if (/\b(registrar|anotar) (pagamento|recebimento)\b/.test(trimmed)) return { intent: "register_payment", confidence: 0.85 };
 
@@ -172,7 +172,7 @@ export function interpretRules(text: string): NluResult {
   else if (/\b(grande|enorme)\b/.test(norm)) e.sizeClass = "grande";
   if (/\b(ja tenho|tenho (o|a) (material|tinta|verniz)|tenho sobrando|sobrou|tenho em casa|tenho tudo)\b/.test(norm)) e.materialStatus = "tem_tudo";
   if (/\b(tenho uma parte|tenho um pouco|tenho parte|falta um pouco)\b/.test(norm)) e.materialStatus = "tem_parte";
-  if (/\b(preciso comprar|vou ter que comprar|tenho que comprar|nao tenho)\b/.test(norm)) e.materialStatus = "precisa_comprar";
+  if (/\b(preciso comprar|vou precisar comprar|vou ter que comprar|tenho que comprar|nao tenho)\b/.test(norm)) e.materialStatus = "precisa_comprar";
   if (/\b(pincel|trincha)\b/.test(norm)) e.method = "pincel";
   else if (/\brolo\b/.test(norm)) e.method = "rolo";
   else if (/\b(pistola|compressor)\b/.test(norm)) e.method = "pistola";

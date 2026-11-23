@@ -30,6 +30,7 @@ import {
 } from "../services/quotes.js";
 import { cashflowReport, dashboardSummary, profitabilityReport, toCsv } from "../services/reports.js";
 import { approveAccessRequest, listAccessRequests, rejectAccessRequest } from "../services/access-requests.js";
+import { listLearningObservations } from "../services/learning.js";
 
 const decStr = z.string().regex(/^\d+(\.\d+)?$/);
 const cents = z.number().int().positive();
@@ -61,6 +62,25 @@ export function adminRoutes(): Hono<AppEnv> {
     if (c.req.query("format") === "csv") return csv(c, "rentabilidade.csv", rows);
     return c.json({ rows });
   });
+  r.get("/conversations", async (c) => {
+    const { limit, offset } = page(c);
+    const userId = c.req.query("userId") ?? null;
+    const rows = await c.get("ctx").db.all(
+      `SELECT cm.id, cm.direction, cm.kind, COALESCE(cm.transcript, cm.text) AS text, cm.intent, cm.confidence, cm.status, cm.created_at,
+              u.id AS user_id, u.display_name, u.role, j.code AS job_code, j.title AS job_title
+         FROM conversation_messages cm
+         LEFT JOIN users u ON u.id = cm.user_id
+         LEFT JOIN jobs j ON j.id = cm.job_id
+        WHERE (? IS NULL OR cm.user_id = ?)
+        ORDER BY cm.created_at DESC LIMIT ? OFFSET ?`,
+      userId,
+      userId,
+      limit,
+      offset,
+    );
+    return c.json({ rows });
+  });
+  r.get("/learning-observations", async (c) => c.json({ rows: await listLearningObservations(c.get("ctx"), page(c).limit) }));
 
   // ---------------- clientes
   r.get("/clients", async (c) => {
