@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { extractDateMention, normalizeText, wordsToNumber, type DateMention } from "@adripatina/shared";
 import { detectConditionStatement, extractClientNames } from "./nlu.js";
-import { FURNITURE, TECHNIQUES, ambiguousFurnitureKind, findTechniques, furnitureLabel, normalizeFurnitureText } from "./vocabulary.js";
+import { FURNITURE, TECHNIQUES, ambiguousFurnitureKind, findTechniques, furnitureLabel, normalizeFurnitureText, nounFeminine } from "./vocabulary.js";
 
 /**
  * Representação intermediária de um pedido de orçamento com vários móveis e
@@ -304,14 +304,15 @@ export function extractQuoteRequest(text: string, now: Date): QuoteRequestDraft 
 /** Pedido com estrutura que o fluxo simples (1 móvel, 1 cliente) não comporta. */
 export function isMultiItemRequest(d: QuoteRequestDraft): boolean {
   const qty = d.items.reduce((a, i) => a + i.quantity, 0);
-  return d.items.length > 0 && (qty > 1 || d.clients.length > 1);
+  // uma peça com dois nomes é de um casal/família, não um pedido de vários clientes
+  return d.items.length > 0 && qty > 1;
 }
 
 /** Nome curto do item para conversa: "a mesinha de centro", "a cômoda". */
 export function itemName(item: MentionedItem): string {
   if (item.generic) return /^outr/.test(item.description) ? `os ${item.description}` : item.description;
   const label = item.description || furnitureLabel(item.furnitureType);
-  const fem = item.furnitureType ? FURNITURE[item.furnitureType]?.feminine : false;
+  const fem = nounFeminine(label, item.furnitureType);
   if (item.quantity > 1) return `${fem ? "as" : "os"} ${item.quantity} ${pluralLabel(label, item.quantity)}`;
   return `${fem ? "a" : "o"} ${label}`;
 }

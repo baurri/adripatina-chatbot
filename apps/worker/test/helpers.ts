@@ -44,12 +44,9 @@ export async function artisanCreatesQuote(h: Harness): Promise<string> {
   await h.send("1,80 de altura, 1 metro de largura e 40 de fundura");
   await h.click("ans:externa");
   await h.click("ans:nao"); // reparos
-  await h.click("ans:nao"); // terceiros
-  await h.click("ans:tem_parte");
   await h.click("ans:pincel");
-  await h.click("ans:nenhum");
-  await h.click("ans:sem_prazo");
-  const summary = await h.click("ans:entrada_entrega");
+  // terceiros, material, prazo e pagamento não mudam o preço: não são perguntados antes do orçamento
+  const summary = await h.click("ans:nenhum");
   expect(h.allText(summary)).toMatch(/pode calcular/);
   return (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs"))!.id;
 }

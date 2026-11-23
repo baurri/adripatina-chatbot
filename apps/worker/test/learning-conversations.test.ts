@@ -21,14 +21,13 @@ describe("Aprendizado curioso e histórico administrativo", () => {
     expect(await count(h, "SELECT COUNT(*) AS n FROM learning_observations WHERE kind = 'MATERIAL_PURCHASE' AND entity_key = 'verniz' AND status = 'APLICADO'")).toBe(1);
   });
 
-  it("pergunta explicitamente sobre estoque dos materiais da técnica e guarda a evidência", async () => {
+  it("material não é perguntado antes do orçamento, mas o que ele contar vira evidência", async () => {
     const h = await createHarness();
     await h.send("Peguei uma mesa da dona Ana para envernizar");
     await h.send("está boa");
     await h.send("1 metro de largura e 80 cm de altura");
-    await h.send("não");
-    const sourceQuestion = await h.send("não");
-    expect(h.allText(sourceQuestion)).toMatch(/verniz.*(estoque|em casa|comprar)/s);
+    const next = await h.send("não");
+    expect(h.allText(next)).not.toMatch(/verniz.*(estoque|em casa)/s);
     await h.send("vou precisar comprar o verniz");
     expect(await count(h, "SELECT COUNT(*) AS n FROM learning_observations WHERE kind = 'MATERIAL_SOURCE' AND entity_key = 'verniz'")).toBe(1);
   });

@@ -153,6 +153,25 @@ export function furnitureLabel(key: string | null | undefined): string {
 /** Nomes do catálogo mestre para tipos que o vocabulário antigo não tem (ex.: "carrinho de chá"). */
 const CATALOG_NAMES = new Map(FURNITURE_CATALOG.map((t) => [t.key, t.name.toLowerCase()]));
 
+/** substantivos de móvel terminados em "a" que são masculinos, e terminados em "e" que são femininos */
+const MASC_ENDING_A = new Set(["sofa", "guarda-roupa", "guarda", "divan", "puff", "pufe"]);
+const FEM_OTHER = new Set(["estante", "ponte", "base", "mesinha", "cabeceira", "peca", "poltrona", "banqueta"]);
+
+/**
+ * Gênero pelo nome que APARECE na conversa (o que o artesão falou), não pelo tipo do catálogo:
+ * o tipo "criado-mudo" é masculino, mas "mesa de cabeceira" é feminino ("a mesa de cabeceira").
+ */
+export function nounFeminine(label: string | null | undefined, key?: string | null): boolean {
+  const head = normalizeText(label ?? "").replace(/^(um|uma|o|a|os|as|uns|umas)\s+/, "").split(/[\s,]+/)[0] ?? "";
+  if (!head) return !!(key && FURNITURE[key]?.feminine);
+  const singular = head.replace(/s$/, "");
+  if (MASC_ENDING_A.has(singular)) return false;
+  if (FEM_OTHER.has(singular)) return true;
+  if (/(a|inha)$/.test(singular)) return true;
+  if (/(o|or|im|et|ack|au|io|el)$/.test(singular)) return false;
+  return !!(key && FURNITURE[key]?.feminine);
+}
+
 export function furnitureArticle(key: string | null | undefined): "a" | "o" {
   return key && FURNITURE[key]?.feminine ? "a" : "o";
 }

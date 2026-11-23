@@ -49,7 +49,7 @@ async function events(h: Harness, requestId: string): Promise<string[]> {
 async function blockedVarnishQuote(h: Harness): Promise<void> {
   await h.ctx.db.run("UPDATE materials SET replacement_price_cents = NULL, price_updated_at = NULL, origin = 'demo_only' WHERE key = 'verniz'");
   await h.send("Peguei uma mesa da dona Ana para envernizar");
-  for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "não", "não", "vou comprar", "pincel", "não precisa", "sem prazo", "à vista"]) await h.send(t);
+  for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "não", "pincel", "não precisa"]) await h.send(t);
   await h.click("calc:yes");
   await h.click("mp:later");
 }

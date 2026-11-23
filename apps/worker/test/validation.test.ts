@@ -123,7 +123,7 @@ describe("Cenário 4 — cama queen (medida nominal)", () => {
     expect(job.facts.dimensions?.value).toMatchObject({ source: "nominal", kind: "mattress" });
     expect(isRealMeasurement(job.facts.dimensions?.value as never)).toBe(false);
     expect(h.allText(await h.send("a cama toda"))).toMatch(/estrutura, por fora/);
-    for (const m of ["não sei", "está boa", "não", "não", "já tenho tudo", "pincel", "não precisa", "sem prazo", "à vista"]) await h.send(m);
+    for (const m of ["não sei", "está boa", "não", "pincel", "não precisa"]) await h.send(m);
     await h.send("pode calcular");
     const quote = await h.ctx.db.first<{ definitive_allowed: number; result_json: string }>("SELECT definitive_allowed, result_json FROM quotes ORDER BY created_at DESC LIMIT 1");
     expect(quote).not.toBeNull();
@@ -317,7 +317,7 @@ describe("travas do orçamento (produção 23/11/2026)", () => {
   async function deferredMethod(h: Harness) {
     await h.ctx.db.run("UPDATE materials SET replacement_price_cents = NULL, price_updated_at = NULL WHERE key = 'verniz'");
     await h.send("Peguei uma mesa da dona Ana para envernizar");
-    for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "só por fora", "não", "não", "vou comprar", "ainda não sei", "não precisa", "sem prazo", "à vista"]) await h.send(t);
+    for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "só por fora", "não", "ainda não sei", "não precisa"]) await h.send(t);
   }
 
   it("bloqueio por campo deixado pra depois vira pergunta, não volta ao 'pode calcular?'", async () => {
@@ -378,5 +378,74 @@ describe("IA mantém o tratamento e quem faz a ação (produção 23/11/2026)", 
   it("aceita a mesma pergunta em português do Brasil", () => {
     expect(validateComposed(payPlan, { text: "E o pagamento: o cliente vai pagar à vista ou metade agora e metade na entrega?" }).reasons).toEqual([]);
     expect(validateComposed(payPlan, { text: "E o Seu Abreu vai pagar como: à vista ou metade agora e metade na entrega?" }).reasons).toEqual([]);
+  });
+});
+
+/** último parágrafo da resposta (a pergunta), sem o reconhecimento da resposta anterior */
+const lastQuestion = (reply: string): string => reply.split(/\n\n|\n---\n/).at(-1) ?? reply;
+
+describe("conversa real do administrador refeita (23/11/2026): mais curta, sem perder nada", () => {
+  async function abreu(h: Harness) {
+    const out: string[] = [];
+    for (const m of [
+      "E aí, consigo fazer um novo orçamento já? É o móvel do seu Abreu e da dona Isa. É uma mesa de cabeceira.",
+      "Eu tenho que fazer uma reforminha assim, eu tenho que lixar e pintar de azul marinho.",
+      "bom",
+      "media",
+    ]) out.push(h.allText(await h.send(m)));
+    return out;
+  }
+
+  it("segundo dono e cor viram observações; o resumo mostra", async () => {
+    const h = await setup();
+    const out = await abreu(h);
+    expect(out.join("\n")).toMatch(/também citado: Dona Isa/);
+    expect(out.join("\n")).toMatch(/cor: azul marinho/);
+    const job = (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs"))!;
+    const facts = (await getJob(h.ctx, job.id))!.facts;
+    expect(facts.details?.value).toMatch(/Dona Isa.*azul marinho|azul marinho.*Dona Isa/);
+  });
+
+  it("questionário não pergunta material, terceiros, prazo nem pagamento antes do orçamento", async () => {
+    const h = await setup();
+    const asked: string[] = await abreu(h);
+    let r = asked.at(-1)!;
+    for (let i = 0; i < 8 && !/pode calcular/.test(r); i++) {
+      const q = lastQuestion(r);
+      const answer = /conserto/i.test(q) ? "não" : /pincel|rolo|pistola/i.test(q) ? "pincel" : /buscar|entregar|transporte/i.test(q) ? "não precisa" : /fora|dentro/i.test(q) ? "só por fora" : "não sei";
+      r = h.allText(await h.send(answer));
+      asked.push(r);
+    }
+    const all = asked.join("\n");
+    expect(r).toMatch(/pode calcular/);
+    expect(all).not.toMatch(/já tem aí em casa|vai precisar comprar\?|marceneiro ou (um )?tapeceiro|prazo combinado|Como o cliente vai pagar/i);
+    expect(asked.length).toBeLessThanOrEqual(9);
+  });
+
+  it("'e aí, vc tá bem?' no resumo: responde e lembra curto; 'quero começar de novo' pede confirmação e recomeça", async () => {
+    const h = await setup();
+    const out = await abreu(h);
+    let r = out.at(-1)!;
+    for (let i = 0; i < 8 && !/pode calcular/.test(r); i++) {
+      const q = lastQuestion(r);
+      r = h.allText(await h.send(/conserto/i.test(q) ? "não" : /pincel|rolo|pistola/i.test(q) ? "pincel" : /fora|dentro/i.test(q) ? "só por fora" : "não precisa"));
+    }
+    const social = h.allText(await h.send("e ai, vc ta bem?"));
+    expect(social).toMatch(/Tudo (certo|bem)/);
+    expect(social).toMatch(/Quer que eu calcule\?/);
+    const restart = await h.send("quero começar de novo");
+    expect(buttonsOf(restart.at(-1))).toEqual(["rst:yes", "cmd:continue"]);
+    const done = h.allText(await h.click("rst:yes"));
+    expect(done).toMatch(/recomecei/);
+    expect((await h.ctx.db.first<{ status: string }>("SELECT status FROM jobs"))!.status).toBe("CANCELADO");
+    const s = await h.ctx.db.first<{ flow: string }>("SELECT flow FROM conversation_sessions");
+    expect(s!.flow).toBe("idle");
+  });
+
+  it("teste de áudio responde que chegou, sem 'não entendi'", async () => {
+    const h = await setup();
+    const r = h.allText(await h.send("testando o áudio, tá chegando?"));
+    expect(r).toMatch(/Tô aqui|chegando direitinho/);
+    expect(r).not.toMatch(/Não entendi/);
   });
 });

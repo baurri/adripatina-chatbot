@@ -313,7 +313,7 @@ export function describeFact(field: ProjectField, value: unknown): string {
     case "payment_terms":
       return `pagamento: ${v as string}`;
     case "details":
-      return `detalhes: ${v as string}`;
+      return `observações: ${v as string}`;
     case "scope": {
       const sc = v as FactValueMap["scope"];
       return sc.part === "tampo" ? "trabalho só no tampo" : sc.part === "cabeceira" ? "trabalho só na cabeceira" : "trabalho na peça inteira";

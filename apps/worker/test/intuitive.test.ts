@@ -53,13 +53,32 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
     expect((await facts(h)).repairs).toBeUndefined();
   });
 
-  it("'quanto fica?' no meio das perguntas oferece calcular agora como estimativa", async () => {
+  it("'quanto fica?' no meio das perguntas já responde com a faixa e oferece calcular agora", async () => {
     const h = await bed();
     await h.send(START);
     await h.send("a cama inteira");
     const r = await h.send("quanto fica?");
-    expect(h.allText(r)).toMatch(/calculo agora com o que já sei/);
+    expect(h.allText(r)).toMatch(/Pelo que já sei, deve ficar entre R\$ [\d.]+,\d\d e R\$ [\d.]+,\d\d \(sem contar frete\)/);
+    expect(h.allText(r)).toMatch(/Com mais \d+ respostas eu fecho o valor/);
     expect(buttonsOf(r.at(-1))).toEqual(["calc:yes", "cmd:continue"]);
+  });
+
+  it("sem preço de material, a faixa NÃO aparece (custo nunca entra como zero)", async () => {
+    const h = await bed();
+    await h.ctx.db.run("UPDATE materials SET replacement_price_cents = NULL WHERE key = 'verniz'");
+    await h.send(START);
+    await h.send("a cama inteira");
+    const r = h.allText(await h.send("quanto fica?"));
+    expect(r).not.toMatch(/R\$/);
+    expect(r).toMatch(/calculo agora com o que já sei/);
+  });
+
+  it("a faixa aparece sozinha uma vez durante as perguntas, quando já dá pra calcular", async () => {
+    const h = await bed();
+    const texts: string[] = [];
+    for (const m of [START, "a cama inteira", "não tenho como medir agora", "está boa", "não", "pincel"]) texts.push(h.allText(await h.send(m)));
+    const shown = texts.filter((t) => /Só pra você ir tendo uma ideia/.test(t));
+    expect(shown).toHaveLength(1);
   });
 
   it("'Mas e o valor?' não é gravado como resposta de texto livre", async () => {
@@ -80,17 +99,15 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
     await start(h);
     await h.send("está boa");
     await h.send("não");
-    await h.send("não");
     const r = h.allText(await h.send("é uma cama queen"));
     expect(r).toMatch(/Isso, já anotei/);
     expect(r).not.toMatch(/não entendi/);
-    expect(r).toMatch(/material \(verniz\)/);
   });
 
   it("logística parcial: 'ela vai deixar a cama na minha casa' = não precisa buscar; pergunta só a volta", async () => {
     const h = await bed();
     await start(h);
-    for (const m of ["está boa", "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
+    for (const m of ["está boa", "não", "pincel"]) await h.send(m);
     const r = h.allText(await h.send("ela vai deixar a cama na minha casa"));
     expect(r).toMatch(/não precisa buscar/);
     expect(r).toMatch(/o cliente vem pegar ou você vai entregar\?/);
@@ -98,36 +115,28 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
     expect((await facts(h)).logistics).toMatchObject({ value: { pickup: false, delivery: false } });
   });
 
-  it("resposta de outra pergunta dita antes da hora vai para o campo certo", async () => {
+  it("prazo e pagamento não são perguntados, mas o que ele disser por conta própria vai para o campo certo", async () => {
     const h = await bed();
     await start(h);
-    for (const m of ["está boa", "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
+    for (const m of ["está boa", "não", "pincel"]) await h.send(m);
     // pergunta pendente: transporte
     const r = h.allText(await h.send("sem pressa"));
     expect(r).toMatch(/prazo: sem prazo/);
-    expect(r).toMatch(/transporte/);
-    await h.send("não precisa, ela traz e busca");
-    // prazo já respondido → pergunta o pagamento; e "entrada agora metade na entrega" nunca vira prazo
+    expect(r).toMatch(/transporte|buscar|entregar/);
+    // "entrada agora metade na entrega" nunca vira prazo
     await h.send("entrada agora metade na entrega");
     const f = await facts(h);
     expect(f.deadline?.value).toBe("sem prazo");
     expect(f.payment_terms?.value).toBe("entrada e restante na entrega");
-  });
-
-  it("pagamento dito na pergunta do prazo é guardado como pagamento, não como prazo", async () => {
-    const h = await bed();
-    await start(h);
-    for (const m of ["está boa", "não", "não", "já tenho tudo", "pincel", "não precisa, ela traz e busca"]) await h.send(m);
-    await h.send("entrada agora metade na entrega");
-    const f = await facts(h);
-    expect(f.deadline).toBeUndefined();
-    expect(f.payment_terms?.value).toBe("entrada e restante na entrega");
+    const sum = h.allText(await h.send("não precisa, ela traz e busca"));
+    expect(sum).toMatch(/pode calcular/);
+    expect(sum).not.toMatch(/Como o cliente vai pagar|prazo combinado/);
   });
 
   it("aprendizado de material só registra os materiais que ele citou", async () => {
     const h = await bed();
     await start(h);
-    for (const m of ["está boa", "não", "não"]) await h.send(m);
+    for (const m of ["está boa", "não"]) await h.send(m);
     await h.send("vou comprar lixa e massa");
     const keys = (await h.ctx.db.all<{ entity_key: string }>("SELECT entity_key FROM learning_observations WHERE kind = 'MATERIAL_SOURCE'")).map((r) => r.entity_key);
     expect(keys).not.toContain("verniz");

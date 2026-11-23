@@ -13,6 +13,7 @@ const LABELS: Record<string, string> = {
   "prog:confirm": "confirmou a mudança de andamento do serviço",
   "calc:yes": "pediu para calcular o orçamento",
   "calc:fix": "quis corrigir algo antes do cálculo",
+  "rst:yes": "confirmou que quer recomeçar o serviço do zero",
   "exp:confirm": "confirmou o registro do gasto",
   "exp:fix": "quis corrigir o valor do gasto",
   "exp:cancel": "desistiu do registro do gasto",

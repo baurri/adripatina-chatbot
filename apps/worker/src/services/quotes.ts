@@ -339,6 +339,51 @@ function quoteLineStatements(ctx: Ctx, quoteId: string, r: PricingResult): D1Pre
  * Se o último orçamento ainda não tem documento emitido e está editável, é atualizado
  * no lugar; caso contrário, cria nova versão — snapshots/PDFs antigos nunca mudam.
  */
+/** Bloqueios que tornam a prévia enganosa (custo faltando entraria como zero). */
+const PREVIEW_UNSAFE = new Set(["MATERIAL_PRICE_MISSING", "MATERIAL_YIELD_MISSING", "MATERIAL_UNKNOWN", "SUBCONTRACT_UNCONFIRMED", "TECHNIQUE_UNKNOWN", "AREA_UNKNOWN"]);
+
+export interface PriceRangePreview {
+  minCents: number;
+  maxCents: number;
+  /** parâmetros ainda não calibrados com o jeito de trabalhar do artesão */
+  uncalibrated: boolean;
+  /** frete ainda não entra (buscar/entregar sem custo informado ou não perguntado) */
+  withoutTransport: boolean;
+}
+
+/**
+ * Faixa de preço ANTES de terminar as perguntas, sem gravar nada: roda o motor na menor e
+ * na maior área possível e, sem método definido, com cada método cadastrado. Só devolve
+ * algo quando nenhum custo entraria como zero (preço de material faltando etc.).
+ */
+export async function previewPriceRange(ctx: Ctx, job: Job): Promise<PriceRangePreview | null> {
+  if (!(job.facts.techniques?.value as string[] | null | undefined)?.length) return null;
+  const settings = await getActiveSettings(ctx);
+  const catalog = await loadCatalog(ctx);
+  const { input, gaps } = await buildPricingInput(ctx, job);
+  if (!input.area) return null;
+  const areas: PricingInput["area"][] = input.area.kind === "exact" ? [input.area] : [{ kind: "exact", m2: input.area.minM2 }, { kind: "exact", m2: input.area.maxM2 }];
+  const methods = input.methodKey ? [input.methodKey] : Object.keys(catalog.methods);
+  if (!methods.length) return null;
+  const prices: number[] = [];
+  let uncalibrated = false;
+  for (const area of areas) {
+    for (const methodKey of methods) {
+      const r = priceJob({ ...input, area, methodKey }, settings.params, catalog, { now: ctx.clock() });
+      if (!r.computable || r.recommendedCents === null || r.blockers.some((b) => PREVIEW_UNSAFE.has(b.code))) return null;
+      if (r.blockers.some((b) => b.code === "UNCALIBRATED_PARAMETERS")) uncalibrated = true;
+      prices.push(r.recommendedCents);
+    }
+  }
+  const logistics = job.facts.logistics?.value as FactValueMap["logistics"] | null | undefined;
+  return {
+    minCents: Math.min(...prices),
+    maxCents: Math.max(...prices),
+    uncalibrated,
+    withoutTransport: !logistics || gaps.some((g) => g.code === "TRANSPORT_COST_MISSING"),
+  };
+}
+
 export async function calculateQuote(
   ctx: Ctx,
   jobId: string,

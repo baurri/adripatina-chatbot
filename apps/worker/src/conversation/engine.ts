@@ -12,6 +12,10 @@ import {
   furnitureHasInterior,
   isQuestionToBot,
   naturalAck,
+  extractNotes,
+  detectMeta,
+  type MetaTurn,
+  mergeNotes,
   naturalQuestion,
   type ParsedAnswer,
   type QuestionContext,
@@ -28,7 +32,7 @@ import {
   type NluResult,
   type ProjectMention,
 } from "@adripatina/conversations";
-import { nextQuestion, QUESTION_ORDER, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
+import { nextQuestion, OPTIONAL_FIELDS, QUESTION_ORDER, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
 import { extractCount, formatBRL, formatDateBR, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { aiInterpretAnswer, interpret } from "../ai/service.js";
@@ -65,6 +69,8 @@ import {
   issueDocuments,
   latestQuoteForJob,
   markQuoteOutcome,
+  previewPriceRange,
+  type PriceRangePreview,
   sendDocumentToArtisan,
   submitForReview,
 } from "../services/quotes.js";
@@ -133,6 +139,8 @@ export class Conversation {
   readonly out: OutgoingMessage[] = [];
   /** confirmação curta da última resposta, enviada junto com a próxima pergunta */
   ack: string | null = null;
+  /** observações novas da mensagem atual, anexadas ao próximo reconhecimento */
+  notesAck: string | null = null;
   session!: Session;
   /** catálogo mestre de móveis (carregado sob demanda, uma vez por mensagem) */
   furnitureCatalog: LoadedCatalog | null = null;
@@ -255,6 +263,9 @@ export class Conversation {
       const handled = await this.onSlashCommand(trimmed);
       if (handled) return;
     }
+    // fora do roteiro (recomeçar, testar o áudio, conversa social): responde e volta ao ponto
+    const meta = detectMeta(trimmed, { voice: this.input.kind === "voice" });
+    if (meta && (await this.onMeta(meta, trimmed))) return;
     const nlu = await interpret(this.ctx, trimmed);
     const decision = decideRoute({ nlu, flow: this.session.flow, pendingQuestion: this.session.context.pendingQuestion ?? null, plausibleAnswer: this.isPlausibleAnswer(trimmed, nlu) });
     await this.logRouting(nlu, decision);
@@ -282,6 +293,75 @@ export class Conversation {
       default:
         return this.onFallback(trimmed, nlu);
     }
+  }
+
+  /** Fala fora do roteiro. Devolve false quando o fluxo normal deve tratar (ex.: "oi" sem nada em andamento). */
+  async onMeta(meta: MetaTurn, text: string): Promise<boolean> {
+    const busy = this.session.flow !== "idle";
+    switch (meta) {
+      case "restart": {
+        const job = this.session.activeJobId && ["collecting", "confirm_calc"].includes(this.session.flow) ? await getJob(this.ctx, this.session.activeJobId) : null;
+        if (job) {
+          this.say(`Quer recomeçar ${jobPhrase(job)} do zero? Eu tiro ele da lista (fica guardado no histórico) e você me conta tudo de novo.`, [
+            [
+              { text: "Recomeçar do zero", data: "rst:yes" },
+              { text: "Continuar de onde parei", data: "cmd:continue" },
+            ],
+          ]);
+          return true;
+        }
+        if (busy) await this.cancel();
+        this.say("Pode me contar do começo: qual é o móvel, de quem é e o que vai fazer nele? Pode ser por áudio. 🙂");
+        return true;
+      }
+      case "audio_test":
+        this.say(this.input.kind === "voice" ? `Tá chegando direitinho! 🎧 Entendi assim: "${text.slice(0, 200)}"` : "Tô aqui! 🎧 Pode mandar áudio que eu escuto e transcrevo.");
+        if (busy) await this.reaskCurrent();
+        return true;
+      case "thanks":
+        this.say(busy ? "Por nada! 😊" : "Por nada! Qualquer coisa, é só chamar. 😊");
+        if (busy) await this.reaskCurrent();
+        return true;
+      case "small_talk":
+        if (!busy) return false;
+        this.say(pick(["Tudo certo por aqui, obrigado! 😊", "Tudo bem sim! 😊"], this.seed(13)));
+        await this.reaskCurrent();
+        return true;
+    }
+  }
+
+  /** Volta ao ponto da conversa sem repetir tudo (resumo longo vira um lembrete curto). */
+  async reaskCurrent(): Promise<void> {
+    const flow = this.session.flow;
+    const job = this.session.activeJobId ? await getJob(this.ctx, this.session.activeJobId) : null;
+    if (flow === "confirm_calc" && job) {
+      this.say(`Voltando ao orçamento ${de(job)}: já tenho o que preciso. Quer que eu calcule?`, [
+        [
+          { text: "Pode calcular", data: "calc:yes" },
+          { text: "Quero corrigir", data: "calc:fix" },
+        ],
+      ]);
+      return;
+    }
+    if (flow === "collecting" && job) return this.askNext(job);
+    if (flow === "quote_request" || flow === "quote_material_pricing") return this.resumePrompt();
+  }
+
+  /** "Recomeçar do zero": o serviço sai da lista (cancelado, com histórico) e a conversa volta ao início. */
+  async onRestart(): Promise<void> {
+    const jobId = this.session.activeJobId;
+    if (jobId) {
+      try {
+        await transitionJob(this.ctx, jobId, "CANCELADO", this.input.user.id, "Recomeçado do zero pelo artesão");
+      } catch {
+        /* estado que não permite cancelar: segue só limpando a conversa */
+      }
+    }
+    this.session.flow = "idle";
+    this.session.activeJobId = null;
+    this.session.lastQuestion = null;
+    this.session.context = {};
+    this.say("Pronto, recomecei. 👍 Me conta: qual é o móvel, de quem é e o que vai fazer nele? Pode ser por áudio.");
   }
 
   async resumePrompt(): Promise<void> {
@@ -874,6 +954,8 @@ ${GUIDE}`);
     this.session.context.questionHistory = [];
     if (mention.photoAttachmentId) await this.ctx.db.run("UPDATE attachments SET job_id = ? WHERE id = ?", job.id, mention.photoAttachmentId);
     const res = await this.applyMention(job.id, mention);
+    const notes = await this.appendNotes(job.id, mention.text);
+    if (notes.length) res.added.push(...notes);
     let fresh = (await getJob(this.ctx, job.id))!;
     // catálogo mestre: tipo exato do móvel e medida de referência (hipótese, nunca medida real)
     const bedNote = await classifyFurniture(this, job.id, mention.text);
@@ -1159,6 +1241,16 @@ ${GUIDE}`);
     }
     this.session.flow = "collecting";
     this.session.lastQuestion = field;
+    if (this.notesAck) {
+      this.ack = this.ack ? `${this.ack}
+
+${this.notesAck}` : this.notesAck;
+      this.notesAck = null;
+    }
+    const preview = await this.earlyPreviewNote(job);
+    if (preview) this.ack = this.ack ? `${this.ack}
+
+${preview}` : preview;
     const hist = this.session.context.questionHistory ?? [];
     if (hist[hist.length - 1] !== field) hist.push(field);
     this.session.context.questionHistory = hist.slice(-20);
@@ -1172,26 +1264,66 @@ ${GUIDE}`);
     this.say(`${ack}${hint}${await this.questionText(job, field)}`);
   }
 
+  /** Observações livres do serviço (fato "details"): devolve só as novas. */
+  async appendNotes(jobId: string, text: string): Promise<string[]> {
+    const job = await getJob(this.ctx, jobId);
+    if (!job) return [];
+    const found = extractNotes(text, { clientName: (job.facts.client_name?.value as string | undefined) ?? null });
+    if (!found.length) return [];
+    const previous = (job.facts.details?.value as string | null | undefined) ?? null;
+    const merged = mergeNotes(previous, found);
+    if (!merged) return [];
+    await setFact(this.ctx, jobId, "details", merged, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
+    const before = new Set((previous ?? "").split(/\s*;\s*/));
+    return found.filter((x) => !before.has(x));
+  }
+
+  /** Material não é mais perguntado antes do orçamento: o que ele contar por conta própria vira aprendizado (só os citados). */
+  async learnMaterialSource(job: Job, text: string, source: "tem_tudo" | "tem_parte" | "precisa_comprar"): Promise<void> {
+    const said = Object.entries(MATERIAL_WORDS).filter(([w]) => new RegExp(`\\b${w}\\b`).test(normalizeText(text))).map(([, k]) => k);
+    if (!said.length) return;
+    await recordMaterialSourceObservation(this.ctx, { userId: this.input.user.id, jobId: job.id, messageId: this.input.inboundMessageId, materialKeys: [...new Set(said)], source });
+  }
+
   /** "Como assim?" → explica por que pergunta e pergunta de outro jeito, sem gravar nada. */
   async explainQuestion(job: Job, field: ProjectField): Promise<void> {
     const opener = pick(["Boa pergunta! ", "Explico: ", "Faz sentido perguntar 🙂 "], this.seed(3));
     this.say(`${opener}${FIELD_EXPLANATION[field]}\n\n${await this.questionText(job, field, 1)}`);
   }
 
-  /** Pediu o valor no meio das perguntas: oferecer calcular já (estimativa) ou continuar. */
-  offerEarlyCalc(job: Job): void {
+  /** Pediu o valor no meio das perguntas: dá a faixa que já dá pra saber e oferece calcular já ou continuar. */
+  async offerEarlyCalc(job: Job): Promise<void> {
     const pending = nextQuestion(job.facts, this.skipFieldsFor(job));
+    if (!pending) {
+      this.say("Claro! Já tenho tudo, vou fazer as contas.");
+      return this.calculateAndPresent(job.id);
+    }
+    const preview = await previewPriceRange(this.ctx, job).catch(() => null);
+    if (preview) this.session.context.previewShownFor = job.id;
+    const remaining = questionProgress(job.facts, this.skipFieldsFor(job));
+    const left = remaining.total - remaining.current + 1;
     this.say(
-      pending
-        ? `Já já te passo! 😊 Ainda tem ${pending ? "algumas coisinhas" : "uma coisinha"} que deixam o valor mais certo, mas se quiser eu calculo agora com o que já sei (fica como estimativa).`
-        : "Claro! Já tenho tudo, vou fazer as contas.",
+      preview
+        ? `Pelo que já sei, ${priceRangePhrase(preview)}. 💰
+
+Com mais ${left === 1 ? "uma resposta" : `${left} respostas`} eu fecho o valor. Quer que eu calcule agora mesmo assim ou seguimos?`
+        : `Já já te passo! 😊 Faltam ${left === 1 ? "uma coisinha" : `${left} coisinhas`} que mudam o valor. Se quiser, eu calculo agora com o que já sei (fica como estimativa).`,
       [
         [
           { text: "Calcular agora", data: "calc:yes" },
-          { text: "Responder as perguntas", data: "cmd:continue" },
+          { text: "Seguir as perguntas", data: "cmd:continue" },
         ],
       ],
     );
+  }
+
+  /** Mostra a faixa de preço uma vez, assim que ela fica confiável (custo nenhum entrando como zero). */
+  async earlyPreviewNote(job: Job): Promise<string | null> {
+    if (this.session.context.previewShownFor === job.id) return null;
+    const preview = await previewPriceRange(this.ctx, job).catch(() => null);
+    if (!preview) return null;
+    this.session.context.previewShownFor = job.id;
+    return `💰 Só pra você ir tendo uma ideia: pelo que já sei, ${priceRangePhrase(preview)}. Com o resto das respostas eu fecho o valor.`;
   }
 
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
@@ -1201,6 +1333,9 @@ ${GUIDE}`);
       this.session.activeJobId = null;
       return this.onText(text, false);
     }
+    // detalhes ditos de passagem (cor, tempo que ele estima, outro dono) nunca se perdem
+    const notes = await this.appendNotes(job.id, text);
+    if (notes.length) this.notesAck = `📝 Anotei também: ${notes.join("; ")}.`;
     // resposta a uma pergunta do catálogo (tipo do móvel, medidas, portas, estofado...)
     if (this.session.context.catalogQ && nlu.intent !== "correction" && (await catalogAnswer(this, job, text, nlu.intent))) return;
     const field = this.session.flow === "collecting" ? (this.session.lastQuestion ?? nextQuestion(job.facts, this.skipFieldsFor(job))) : null;
@@ -1266,10 +1401,17 @@ ${GUIDE}`);
       }
     }
 
-    if (nlu.entities.materialStatus && field !== "material_status" && ans.kind !== "value") {
-      // "já tenho o verniz" em qualquer momento
-      await setFact(this.ctx, job.id, "material_status", nlu.entities.materialStatus, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
-      this.say(stockExplanation(nlu.entities.materialStatus, nlu.entities.materialMention));
+    // "já tenho o verniz" / "vou comprar lixa e massa" em qualquer momento (material não é mais perguntado
+    // antes do orçamento). Só vale com um material citado: "tenho aquela cristaleira" não é estoque.
+    const volunteeredMaterial =
+      field !== "material_status" && ans.kind !== "value"
+        ? (nlu.entities.materialStatus ?? (mentionsMaterial(text) ? specificValue(parseAnswer("material_status", text)) : undefined))
+        : undefined;
+    if (volunteeredMaterial) {
+      const status = volunteeredMaterial as "tem_tudo" | "tem_parte" | "precisa_comprar";
+      await setFact(this.ctx, job.id, "material_status", status, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
+      await this.learnMaterialSource(job, text, status);
+      this.say(stockExplanation(status, nlu.entities.materialMention));
       return this.askNext((await getJob(this.ctx, job.id))!);
     }
 
@@ -1487,6 +1629,7 @@ ${await this.questionText(job, field, 4)}`);
     if (ns === "match") return this.onMatch(action, arg);
     if (ns === "fact") return this.onFact(action);
     if (ns === "calc") return this.onCalc(action);
+    if (ns === "rst") return this.onRestart();
     if (ns === "exp") return this.onExpense(action, arg);
     if (ns === "pay") return this.onPayment(action, arg);
     if (ns === "prog") return this.onProgress(action);
@@ -2306,6 +2449,20 @@ export function blockingField(job: Job, blockers: readonly { code: string; ref?:
   return null;
 }
 
+function priceRangePhrase(p: PriceRangePreview): string {
+  const value = p.minCents === p.maxCents ? `deve ficar por volta de ${formatBRL(p.minCents)}` : `deve ficar entre ${formatBRL(p.minCents)} e ${formatBRL(p.maxCents)}`;
+  return `${value}${p.withoutTransport ? " (sem contar frete)" : ""}`;
+}
+
+function mentionsMaterial(text: string): boolean {
+  const n = normalizeText(text);
+  return Object.keys(MATERIAL_WORDS).some((w) => n.split(/[^a-z0-9]+/).includes(w));
+}
+
+function specificValue(a: ParsedAnswer): string | undefined {
+  return a.kind === "value" && a.strength === "specific" ? String(a.value) : undefined;
+}
+
 function pick<T>(list: readonly T[], seed: number): T {
   return list[Math.abs(seed) % list.length]!;
 }
@@ -2320,6 +2477,7 @@ function questionProgress(facts: Job["facts"], baseSkip: ProjectField[] = []): {
     f = nextQuestion(facts, skip);
   }
   const answered = QUESTION_ORDER.filter((field) => {
+    if (OPTIONAL_FIELDS.includes(field)) return false;
     if (field === "dimensions") return !!(facts.dimensions || facts.size_class);
     return !!facts[field];
   }).length;

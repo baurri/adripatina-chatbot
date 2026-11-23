@@ -9,3 +9,5 @@ export * from "./ai-answers.js";
 export * from "./furniture/index.js";
 export * from "./llm/index.js";
 export * from "./proactive/index.js";
+export * from "./notes.js";
+export * from "./meta.js";

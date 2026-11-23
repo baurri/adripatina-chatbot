@@ -47,6 +47,13 @@ export const QUESTION_ORDER: readonly ProjectField[] = [
   "payment_terms",
 ];
 
+/**
+ * Campos que NÃO mudam o preço (ou só aparecem no PDF): não entram no questionário antes
+ * do orçamento. São gravados se o artesão falar espontaneamente ("vou comprar", "metade na
+ * entrega", "o assento vai pro tapeceiro") e o PDF usa "a combinar" quando faltam.
+ */
+export const OPTIONAL_FIELDS: readonly ProjectField[] = ["subcontract", "material_status", "deadline", "payment_terms"];
+
 export type FactStatus = "confirmed" | "unconfirmed" | "unknown";
 
 /**
@@ -153,12 +160,19 @@ export function isFieldAnswered(facts: FactSet, field: ProjectField): boolean {
 export function nextQuestion(facts: FactSet, skip: readonly ProjectField[] = []): ProjectField | null {
   for (const field of QUESTION_ORDER) {
     if (skip.includes(field)) continue;
+    if (OPTIONAL_FIELDS.includes(field) && !(field === "subcontract" && upholsteryInvolved(facts))) continue;
     if (field === "dimensions" && facts.size_class) continue;
     if (field === "application_method" && !techniquesNeedMethod(facts)) continue;
     if (field === "scope" && (facts.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined)?.type !== "cama") continue;
     if (!isFieldAnswered(facts, field)) return field;
   }
   return null;
+}
+
+/** estofado no serviço: o tapeceiro entra no preço, então "terceiros" volta a ser perguntado */
+function upholsteryInvolved(facts: FactSet): boolean {
+  const scope = (facts.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined)?.attributes?.upholstery_scope;
+  return scope === "estofado" || scope === "completo";
 }
 
 function techniquesNeedMethod(facts: FactSet): boolean {

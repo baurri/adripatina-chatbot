@@ -1,6 +1,7 @@
 import {
   AMBIGUOUS_FURNITURE,
   FURNITURE,
+  nounFeminine,
   conditionOf,
   extractQuoteRequest,
   furnitureHasTop,
@@ -90,7 +91,9 @@ function servicesText(item: MentionedItem): string {
 /** Detecta se a mensagem deve abrir o objetivo multi-item. */
 export function shouldStartQuoteRequest(draft: QuoteRequestDraft): boolean {
   const pieces = totalPieces(draft);
-  return draft.items.length > 0 && (pieces > 1 || draft.clients.length > 1);
+  // UMA peça com dois nomes ("do seu Abreu e da dona Isa") é de um casal/família: serviço simples,
+  // o segundo nome fica nas observações — não é pedido de vários clientes
+  return draft.items.length > 0 && pieces > 1;
 }
 
 export async function buildDraft(c: Conversation, text: string): Promise<QuoteRequestDraft> {
@@ -146,7 +149,7 @@ export async function startQuoteRequest(c: Conversation, draft: QuoteRequestDraf
     draft.items.map((i) =>
       i.generic
         ? `${draft.items.length > 1 ? "mais " : ""}${i.description.replace(/^outros /, "")}`
-        : `${i.quantity > 1 ? `${i.quantity} ${pluralLabel(i.description, i.quantity)}` : `${FURNITURE[i.furnitureType ?? ""]?.feminine ? "uma" : "um"} ${i.description}`}`,
+        : `${i.quantity > 1 ? `${i.quantity} ${pluralLabel(i.description, i.quantity)}` : `${nounFeminine(i.description, i.furnitureType) ? "uma" : "um"} ${i.description}`}`,
     ),
   );
   const services = humanList([...new Set(draft.items.flatMap((i) => i.services))]);
@@ -365,7 +368,7 @@ function conditionText(it: MentionedItem): string {
     case "reparos":
       return it.repairPart ? `com reparo no ${it.repairPart}` : "com reparos";
     case "danificado":
-      return "bem danificad" + (it.furnitureType && FURNITURE[it.furnitureType]?.feminine ? "a" : "o");
+      return "bem danificad" + (nounFeminine(it.description, it.furnitureType) ? "a" : "o");
     case "melhor_que_outros":
     case "bom":
       return "sem reparos grandes";
@@ -378,7 +381,7 @@ function reviewText(d: QuoteRequestDraft): string {
   return d.items
     .map((it) => {
       const owner = d.clients.length > 1 ? ` (${clientName(d, it.ownerRef)})` : "";
-      const scope = it.affectedPart === "tampo" ? "só o tampo" : "inteir" + (it.furnitureType && FURNITURE[it.furnitureType]?.feminine ? "a" : "o");
+      const scope = it.affectedPart === "tampo" ? "só o tampo" : "inteir" + (nounFeminine(it.description, it.furnitureType) ? "a" : "o");
       return `${itemName(it)}${owner}: ${servicesText(it)} ${scope}, ${conditionText(it)}`;
     })
     .join("; ");

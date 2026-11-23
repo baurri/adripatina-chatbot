@@ -16,7 +16,7 @@ async function setup(missing: string[] = ["verniz"]): Promise<Harness> {
 /** Serviço simples de verniz até o pedido de cálculo; devolve as respostas do cálculo. */
 async function varnishJobAndCalc(h: Harness, client = "dona Ana") {
   await h.send(`Peguei uma mesa da ${client} para envernizar`);
-  for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "só por fora", "não", "não", "vou comprar", "pincel", "não precisa", "sem prazo", "à vista"]) await h.send(t);
+  for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "só por fora", "não", "pincel", "não precisa"]) await h.send(t);
   return h.click("calc:yes");
 }
 
