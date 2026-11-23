@@ -513,11 +513,23 @@ ${GUIDE}`);
     const quote = await calculateQuote(this.ctx, job.id, this.input.user.id);
     const missing = missingPriceKeys([quote.result]);
     if (missing.length && quote.result.computable) return startPricing(this, { kind: "job", jobId: job.id }, missing, [quote.id]);
-    this.say(`Orçamento ${de(job)}:\n${artisanQuoteSummary(quote)}`);
     if (!quote.result.computable) {
-      this.session.flow = "collecting";
-      return this.askNext(job);
+      // o bloqueio vira pergunta (mesmo que o campo tenha ficado "pra depois"); nunca volta ao
+      // resumo + "pode calcular?" sem mudar nada — isso era um ciclo sem saída
+      const field = blockingField(job, quote.result.blockers);
+      if (field) {
+        this.session.context.calcAfter = { jobId: job.id, field };
+        this.ack = `Pra fechar a conta ${de(job)} eu ainda preciso saber isso, sem isso o cálculo não sai. Se ainda não decidiu, me diz o mais provável.`;
+        return this.askNext(job, field);
+      }
+      this.say(`Orçamento ${de(job)}:\n${artisanQuoteSummary(quote)}`);
+      this.session.flow = "idle";
+      this.session.lastQuestion = null;
+      this.clearPending();
+      this.say("Isso eu não consigo resolver por aqui: depende de um ajuste no cadastro, que o administrador faz no painel. O serviço fica guardado e, depois do ajuste, é só pedir \"calcular o orçamento\" de novo.");
+      return;
     }
+    this.say(`Orçamento ${de(job)}:\n${artisanQuoteSummary(quote)}`);
     const settings = await getActiveSettings(this.ctx);
     this.clearPending();
     if (settings.params.requireAdminReview || !quote.definitiveAllowed) {
@@ -1099,17 +1111,28 @@ ${GUIDE}`);
       greet: false,
       recent: this.recentBotTexts(),
       topicEmoji: null,
+      names: [this.firstName, String(job.facts.client_name?.value ?? "")].filter(Boolean),
     });
     return msg.text;
   }
 
-  async askNext(job: Job): Promise<void> {
+  async askNext(job: Job, force?: ProjectField): Promise<void> {
     await ensureCatalog(this);
-    const field = nextQuestion(job.facts, this.skipFieldsFor(job));
+    // campo bloqueante respondido (de verdade, não "não sei" de novo) → recalcula sem passar pelo resumo
+    const after = this.session.context.calcAfter;
+    if (!force && after) {
+      delete this.session.context.calcAfter;
+      if (after.jobId === job.id && job.facts[after.field]?.status !== "unknown") {
+        if (this.ack) this.say(this.ack);
+        this.ack = null;
+        return this.calculateAndPresent(job.id);
+      }
+    }
+    const field = force ?? nextQuestion(job.facts, this.skipFieldsFor(job));
     this.session.context.unparsedCount = 0;
     delete this.session.context.catalogQ;
     // catálogo mestre: tipo exato, medidas na ordem do móvel e perguntas específicas (uma por vez)
-    const step = await nextCatalogStep(this, job, field);
+    const step = force ? null : await nextCatalogStep(this, job, field);
     if (step) {
       const ack = this.ack ? `${this.ack}\n\n` : "";
       this.ack = null;
@@ -2271,6 +2294,18 @@ const FIELD_LABEL: Record<ProjectField, string> = {
 };
 
 /** "Pergunta 3 de 11": deixa claro quanto falta (previsibilidade). */
+/** Bloqueio do cálculo que o artesão consegue resolver respondendo uma pergunta. */
+const BLOCKER_FIELD: Record<string, ProjectField> = { METHOD_REQUIRED: "application_method", AREA_UNKNOWN: "dimensions", TECHNIQUE_UNKNOWN: "techniques" };
+export function blockingField(job: Job, blockers: readonly { code: string; ref?: string }[]): ProjectField | null {
+  for (const b of blockers) {
+    const field = BLOCKER_FIELD[b.code];
+    // técnica com ref = técnica não cadastrada (ajuste do administrador, não pergunta)
+    if (!field || (b.code === "TECHNIQUE_UNKNOWN" && b.ref)) continue;
+    if (job.facts[field]?.status !== "confirmed") return field;
+  }
+  return null;
+}
+
 function pick<T>(list: readonly T[], seed: number): T {
   return list[Math.abs(seed) % list.length]!;
 }

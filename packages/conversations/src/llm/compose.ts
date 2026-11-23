@@ -28,6 +28,8 @@ export interface MessagePlan {
   greet?: boolean;
   /** últimas mensagens do bot, para não repetir a mesma frase */
   recent?: string[];
+  /** nomes que podem aparecer (quem está conversando, clientes já citados) */
+  names?: string[];
 }
 
 /** Preferências de comunicação (explícitas; nada de diagnóstico nas mensagens). */
@@ -46,6 +48,7 @@ Regras obrigatórias:
 - Não invente fatos, números, medidas, preços, nomes ou datas: só cite o que está em "fatos".
 - Não repita perguntas listadas em "evitar". Não use termos de sistema (campo, cadastro, inválido, processando).
 - Não mencione condições pessoais, saúde ou diagnóstico. Não trate o Adriano como criança.
+- Só reescreva o "texto_de_referencia": não acrescente situações, histórias, exemplos ou comentários que não estejam nele. Você é um assistente: não fale de família, casa ou vida pessoal.
 - Se "pode_cumprimentar" for falso, não comece com saudação.
 Responda só com JSON: {"text": "<mensagem>"}`;
 
@@ -144,7 +147,54 @@ export function validateComposed(plan: MessagePlan, raw: unknown): ComposeCheck 
   if (countEmojis(text) > 2) reasons.push("emojis demais");
   if (!plan.greet && GREETING.test(text)) reasons.push("saudação repetida");
   if ((plan.recent ?? []).some((r) => normalizeText(r) === norm)) reasons.push("repetiu mensagem recente");
+  if (PERSONAL_STORY.test(norm)) reasons.push("história pessoal inventada");
+  if (FORMAL_OR_PT_PT.test(norm)) reasons.push("tratamento formal ou português de Portugal");
+  // quem faz a ação não pode mudar ("como o cliente vai pagar?" ≠ "preferes pagar?")
+  const qNorm = normalizeText(`${plan.question ?? ""} ${plan.fallback}`);
+  if (/\bcliente\b/.test(qNorm) && !/\bcliente\b/.test(norm) && !(plan.names ?? []).slice(1).some((n) => n && norm.includes(normalizeText(n)))) reasons.push("trocou de quem é a ação (cliente)");
+  reasons.push(...groundingIssues(plan, text));
   return { ok: reasons.length === 0, text, reasons };
+}
+
+// ------------------------------------------------------------------ ancoragem
+/*
+ * A IA só pode REESCREVER: cada frase precisa ser feita do que o código mandou (texto de
+ * referência, pergunta, fatos, nome) mais palavras de tom/ligação. Frases com conteúdo novo
+ * ("alguém do meu filho, brincando, quebrou a perna da mesa") são recusadas — não há como
+ * validar um fato inventado, então o conteúdo novo em si é o defeito. A frase da pergunta
+ * tem um pouco mais de folga (sinônimos), as demais quase nenhuma.
+ */
+
+/** o assistente não tem família, casa nem vida pessoal */
+const PERSONAL_STORY = /\b(meu|minha|meus|minhas|nosso|nossa)\s+(filh|esposa|marido|mulher|mae|pai|irma|irmao|neto|neta|sobrinh|famil|vizinh|cachorr|gat|amig)/;
+
+/** o Adriano é tratado por "você", em português do Brasil */
+const FORMAL_OR_PT_PT = /\b(o senhor|a senhora|ao senhor|do senhor|preferes|queres|tens|podes|sabes|(diga|diz|conte|informe)[- ]me|o traz|a traz|busca[- ]l[oa])\b/;
+
+const TONE_WORDS = new Set(
+  "perfeito perfeita otimo otima beleza certinho entendi entendido anotei anotado anotada combinado tranquilo tranquila valeu obrigado obrigada legal bacana maravilha show joia agora entao menos cerca aproximadamente sobre ainda depois preciso precisar saber queria gostaria seguir seguimos vamos proxima proximo pergunta coisa coisinha rapidinho rapida rapido momento ajuda ajudar contar conta dizer falar melhor tambem aquele aquela assim parte ultima ultimo falta faltando pouco pouquinho quase terminar continuar orcamento servico movel peca pecas moveis conferir confirmar pronto pronta registrado registrei guardei guardado deixei deixar pendente problema certeza sabe acha achar lembra lembrar quando puder ideia importante fechar conta contas calculo calcular entender boa bom caso".split(" "),
+);
+
+const STOP = new Set(["voce", "voces", "qual", "quais", "quanto", "quantos", "quantas", "como", "esta", "estao", "essa", "esse", "isso", "pode", "para", "mais", "tem", "sao", "dele", "dela", "nela", "nele", "aqui", "seria", "fica", "ficar", "vai", "precisa", "porque", "onde", "tudo", "todo", "toda", "algum", "alguma", "nenhum", "nenhuma", "outro", "outra", "muito", "muita", "seus", "suas", "este", "estes", "esses", "essas", "foram", "estava", "sendo", "sido", "tinha", "temos", "vamos", "favor"]);
+
+const stem = (w: string): string => w.slice(0, 5);
+
+function contentWords(text: string): string[] {
+  return normalizeText(text).replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w.length >= 5 && !STOP.has(w));
+}
+
+function groundingIssues(plan: MessagePlan, text: string): string[] {
+  const allowed = new Set<string>();
+  for (const src of [plan.fallback, plan.question ?? "", ...plan.facts, ...plan.keyTerms, ...(plan.names ?? []), "Adriano"]) for (const w of contentWords(src)) allowed.add(stem(w));
+  for (const w of TONE_WORDS) allowed.add(stem(w));
+  const sentences = text.split(/(?<=[.!?…])\s+|\n+/).map((s) => s.trim()).filter(Boolean);
+  const issues: string[] = [];
+  for (const s of sentences) {
+    const novel = contentWords(s).filter((w) => !allowed.has(stem(w)));
+    const limit = s.includes("?") ? 3 : 1;
+    if (novel.length > limit) issues.push(`frase sem base no contexto: ${novel.slice(0, 4).join(", ")}`);
+  }
+  return issues;
 }
 
 /** Palavras-chave de uma pergunta (para conferir que a reescrita não perdeu o propósito). */

@@ -311,3 +311,72 @@ describe("Regressões da integração com o catálogo mestre (23/11/2026)", () =
     expect(h.allText(await h.send("Não tenho as medidas agora."))).toMatch(/sigo sem a medida/);
   });
 });
+
+describe("travas do orçamento (produção 23/11/2026)", () => {
+  /** reproduz a conversa do administrador: método "não sei" e material sem preço */
+  async function deferredMethod(h: Harness) {
+    await h.ctx.db.run("UPDATE materials SET replacement_price_cents = NULL, price_updated_at = NULL WHERE key = 'verniz'");
+    await h.send("Peguei uma mesa da dona Ana para envernizar");
+    for (const t of ["está boa", "1 metro de largura, 80 de altura e 60 de fundura", "só por fora", "não", "não", "vou comprar", "ainda não sei", "não precisa", "sem prazo", "à vista"]) await h.send(t);
+  }
+
+  it("bloqueio por campo deixado pra depois vira pergunta, não volta ao 'pode calcular?'", async () => {
+    const h = await setup();
+    await deferredMethod(h);
+    const r = h.allText(await h.click("calc:yes"));
+    expect(r).toMatch(/sem isso o cálculo não sai/);
+    expect(r).toMatch(/pincel|rolo|pistola/);
+    expect(r).not.toMatch(/Pode calcular|pode calcular/);
+    // respondeu o método → recalcula direto e cai na coleta do preço do verniz
+    const p = h.allText(await h.send("pincel"));
+    expect(p).toMatch(/preço atual do verniz/);
+    expect(p).not.toMatch(/Dá uma conferida/);
+  });
+
+  it("bloqueio que o artesão não resolve (técnica não cadastrada) não vira pergunta; campo confirmado também não", async () => {
+    const { blockingField } = await import("../src/conversation/engine.js");
+    const job = (facts: Record<string, { status: string }>) => ({ facts }) as unknown as Parameters<typeof blockingField>[0];
+    expect(blockingField(job({ application_method: { status: "unknown" } }), [{ code: "METHOD_REQUIRED" }])).toBe("application_method");
+    expect(blockingField(job({}), [{ code: "AREA_UNKNOWN" }])).toBe("dimensions");
+    expect(blockingField(job({ application_method: { status: "confirmed" } }), [{ code: "METHOD_REQUIRED" }])).toBeNull();
+    expect(blockingField(job({}), [{ code: "TECHNIQUE_UNKNOWN", ref: "decape_x" }])).toBeNull();
+    expect(blockingField(job({}), [{ code: "MATERIAL_UNKNOWN", ref: "x" }])).toBeNull();
+  });
+});
+
+describe("IA não inventa frases (produção 23/11/2026: 'alguém do meu filho quebrou a perna da mesa')", async () => {
+  const { validateComposed } = await import("@adripatina/conversations");
+  const base = "Tem alguma coisa pra consertar primeiro, como uma perna bamba, uma lasca ou uma tábua solta? Se não tiver, me avisa.";
+  const plan = { purpose: "ask_repairs", fallback: base, question: base, keyTerms: ["consertar"], facts: ["móvel: criado-mudo", "cliente: Seu Abreu", "só por fora"], names: ["Administrador", "Seu Abreu"], greet: false };
+
+  it("recusa frase com conteúdo novo (a mensagem real de produção)", () => {
+    const r = validateComposed(plan, { text: "Alguém do meu filho, brincando, quebrou a perna da mesa. Tem alguma coisa pra consertar primeiro, como uma perna bamba, uma lasca ou uma tábua solta?" });
+    expect(r.ok).toBe(false);
+    expect(validateComposed(plan, { text: "Minha esposa adora esse tipo de móvel! Tem alguma coisa pra consertar primeiro?" }).ok).toBe(false);
+    expect(validateComposed(plan, { text: "Ontem choveu bastante na cidade. Tem alguma coisa pra consertar primeiro?" }).ok).toBe(false);
+  });
+
+  it("aceita reescrita fiel, com nome e palavras de tom", () => {
+    expect(validateComposed(plan, { text: "Beleza, Administrador. Antes da pintura, tem alguma coisa pra consertar no criado-mudo, tipo uma perna bamba ou uma lasca?" }).reasons).toEqual([]);
+    expect(validateComposed(plan, { text: "O criado-mudo do Seu Abreu precisa consertar alguma coisa antes, como uma tábua solta?" }).reasons).toEqual([]);
+  });
+});
+
+describe("IA mantém o tratamento e quem faz a ação (produção 23/11/2026)", async () => {
+  const { validateComposed } = await import("@adripatina/conversations");
+  const pay = "Como o cliente vai pagar? Por exemplo: \"à vista\" ou \"metade agora e metade na entrega\".";
+  const payPlan = { purpose: "ask_payment_terms", fallback: pay, question: pay, keyTerms: ["pagar"], facts: [], names: ["Administrador", "Seu Abreu"], greet: false };
+  const tech = "O que você vai fazer no criado-mudo? Pintar, dar pátina, passar verniz ou um conserto?";
+  const techPlan = { purpose: "ask_techniques", fallback: tech, question: tech, keyTerms: ["fazer"], facts: ["móvel: criado-mudo"], names: ["Administrador"], greet: false };
+
+  it("recusa as mensagens reais", () => {
+    expect(validateComposed(payPlan, { text: "Última coisinha: E sobre o pagamento? Preferes pagar à vista, ou então metade agora e metade na entrega?" }).ok).toBe(false);
+    expect(validateComposed(techPlan, { text: "O que o senhor vai fazer no criado-mudo? Pintar, dar pátina, passar verniz ou um conserto? Conforme o senhor preferir." }).ok).toBe(false);
+    expect(validateComposed(payPlan, { text: "Por favor, diga-me como o cliente vai pagar: à vista ou metade agora e metade na entrega?" }).ok).toBe(false);
+  });
+
+  it("aceita a mesma pergunta em português do Brasil", () => {
+    expect(validateComposed(payPlan, { text: "E o pagamento: o cliente vai pagar à vista ou metade agora e metade na entrega?" }).reasons).toEqual([]);
+    expect(validateComposed(payPlan, { text: "E o Seu Abreu vai pagar como: à vista ou metade agora e metade na entrega?" }).reasons).toEqual([]);
+  });
+});

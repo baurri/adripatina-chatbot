@@ -84,3 +84,9 @@ Migration `0005_proactive_collection.sql` aplicada nos testes (D1 shim) sobre 00
 - Conversa completa até o orçamento revelou e corrigiu: "cadeirases" (plural duplicado), concordância "as 2 cadeiras são", "1 metro por 60" não reconhecido e **largura × fundura sem altura sem cálculo** (agora faixa com altura 0,4–1,0 m, NÃO CALIBRADA). Totais conferidos à mão.
 - Coleta proativa verificada: desligada por padrão (sem configuração em produção), com janela, limites diário/semanal, intervalo mínimo e bloqueio durante conversa ativa.
 - Testes: shared 24 · domain 7 · pricing 31 · pdf 7 · conversations 157 · worker 179 (+2 exploratórios) = **405** ✅; lint e typecheck ✅.
+
+## 23/11/2026 — travas vistas no teste real do administrador
+
+- **Ciclo "pode calcular?"**: o cálculo bloqueado por um campo deixado "pra depois" (método de aplicação) voltava ao resumo e pedia para calcular de novo, sem saída. Agora o bloqueio vira a pergunta do campo; respondida, o cálculo roda direto e segue para a coleta de preços. Bloqueio que só o administrador resolve (cadastro) encerra com explicação, sem ciclo.
+- **IA inventando frases** ("alguém do meu filho, brincando, quebrou a perna da mesa"): o validador da reescrita só conferia a pergunta e números. Agora cada frase precisa ser feita do texto-base, fatos e nomes (mais palavras de tom); história pessoal, "o senhor", português de Portugal ("preferes", "diga-me") e troca de quem faz a ação (cliente → artesão) são recusados e entra o texto determinístico.
+- Testes: 411 passando (shared 24, domain 7, pricing 31, pdf 7, conversations 157, worker 185 + 2 exploradores pulados).

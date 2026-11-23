@@ -180,6 +180,8 @@ export interface SessionContext {
   adminAction?: { kind: "approve"; quoteId: string };
   questionHistory?: ProjectField[];
   unparsedCount?: number;
+  /** campo que bloqueou o cálculo e foi perguntado de novo: ao responder, recalcula direto */
+  calcAfter?: { jobId: string; field: ProjectField };
   deferredText?: string;
   pendingQuestion?: PendingQuestion;
   /** pergunta do catálogo de móveis em aberto (tipo, medidas ou detalhe específico) */
