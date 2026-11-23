@@ -88,14 +88,27 @@ export async function recordTechniqueTimeObservation(
   await ctx.db.batch(stmts);
 }
 
-export async function listLearningObservations(ctx: Ctx, limit = 100): Promise<unknown[]> {
+export async function listLearningObservations(
+  ctx: Ctx,
+  options: { limit?: number; userId?: string | null; from?: string | null; to?: string | null } = {},
+): Promise<unknown[]> {
+  const limit = options.limit ?? 100;
   return ctx.db.all(
     `SELECT lo.id, lo.kind, lo.entity_type, lo.entity_key, lo.data_json, lo.confidence, lo.status, lo.created_at,
             u.display_name, j.code AS job_code
        FROM learning_observations lo
        LEFT JOIN users u ON u.id = lo.user_id
        LEFT JOIN jobs j ON j.id = lo.job_id
+      WHERE (? IS NULL OR lo.user_id = ?)
+        AND (? IS NULL OR substr(lo.created_at, 1, 10) >= ?)
+        AND (? IS NULL OR substr(lo.created_at, 1, 10) <= ?)
       ORDER BY lo.created_at DESC LIMIT ?`,
+    options.userId ?? null,
+    options.userId ?? null,
+    options.from ?? null,
+    options.from ?? null,
+    options.to ?? null,
+    options.to ?? null,
     limit,
   );
 }

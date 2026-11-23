@@ -91,3 +91,4 @@ code { font-size: 13px; word-break: break-all; }
 .conversation-log li { border: 1px solid var(--line); }
 .learning-list { padding-left: 20px; }
 .learning-list li { margin: 10px 0; }
+.conversation-filters .field { min-width: 190px; }

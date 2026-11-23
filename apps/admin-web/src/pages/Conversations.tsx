@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, formatDate } from "../api";
-import { Badge, Loading, Section, useLoad } from "../ui";
+import { Badge, Field, Loading, Section, useLoad } from "../ui";
 
 interface MessageRow {
   id: string;
@@ -28,6 +28,13 @@ interface LearningRow {
   job_code: string | null;
 }
 
+interface UserRow {
+  id: string;
+  role: "ADMIN" | "ARTESAO";
+  displayName: string;
+  active: boolean;
+}
+
 function learningText(row: LearningRow): string {
   try {
     const data = JSON.parse(row.data_json) as Record<string, unknown>;
@@ -43,20 +50,41 @@ function learningText(row: LearningRow): string {
 }
 
 export function Conversations() {
-  const [onlyAdriano, setOnlyAdriano] = useState(true);
-  const messages = useLoad(() => api<{ rows: MessageRow[] }>("/conversations?limit=300"));
-  const learning = useLoad(() => api<{ rows: LearningRow[] }>("/learning-observations?limit=100"));
-  const rows = (messages.data?.rows ?? []).filter((m) => !onlyAdriano || m.role === "ARTESAO").reverse();
+  const [userId, setUserId] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const users = useLoad(() => api<{ rows: UserRow[] }>("/users"));
+  const query = () => {
+    const params = new URLSearchParams({ limit: "300" });
+    if (userId) params.set("userId", userId);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    return params.toString();
+  };
+  const messages = useLoad(() => api<{ rows: MessageRow[] }>(`/conversations?${query()}`), [userId, from, to]);
+  const learning = useLoad(() => api<{ rows: LearningRow[] }>(`/learning-observations?${query()}`), [userId, from, to]);
+  const rows = [...(messages.data?.rows ?? [])].reverse();
+  const selectedUser = users.data?.rows.find((u) => u.id === userId);
   return (
     <>
       <h1>Conversas e aprendizado</h1>
       <p className="muted">Área restrita ao administrador. Aqui você acompanha o que o bot entendeu, perguntou e aprendeu.</p>
-      <Section
-        title="Histórico de conversa"
-        actions={
-          <label className="check"><input type="checkbox" checked={onlyAdriano} onChange={(e) => setOnlyAdriano(e.target.checked)} /> Mostrar somente o artesão</label>
-        }
-      >
+      <Section title="Filtros">
+        <div className="form-row conversation-filters">
+          <Field label="Usuário">
+            <select value={userId} onChange={(e) => setUserId(e.target.value)}>
+              <option value="">Todos os usuários</option>
+              {(users.data?.rows ?? []).map((u) => <option key={u.id} value={u.id}>{u.role === "ADMIN" ? "Administrador" : "Artesão"} — {u.displayName}{u.active ? "" : " (inativo)"}</option>)}
+            </select>
+          </Field>
+          <Field label="Data inicial"><input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></Field>
+          <Field label="Data final"><input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></Field>
+          <button className="secondary" disabled={!userId && !from && !to} onClick={() => { setUserId(""); setFrom(""); setTo(""); }}>Limpar filtros</button>
+        </div>
+        <Loading error={users.error} loading={users.loading} />
+        <p className="muted">Os filtros são aplicados tanto às conversas quanto ao aprendizado do bot.{selectedUser ? ` Exibindo apenas ${selectedUser.displayName}.` : ""}</p>
+      </Section>
+      <Section title={`Histórico de conversa${selectedUser ? ` — ${selectedUser.displayName}` : ""}`}>
         <Loading error={messages.error} loading={messages.loading} />
         <ol className="chat conversation-log">
           {rows.map((m) => (
@@ -69,7 +97,7 @@ export function Conversations() {
         </ol>
         {!messages.loading && rows.length === 0 && <p className="muted">Nenhuma conversa registrada.</p>}
       </Section>
-      <Section title="O que o bot aprendeu">
+      <Section title={`O que o bot aprendeu${selectedUser ? ` com ${selectedUser.displayName}` : ""}`}>
         <Loading error={learning.error} loading={learning.loading} />
         <ul className="learning-list">
           {(learning.data?.rows ?? []).map((row) => (

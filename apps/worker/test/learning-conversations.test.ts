@@ -37,9 +37,16 @@ describe("Aprendizado curioso e histórico administrativo", () => {
   it("expõe conversa e aprendizado somente pela API administrativa autenticada", async () => {
     const h = await createHarness();
     await h.send("oi");
+    await h.send("oi", 2001);
     const history = await api(h, "GET", "/conversations?limit=20");
     expect(history.status).toBe(200);
     expect((history.json!.rows as unknown[]).length).toBeGreaterThan(0);
+    const artisanHistory = await api(h, "GET", `/conversations?limit=20&userId=${h.artisanId}&from=2026-11-16&to=2026-11-16`);
+    expect((artisanHistory.json!.rows as { user_id: string }[]).every((row) => row.user_id === h.artisanId)).toBe(true);
+    expect((artisanHistory.json!.rows as unknown[]).length).toBeGreaterThan(0);
+    const outsidePeriod = await api(h, "GET", `/conversations?limit=20&userId=${h.artisanId}&from=2026-11-17`);
+    expect(outsidePeriod.json!.rows).toEqual([]);
+    expect((await api(h, "GET", "/conversations?from=ontem")).status).toBe(422);
     expect((await api(h, "GET", "/conversations?limit=20", undefined, "")).status).toBe(401);
     expect((await api(h, "GET", "/learning-observations", undefined, "")).status).toBe(401);
   });

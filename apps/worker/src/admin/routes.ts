@@ -34,6 +34,7 @@ import { listLearningObservations } from "../services/learning.js";
 
 const decStr = z.string().regex(/^\d+(\.\d+)?$/);
 const cents = z.number().int().positive();
+const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional();
 const page = (c: { req: { query: (k: string) => string | undefined } }) => ({
   limit: Math.min(200, Math.max(1, Number(c.req.query("limit") ?? 50) || 50)),
   offset: Math.max(0, Number(c.req.query("offset") ?? 0) || 0),
@@ -64,7 +65,14 @@ export function adminRoutes(): Hono<AppEnv> {
   });
   r.get("/conversations", async (c) => {
     const { limit, offset } = page(c);
-    const userId = c.req.query("userId") ?? null;
+    const filters = z.object({ userId: z.string().min(1).optional(), from: optionalDate, to: optionalDate }).parse({
+      userId: c.req.query("userId") || undefined,
+      from: c.req.query("from") || undefined,
+      to: c.req.query("to") || undefined,
+    });
+    const userId = filters.userId ?? null;
+    const from = filters.from ?? null;
+    const to = filters.to ?? null;
     const rows = await c.get("ctx").db.all(
       `SELECT cm.id, cm.direction, cm.kind, COALESCE(cm.transcript, cm.text) AS text, cm.intent, cm.confidence, cm.status, cm.created_at,
               u.id AS user_id, u.display_name, u.role, j.code AS job_code, j.title AS job_title
@@ -72,15 +80,28 @@ export function adminRoutes(): Hono<AppEnv> {
          LEFT JOIN users u ON u.id = cm.user_id
          LEFT JOIN jobs j ON j.id = cm.job_id
         WHERE (? IS NULL OR cm.user_id = ?)
+          AND (? IS NULL OR substr(cm.created_at, 1, 10) >= ?)
+          AND (? IS NULL OR substr(cm.created_at, 1, 10) <= ?)
         ORDER BY cm.created_at DESC LIMIT ? OFFSET ?`,
       userId,
       userId,
+      from,
+      from,
+      to,
+      to,
       limit,
       offset,
     );
     return c.json({ rows });
   });
-  r.get("/learning-observations", async (c) => c.json({ rows: await listLearningObservations(c.get("ctx"), page(c).limit) }));
+  r.get("/learning-observations", async (c) => {
+    const filters = z.object({ userId: z.string().min(1).optional(), from: optionalDate, to: optionalDate }).parse({
+      userId: c.req.query("userId") || undefined,
+      from: c.req.query("from") || undefined,
+      to: c.req.query("to") || undefined,
+    });
+    return c.json({ rows: await listLearningObservations(c.get("ctx"), { limit: page(c).limit, ...filters }) });
+  });
 
   // ---------------- clientes
   r.get("/clients", async (c) => {
