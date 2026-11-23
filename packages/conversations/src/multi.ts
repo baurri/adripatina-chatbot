@@ -101,13 +101,15 @@ function servicesOf(clause: string): string[] {
 export function partOf(clause: string): "tampo" | "inteiro" | null {
   const n = normalizeText(clause);
   if (/\b(so|somente|apenas|unicamente)\s+(o\s+|no\s+|do\s+)?tampo\b|\bso no tampo\b|\bo tampo so\b/.test(n)) return "tampo";
+  // "preciso fazer o tampo dela", "vou lixar o tampo" (teste real 23/11/2026)
+  if (/\b(fazer|trabalhar|reformar|pintar|lixar|envernizar|restaurar|mexer)\s+(?:so\s+)?(?:n?o\s+)tampo\b/.test(n) && !/\b(inteir|toda|todo)\b/.test(n)) return "tampo";
   // "toda ela" = a peça inteira; "em todos eles" = todas as peças (não muda o escopo — teste real 23/11/2026)
   if (/\b(inteir[oa]s?|tod[oa] (ela|ele)|nela toda|nele todo|completa|completo|a peca toda|o movel todo)\b/.test(n)) return "inteiro";
   return null;
 }
 
 /** "acertar os detalhes", "arrumar uns detalhes", "uns retoques": reparo leve (teste real 23/11/2026) */
-const ACERTAR_DETALHES = /\b(acert|arrum|ajeit|consert)\w*\s+(?:os |uns |alguns |umas |as |o |a )?(detalhes?|detalhezinhos?|coisinhas?|partes?)\b|\bretoques?\b/;
+const ACERTAR_DETALHES = /\b(acert|arrum|ajeit|consert)\w*\s+(?:os |uns |alguns |umas |as |o |a )?(detalhes?|detalhezinhos?|coisinhas?|partes?)\b|\bretoques?\b|\b(ajustezinho|ajustinho|um ajuste|uns ajustes)\b/;
 
 export function conditionOf(clause: string): { condition: ItemCondition; repairPart: string | null } | null {
   const n = normalizeText(clause);

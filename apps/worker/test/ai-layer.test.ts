@@ -90,3 +90,13 @@ describe("integração com o motor (Claude simulado)", () => {
     expect(r).not.toMatch(/R\$ 1,00/);
   });
 });
+
+describe("teste real 23/11/2026 (noite): 2 mesas de centro e 'data marcada'", () => {
+  it("texto claro que repete a peça não vira peça a mais", () => {
+    const raw = "é uma mesa de centro e tem também duas cômodas";
+    expect(inboundIssues(raw, "Mesa de centro: lixar. Duas cômodas. Amanhã vou pegar a mesa de centro.", "").join()).toMatch(/peça a mais/);
+  });
+  it("'anotei' não pode virar 'ficou marcada'", () => {
+    expect(outboundIssues("📅 Anotei o dia que você falou: amanhã (24/11/2026), só de lembrete.", "A data já ficou marcada: amanhã (24/11/2026). ✅", "").join()).toMatch(/prometeu/);
+  });
+});

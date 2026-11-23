@@ -221,7 +221,7 @@ describe("Etapa 11 — valores e datas", () => {
   it("data citada não é presumida como retirada; 'dia 5' vira 05/12/2026 com pedido de confirmação", async () => {
     const h = await setup();
     const r = h.allText(await h.send("duas cadeiras da dona Ana pra pintar, entrego dia 5"));
-    expect(r).toMatch(/Anotei a data: dia 5 \(05\/12\/2026\) — se for outro dia, me avisa/);
+    expect(r).toMatch(/Anotei o dia que você falou: dia 5 \(05\/12\/2026\), só de lembrete — se for outro dia, me avisa/);
     expect(r).not.toMatch(/retirada/);
   });
 });

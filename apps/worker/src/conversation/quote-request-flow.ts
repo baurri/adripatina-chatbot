@@ -160,7 +160,8 @@ export async function startQuoteRequest(c: Conversation, draft: QuoteRequestDraf
   const who = draft.clients.length ? ` para ${humanList(draft.clients.map((x) => (normalizeText(x.name).startsWith("dona") ? `a ${x.name}` : `o ${x.name}`)))}` : "";
   // a data citada pode ser de retirada ou de entrega: não presumir; datas ambíguas pedem confirmação
   const date = draft.date
-    ? ` Anotei a data: ${draft.date.expression.replace("terca", "terça")} (${isoToBR(draft.date.isoDate)})${draft.date.ambiguous ? " — se for outro dia, me avisa" : ""}.`
+    ? // só um lembrete do dia que ele falou: não agenda nada nem vira prazo do serviço
+      ` 📅 Anotei o dia que você falou: ${draft.date.expression.replace("terca", "terça")} (${isoToBR(draft.date.isoDate)}), só de lembrete${draft.date.ambiguous ? " — se for outro dia, me avisa" : ""}.`
     : "";
   const goal = draft.wantsPrice ? " Você quer saber quanto cobrar." : "";
   c.say(`Entendi: ${pieces === 1 ? "um móvel" : `são ${pieces} móveis`}${services ? ` para ${services}` : ""} — ${itemsText}${who}.${goal}${date}`);

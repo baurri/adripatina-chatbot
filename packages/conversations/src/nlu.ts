@@ -63,7 +63,7 @@ export const NluResultSchema = z.object({
 });
 export type NluResult = z.infer<typeof NluResultSchema>;
 
-const HONORIFIC = "(?:dona|seu|sr|sra|senhora|senhor|doutor|doutora|dr|dra|tia|tio|professora|professor)";
+const HONORIFIC = "(?:dona|seu|dom|sr|sra|senhora|senhor|doutor|doutora|dr|dra|tia|tio|professora|professor)";
 const NAME_STOP = new Set([
   "que", "para", "pra", "pro", "e", "com", "de", "do", "da", "dos", "das", "quer", "pagou", "me", "ja", "uma", "um", "a", "o",
   "hoje", "ontem", "agora", "reais", "real", "deu", "mandou", "trouxe", "vai", "esta", "ta", "ficou", "dela", "dele", "no", "na",

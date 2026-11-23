@@ -144,6 +144,9 @@ export function inboundIssues(raw: string, clear: string, corpus: string): strin
   const allowed = `${raw}\n${corpus}`;
   const fRaw = new Set([...furnitureKeys(raw), ...furnitureKeys(corpus)]);
   for (const k of furnitureKeys(clear)) if (!fRaw.has(k)) issues.push(`móvel inventado: ${k}`);
+  // repetir o nome de uma peça não pode virar peça a mais ("mesa de centro ... a mesa de centro")
+  // (citar as peças já anotadas pelo nome — "o 1º e o 2º aparador" — é explicitar, não inventar)
+  if (!/peças:/.test(corpus) && pieceCount(clear) > pieceCount(raw)) issues.push("peça a mais");
   const tRaw = new Set([...findTechniques(raw), ...findTechniques(corpus)]);
   for (const t of findTechniques(clear)) if (!tRaw.has(t)) issues.push(`técnica inventada: ${t}`);
   const nAllowed = normalizeText(allowed);
@@ -151,6 +154,13 @@ export function inboundIssues(raw: string, clear: string, corpus: string): strin
   issues.push(...newDomainWords(clear, allowed).map((w) => `detalhe inventado: ${w}`));
   return issues;
 }
+
+function pieceCount(text: string): number {
+  return findFurnitureHits(text).reduce((a, h) => a + (h.quantity || 1), 0);
+}
+
+/** "anotei" nunca pode virar "marquei/agendei/confirmado" (teste real 23/11/2026: "a data já ficou marcada") */
+const COMMITMENT = /\b(agend\w*|marcad[oa]s?|marquei|confirmad[oa]s?|reservad[oa]s?|garantid[oa]s?)\b/;
 
 const QUOTED = /["“”]([^"“”]{2,80})["“”]/g;
 
@@ -174,6 +184,7 @@ export function outboundIssues(original: string, polished: string, corpus: strin
   for (const n of namesIn(polished)) if (!nAllowed.includes(n)) issues.push(`nome inventado: ${n}`);
   for (const n of namesIn(original)) if (!normalizeText(polished).includes(n)) issues.push(`nome sumiu: ${n}`);
   issues.push(...newDomainWords(polished, allowed).map((w) => `detalhe inventado: ${w}`));
+  if (COMMITMENT.test(normalizeText(polished)) && !COMMITMENT.test(normalizeText(original))) issues.push("prometeu/agendou algo que não foi feito");
   issues.push(...toneIssues(polished));
   return issues;
 }
@@ -221,7 +232,9 @@ export async function understandInbound(c: Conversation, raw: string): Promise<U
   const kind = typeof o.tipo === "string" ? o.tipo : null;
   // mensagem longa de assunto novo (o pedido inicial com tudo): o texto original já é lido inteiro
   // pelas regras + extração do pedido; reescrever arrisca perder detalhe ("3 a 5 dias", "70 reais")
-  if (kind === "assunto_novo" && trimmed.split(/\s+/).length > 35) return { text: raw, kind, rewritten: false };
+  // (teste real 23/11/2026: o texto claro repetiu "mesa de centro" e virou 2 mesas). Vale para
+  // qualquer tipo: o Claude marcou o pedido como "resposta" ao "me conta do começo"
+  if (trimmed.split(/\s+/).length > 25) return { text: raw, kind, rewritten: false };
   const issues = inboundIssues(trimmed, clear, ctxb.corpus);
   // nada do que ele disse pode sumir: todo número dito continua no texto claro
   const kept = groundNumbers(clear);
@@ -243,6 +256,7 @@ Obrigatório em cada mensagem:
 - Mantenha os textos entre aspas (exemplos de resposta e nomes de botões) exatamente.
 - Linhas de lista (•) continuam como lista.
 - Não invente nada: nenhum fato, defeito, peça, valor, história, família, casa ou vida pessoal. Você é um assistente.
+- Não aumente o que foi feito: "anotei" continua "anotei" (nunca "marquei", "agendei", "confirmado").
 - Não repita a mesma abertura das mensagens recentes do histórico.
 - Não use termos de sistema (campo, cadastro, processando) nem "o senhor".
 Devolva o mesmo número de mensagens, na mesma ordem. Responda só JSON.`;
