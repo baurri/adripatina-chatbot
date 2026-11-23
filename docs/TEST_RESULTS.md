@@ -31,3 +31,11 @@ Fluxo completo com dados fictícios: conversa → resumo → cálculo (piso R$ 5
 
 ## Não executado (exige aprovação/recursos externos)
 - Telegram real, Workers AI real (áudio brasileiro), Cloudflare Access real, D1/R2 remotos, deploy.
+
+## 23/11/2026 — Ajustes 1 (preço durante o orçamento) e 2 (objetivos conversacionais)
+
+`pnpm check`: **sucesso**. Testes: shared 18 · domain 7 · pricing 23 · pdf 7 · conversations **71** · worker **97** (+1 exploratório pulado) = **223**.
+
+Novos arquivos de teste: `packages/conversations/test/multi.test.ts`, `apps/worker/test/router.test.ts`, `apps/worker/test/quote-request.test.ts` (caso real de produção reproduzido literalmente), `apps/worker/test/quote-pricing.test.ts` (25 cenários do Ajuste 1).
+
+Migration `0004_conversation_goals_pricing.sql` aplicada com sucesso no D1 local (Miniflare), incluindo recriação de `learning_observations` com cópia dos dados e índice único parcial. **Pendente em produção** (somente 0004).

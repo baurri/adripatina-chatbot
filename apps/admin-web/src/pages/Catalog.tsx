@@ -16,6 +16,13 @@ interface Material {
   origin: string;
 }
 
+const ORIGIN_LABEL: Record<string, string> = {
+  telegram_quote_confirmed: "Preço informado pelo artesão no Telegram, durante um orçamento",
+  telegram_confirmed: "Preço aprendido de uma compra informada no Telegram",
+  admin: "Cadastrado pelo administrador",
+  demo_only: "Valor de demonstração (sem preço real)",
+};
+
 function MaterialRow({ m, onSaved }: { m: Material; onSaved: () => void }) {
   const [price, setPrice] = useState(m.replacementPriceCents !== null ? (m.replacementPriceCents / 100).toFixed(2).replace(".", ",") : "");
   const [yieldV, setYield] = useState(m.yieldM2PerUnitPerCoat ?? "");
@@ -28,6 +35,8 @@ function MaterialRow({ m, onSaved }: { m: Material; onSaved: () => void }) {
     <tr>
       <td>
         {m.name} <small className="muted">({m.key})</small> {m.origin === "demo_only" && <Badge tone="warn">demo</Badge>}
+        <br />
+        <small className="muted">{ORIGIN_LABEL[m.origin] ?? m.origin}</small>
         <Notice message={message} />
       </td>
       <td><input aria-label={`Embalagem de ${m.name}`} size={5} value={pkg} onChange={(e) => setPkg(e.target.value.replace(",", "."))} /> {m.unit}</td>

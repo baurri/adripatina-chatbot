@@ -37,6 +37,17 @@ export const PricingSettingsSchema = z.object({
   }),
   /** fator de área interna em relação à externa — hipótese NÃO CALIBRADA */
   internalAreaFactor: decStr,
+  /**
+   * Limites para detectar erro de transcrição em preços informados por conversa
+   * (ex.: "R$ 90" ouvido como "R$ 9.000"). Fora da faixa → confirmação reforçada,
+   * nunca rejeição silenciosa.
+   */
+  priceSanity: z
+    .object({
+      minPackagePriceCents: cents.positive(),
+      maxPackagePriceCents: cents.positive(),
+    })
+    .default({ minPackagePriceCents: 100, maxPackagePriceCents: 200_000 }),
 });
 export type PricingSettings = z.infer<typeof PricingSettingsSchema>;
 

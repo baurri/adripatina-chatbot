@@ -21,6 +21,7 @@ export const PROJECT_FIELDS = [
   "application_method",
   "deadline",
   "payment_terms",
+  "scope",
 ] as const;
 export type ProjectField = (typeof PROJECT_FIELDS)[number];
 
@@ -69,6 +70,8 @@ export interface FactValueMap {
   application_method: "pincel" | "rolo" | "pistola";
   deadline: string;
   payment_terms: string;
+  /** parte trabalhada: só o tampo ou a peça inteira (pedidos com vários móveis) */
+  scope: { part: "tampo" | "inteiro"; repairPart?: string | null };
 }
 
 export interface Fact<F extends ProjectField = ProjectField> {

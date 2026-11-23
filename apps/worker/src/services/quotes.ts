@@ -154,7 +154,7 @@ export async function buildPricingInput(
   const surfaces = f.surfaces?.value as FactValueMap["surfaces"] | null | undefined;
   const area = overrides.areaM2Override
     ? ({ kind: "exact", m2: overrides.areaM2Override } as const)
-    : estimateArea({ width: dims?.width ?? null, height: dims?.height ?? null, depth: dims?.depth ?? null, surfaces: surfaces ?? null, sizeClass: size ?? null }, settings.params);
+    : estimateArea({ width: dims?.width ?? null, height: dims?.height ?? null, depth: dims?.depth ?? null, surfaces: surfaces ?? null, sizeClass: size ?? null, part: (f.scope?.value as FactValueMap["scope"] | null | undefined)?.part ?? null }, settings.params);
   const techniques = (f.techniques?.value as string[] | null | undefined) ?? [];
   const method = (f.application_method?.value as string | null | undefined) ?? null;
 

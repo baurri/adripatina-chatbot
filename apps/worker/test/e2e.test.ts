@@ -12,22 +12,25 @@ describe("Fluxo ponta a ponta (aceite 28)", () => {
     const base = await h.ctx.db.first<{ id: string }>("SELECT id FROM materials WHERE key = 'tinta_base_patina'");
     await h.ctx.db.run("INSERT INTO stock_movements (id, material_id, kind, quantity, historical_unit_cost_cents, created_at) VALUES ('s1', ?, 'ENTRADA', '0.45', '1000', '2020-01-01T00:00:00Z')", base!.id);
 
-    // 1ª tentativa com catálogo de demonstração (sem preços): bloqueia e manda revisar
+    // admin calibra o catálogo, mas a base da pátina ainda não tem preço:
+    // o bot pergunta ao Adriano em vez de travar ou mandar para o administrador
+    await h.calibrateAndPrice();
+    await h.ctx.db.run("UPDATE materials SET replacement_price_cents = NULL, price_updated_at = NULL WHERE key = 'tinta_base_patina'");
     const calc1 = await h.click("calc:yes");
-    const t1 = h.allText(calc1);
-    expect(t1).toMatch(/Falta o preço atual/);
-    expect(t1).toMatch(/administrador conferir/);
+    expect(h.allText(calc1)).toMatch(/preço atual da tinta base para pátina/i);
+    expect(await count(h, "SELECT COUNT(*) AS n FROM quotes WHERE status = 'AGUARDANDO_REVISAO'")).toBe(0);
+    const confirm = await h.send("a lata de 900 ml custa 50 reais");
+    expect(h.allText(confirm)).toMatch(/900 ml.*R\$ 50,00.*Está certo/s);
+    const okData = buttonsOf(confirm[confirm.length - 1]).find((d) => d.startsWith("mp:ok:"))!;
+    const after = await h.click(okData);
+    expect(h.allText(after)).toMatch(/Atualizei o preço da tinta base para pátina/);
+    expect(h.allText(after)).toMatch(/administrador conferir/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM quotes WHERE status = 'AGUARDANDO_REVISAO'")).toBe(1);
     await processOutbox(h.ctx);
     expect(h.telegram.sent.some((s) => s.chatId === String(ADMIN_TG) && /aguardando revisão/.test(s.text ?? ""))).toBe(true);
 
-    // admin não consegue aprovar com preços ausentes
+    // admin aprova (o preço do dia a dia não precisou de aprovação dele)
     const q1 = (await h.ctx.db.first<{ id: string }>("SELECT id FROM quotes"))!.id;
-    const blocked = await api(h, "POST", `/quotes/${q1}/approve`, {});
-    expect(blocked.status).toBe(422);
-
-    // admin cadastra preços e calibra parâmetros, depois aprova
-    await h.calibrateAndPrice();
     const ok = await api(h, "POST", `/quotes/${q1}/approve`, {});
     expect(ok.status).toBe(200);
     expect(ok.json!.status).toBe("APROVADO");

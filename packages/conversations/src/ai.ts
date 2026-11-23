@@ -86,7 +86,8 @@ export function mergeNlu(rules: NluResult, ai: AiExtraction | null): NluResult {
   if (e.techniques.length === 0 && ai.techniques?.length) e.techniques = ai.techniques;
   if (!e.clientName && ai.clientName) e.clientName = ai.clientName;
   if (e.descriptors.length === 0 && ai.descriptors?.length) e.descriptors = ai.descriptors;
-  if (e.amountCents === undefined && ai.amountMentionedReais) e.amountCents = Math.round(ai.amountMentionedReais * 100);
+  // valores em dinheiro vêm SOMENTE do texto literal (regras); a IA nunca introduz um valor
+  // que não foi dito — evita que alucinação ou erro de estruturação vire lançamento financeiro.
   if (!e.sizeClass && ai.sizeClass) e.sizeClass = ai.sizeClass;
   if (!e.materialStatus && ai.materialStatus) e.materialStatus = ai.materialStatus;
   if (!e.method && ai.method) e.method = ai.method;
@@ -94,7 +95,15 @@ export function mergeNlu(rules: NluResult, ai: AiExtraction | null): NluResult {
   if (ai.referencesExisting) e.referencesExisting = true;
   let intent = rules.intent;
   let confidence = rules.confidence;
-  if (rules.intent === "unknown" || (ai.confidence > rules.confidence && ai.intent !== rules.intent && rules.confidence < 0.7)) {
+  // intenções que MUDAM estado só valem com evidência literal no texto (a IA sozinha não basta)
+  const evidence: Partial<Record<NluResult["intent"], boolean>> = {
+    job_progress: !!e.progress,
+    register_payment: e.amountCents !== undefined,
+    register_expense: e.amountCents !== undefined || !!e.materialMention,
+    cancel: rules.intent === "cancel",
+  };
+  const aiAllowed = evidence[ai.intent] !== false;
+  if (aiAllowed && (rules.intent === "unknown" || (ai.confidence > rules.confidence && ai.intent !== rules.intent && rules.confidence < 0.7))) {
     intent = ai.intent;
     confidence = Math.min(ai.confidence, 0.85); // IA sozinha nunca chega a confiança máxima
   } else if (ai.intent === rules.intent) {

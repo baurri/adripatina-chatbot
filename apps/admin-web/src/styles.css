@@ -93,3 +93,5 @@ code { font-size: 13px; word-break: break-all; }
 .learning-list li { margin: 10px 0; }
 .conversation-filters .field { min-width: 190px; }
 .conversation-filters .filter-clear { margin-bottom: 8px; min-height: 42px; }
+.msg-detail { background: #fffdf8; border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: 14px; }
+.msg-detail ul { margin: 0; padding-left: 18px; }

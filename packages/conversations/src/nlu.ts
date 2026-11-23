@@ -37,6 +37,8 @@ export const EntitiesSchema = z.object({
   descriptors: z.array(z.string()).default([]),
   techniques: z.array(z.string()).default([]),
   clientName: z.string().optional(),
+  /** todos os clientes citados, na ordem (ex.: "seu Roberto e Dona Jo") */
+  clientNames: z.array(z.string()).default([]),
   amountCents: z.number().int().positive().optional(),
   lengthsM: z.array(z.string()).default([]),
   sizeClass: z.enum(["pequeno", "medio", "grande"]).optional(),
@@ -44,7 +46,9 @@ export const EntitiesSchema = z.object({
   materialStatus: z.enum(["tem_tudo", "tem_parte", "precisa_comprar"]).optional(),
   method: z.enum(["pincel", "rolo", "pistola"]).optional(),
   surfaces: z.enum(["externa", "interna_externa"]).optional(),
-  progress: z.enum(["iniciado", "concluido", "entregue"]).optional(),
+  progress: z.enum(["iniciado", "em_execucao", "concluido", "entregue", "nao_iniciado", "parado"]).optional(),
+  /** a frase descreve o ESTADO FÍSICO da peça ("precisa de reparos", "está riscada") */
+  conditionStatement: z.boolean().default(false),
   materialMention: z.string().optional(),
   explicitNew: z.boolean().default(false),
   referencesExisting: z.boolean().default(false),
@@ -71,6 +75,58 @@ function titleCase(s: string): string {
     .split(" ")
     .map((w) => (w.length > 0 ? w[0]!.toUpperCase() + w.slice(1) : w))
     .join(" ");
+}
+
+/** Todos os clientes com pronome de tratamento, na ordem: "do seu Roberto e Dona Jo" → ["Seu Roberto", "Dona Jo"]. */
+export function extractClientNames(text: string): string[] {
+  const norm = normalizeText(text).replace(/[.,!?;:]/g, " ");
+  const re = new RegExp(`\\b(${HONORIFIC})\\s+([a-z]+(?:\\s+[a-z]+)?)`, "g");
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(norm))) {
+    const nameTokens: string[] = [];
+    for (const t of (m[2] ?? "").split(" ")) {
+      if (!t || NAME_STOP.has(t)) break;
+      nameTokens.push(t);
+    }
+    if (nameTokens.length === 0) continue;
+    const name = `${titleCase(m[1]!)} ${titleCase(nameTokens.join(" "))}`;
+    if (!out.some((x) => x.toLowerCase() === name.toLowerCase())) out.push(name);
+  }
+  return out;
+}
+
+export type ProgressKind = "iniciado" | "em_execucao" | "concluido" | "entregue" | "nao_iniciado" | "parado";
+
+/**
+ * Andamento OPERACIONAL do serviço. Exige verbo de ação do artesão sobre o trabalho
+ * ou pedido explícito de marcação — palavras soltas ("reparo", "melhor", "pronto")
+ * nunca bastam. Estado físico da peça não é andamento.
+ */
+export function detectProgress(text: string): ProgressKind | undefined {
+  const n = normalizeText(text);
+  const mark = /\b(marca|marcar|marque|coloca|colocar|coloque|bota|botar|muda|mudar|pode marcar|pode colocar|deixa)\b/;
+  if (/\b(ainda nao comecei|nao comecei ainda|nem comecei|ainda nao iniciei)\b/.test(n)) return "nao_iniciado";
+  if (/\b(o (trabalho|servico) (esta|ta) parado|parei o (trabalho|servico))\b/.test(n)) return "parado";
+  if (/\b(entreguei|foi entregue|ja entreguei|levei de volta|o cliente (ja )?buscou|ja buscaram)\b/.test(n)) return "entregue";
+  if (mark.test(n) && /\bentregue\b/.test(n)) return "entregue";
+  if (/\b(terminei|acabei (o|a|de fazer)|conclui|finalizei|ficou pront[oa]|(ja )?(esta|ta) pront[oa])\b/.test(n)) return "concluido";
+  if (mark.test(n) && /\b(concluid[oa]|pront[oa]|terminad[oa]|finalizad[oa])\b/.test(n)) return "concluido";
+  if (mark.test(n) && /\b(em execucao|em andamento|iniciad[oa]|comecad[oa])\b/.test(n)) return "em_execucao";
+  if (/\b(comecei|iniciei)\b/.test(n)) return "iniciado";
+  if (/\b(estou|to|ja estou) (fazendo|lixando|pintando|envernizando|trabalhando|mexendo)\b/.test(n)) return "iniciado";
+  return undefined;
+}
+
+/** Descrição do ESTADO FÍSICO de uma peça (condição), não do andamento do trabalho. */
+export function detectConditionStatement(text: string): boolean {
+  const n = normalizeText(text);
+  return (
+    /\bprecis\w*\s+(de\s+)?(uns\s+|um\s+|alguns\s+|algum\s+|pequenos\s+|bastante\s+|muito\s+)?(reparos?|conserto|consertos|ajustes?|restauro|massa|cola)\b/.test(n) ||
+    /\b(estragad|riscad|arranhad|quebrad|descascand|desgastad|manchad|rachad|lascad|empenad|podre|cupim|carcomid|conservad|judiad|detonad)\w*/.test(n) ||
+    /\b(esta|estao|ta|tao|ficou|ficaram)\s+(bem\s+|muito\s+|um pouco\s+)?(melhor|melhores|bo[ma]|bons|boas|ruim|ruins|otim[oa]s?|pessim[oa]s?|inteir[oa]s?)\b/.test(n) ||
+    /\b(em bom estado|em mau estado|tampo (esta|ta) ruim|vai precisar lixar bastante|tem partes? quebradas?)\b/.test(n)
+  );
 }
 
 /** Extrai nome de cliente: "da dona Maria", "do seu João", "cliente Ana", "a dona Ana pagou". */
@@ -124,10 +180,8 @@ function classify(norm: string, e: Entities): { intent: Intent; confidence: numb
   if (/\b(registrar|anotar) (gasto|despesa|compra)\b/.test(trimmed)) return { intent: "register_expense", confidence: 0.85 };
   if (/\b(registrar|anotar) (pagamento|recebimento)\b/.test(trimmed)) return { intent: "register_payment", confidence: 0.85 };
 
-  if (/\b(comecei|iniciei|vou comecar hoje|estou fazendo|to fazendo)\b/.test(trimmed) && (e.furnitureType || e.clientName))
-    return { intent: "job_progress", confidence: 0.8 };
-  if (/\b(terminei|acabei|ficou pronto|ficou pronta|conclui|finalizei)\b/.test(trimmed)) return { intent: "job_progress", confidence: 0.8 };
-  if (/\b(entreguei|foi entregue|levei de volta|cliente buscou|ja buscou)\b/.test(trimmed)) return { intent: "job_progress", confidence: 0.8 };
+  // andamento só com evidência operacional explícita (ver detectProgress)
+  if (e.progress) return { intent: "job_progress", confidence: e.progress === "em_execucao" || e.progress === "entregue" ? 0.9 : 0.85 };
 
   if (/\b(como (esta|ta|anda)|andamento|situacao|quanto falta|saldo|quanto (ela|ele) deve|ja pagou)\b/.test(trimmed))
     return { intent: "query_status", confidence: 0.8 };
@@ -158,6 +212,8 @@ export function interpretRules(text: string): NluResult {
     descriptors,
     techniques,
     clientName: extractClientName(text),
+    clientNames: extractClientNames(text),
+    conditionStatement: detectConditionStatement(text),
     amountCents: money?.cents,
     lengthsM: lengths,
     explicitNew: /\b(outra|outro|mais uma|mais um|segunda|segundo|nova|novo) (cristaleira|comoda|cadeira|mesa|armario|guarda|estante|movel|peca|[a-z]+)\b/.test(norm) && !/\b(novo orcamento)\b/.test(norm),
@@ -178,9 +234,8 @@ export function interpretRules(text: string): NluResult {
   else if (/\b(pistola|compressor)\b/.test(norm)) e.method = "pistola";
   if (/\b(por dentro|dentro e fora|interna|parte de dentro)\b/.test(norm)) e.surfaces = "interna_externa";
   else if (/\b(so por fora|so fora|parte de fora|externa)\b/.test(norm)) e.surfaces = "externa";
-  if (/\b(comecei|iniciei)\b/.test(norm)) e.progress = "iniciado";
-  if (/\b(terminei|acabei|ficou pront[oa]|conclui|finalizei)\b/.test(norm)) e.progress = "concluido";
-  if (/\b(entreguei|foi entregue|cliente buscou|ja buscou)\b/.test(norm)) e.progress = "entregue";
+  const progress = detectProgress(text);
+  if (progress) e.progress = progress;
   const matMention = /\b(tinta|verniz|lixa|massa|cera|betume|thinner|solvente|folha de ouro|fundo|cola|pincel|rolo)\b/.exec(norm);
   if (matMention) e.materialMention = matMention[1];
   const { intent, confidence } = classify(norm, e);

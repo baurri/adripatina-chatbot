@@ -16,6 +16,9 @@ interface MessageRow {
   role: string | null;
   job_code: string | null;
   job_title: string | null;
+  display_text?: string | null;
+  contextual_intent?: string | null;
+  route?: string | null;
 }
 interface LearningRow {
   id: string;
@@ -26,6 +29,10 @@ interface LearningRow {
   created_at: string;
   display_name: string | null;
   job_code: string | null;
+  confidence?: number;
+  origin?: string | null;
+  source_text?: string | null;
+  message_text?: string | null;
 }
 
 interface UserRow {
@@ -35,9 +42,29 @@ interface UserRow {
   active: boolean;
 }
 
+const brl = (cents: unknown) => (typeof cents === "number" ? `R$ ${(cents / 100).toFixed(2).replace(".", ",")}` : "—");
+
+const ROUTE_LABEL: Record<string, string> = {
+  universal: "comando",
+  expected_confirmation: "confirmação esperada",
+  pending_answer: "resposta à pergunta",
+  active_goal: "continuação do objetivo",
+  interruption: "interrupção (objetivo suspenso)",
+  global: "nova intenção",
+  fallback: "não entendido",
+};
+
 function learningText(row: LearningRow): string {
   try {
     const data = JSON.parse(row.data_json) as Record<string, unknown>;
+    if (row.kind === "MATERIAL_PRICE_QUOTE" || (row.kind === "MATERIAL_PURCHASE" && data.newPriceCents !== undefined)) {
+      const conf = data.confidence === "media" ? " (valor aproximado)" : "";
+      return `${row.entity_key}: ${brl(data.previousPriceCents)} → ${brl(data.newPriceCents)} por embalagem de ${String(data.newPackageSize)} ${String(data.unit ?? "")}${conf} — ${row.kind === "MATERIAL_PRICE_QUOTE" ? "informado durante um orçamento" : "aprendido de uma compra"}`;
+    }
+    if (row.kind === "QUOTE_REQUEST") {
+      const items = (data.items as { description: string; quantity: number }[] | undefined) ?? [];
+      return `Pedido de orçamento: ${items.map((i) => `${i.quantity}× ${i.description}`).join(", ")} — clientes: ${((data.clients as string[]) ?? []).join(", ") || "—"}`;
+    }
     if (row.kind === "MATERIAL_PURCHASE") {
       const cents = Number(data.replacementPriceCents ?? 0);
       return `${row.entity_key}: ${Number(data.packages)} embalagem(ns) de ${String(data.packageSize)} — preço de reposição R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -63,7 +90,68 @@ function dateBRToIso(value: string): string | null {
   return `${year}-${month}-${day}`;
 }
 
+function MessageDetail({ id }: { id: string }) {
+  const d = useLoad(
+    () =>
+      api<{
+        routing: Record<string, unknown> | null;
+        changes: { action: string; entity_type: string; created_at: string }[];
+        learned: { kind: string; entity_key: string }[];
+        prices: { name: string; price_cents: number; previous_price_cents: number | null }[];
+      }>(`/conversations/${id}`),
+    [id],
+  );
+  if (!d.data) return <Loading error={d.error} loading={d.loading} />;
+  const r = d.data.routing as {
+    rawIntent?: string;
+    rawConfidence?: number;
+    contextualIntent?: string;
+    route?: string;
+    reason?: string;
+    activeGoal?: string | null;
+    pendingQuestion?: string | null;
+    flow?: string;
+    entities?: unknown;
+  } | null;
+  return (
+    <div className="msg-detail">
+      {r ? (
+        <ul>
+          <li>Intenção bruta: <code>{r.rawIntent}</code> ({Math.round((r.rawConfidence ?? 0) * 100)}%)</li>
+          <li>Intenção no contexto: <code>{r.contextualIntent}</code></li>
+          <li>Decisão: <strong>{ROUTE_LABEL[r.route ?? ""] ?? r.route}</strong> — {r.reason}</li>
+          <li>Fluxo: {r.flow} · objetivo ativo: {r.activeGoal ?? "nenhum"} · pergunta pendente: {r.pendingQuestion ?? "nenhuma"}</li>
+          <li>Entidades: <code>{JSON.stringify(r.entities)}</code></li>
+        </ul>
+      ) : (
+        <p className="muted">Sem decisão de roteamento registrada (mensagem do bot, botão ou anterior à auditoria).</p>
+      )}
+      {d.data.changes.length > 0 && <p>Alterações: {d.data.changes.map((c) => `${c.action} (${c.entity_type})`).join(", ")}</p>}
+      {d.data.prices.length > 0 && <p>Preços: {d.data.prices.map((p) => `${p.name}: ${brl(p.previous_price_cents)} → ${brl(p.price_cents)}`).join("; ")}</p>}
+      {d.data.learned.length > 0 && <p>Aprendido: {d.data.learned.map((l) => `${l.kind} ${l.entity_key}`).join(", ")}</p>}
+    </div>
+  );
+}
+
+function TechniqueLearning() {
+  const t = useLoad(() => api<{ rows: { technique: string; samples: number; avgHoursPerJob: string }[]; note: string }>("/learning/techniques"));
+  if (!t.data || t.data.rows.length === 0) return null;
+  return (
+    <Section title="Tempo por técnica (sugestões, não aplicadas)">
+      <p className="muted">{t.data.note}</p>
+      <ul className="learning-list">
+        {t.data.rows.map((r) => (
+          <li key={r.technique}>
+            <strong>{r.technique}</strong>: {r.samples} {r.samples === 1 ? "serviço" : "serviços"}, média de {r.avgHoursPerJob.replace(".", ",")} h por serviço
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
 export function Conversations() {
+  const [openId, setOpenId] = useState<string | null>(null);
   const [userId, setUserId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -119,8 +207,19 @@ export function Conversations() {
           {rows.map((m) => (
             <li className={m.direction} key={m.id}>
               <small className="muted">{formatDate(m.created_at)} · {m.direction === "in" ? m.display_name ?? "Usuário" : "Bot"} · {m.kind}{m.job_code ? ` · ${m.job_code}` : ""}</small>
-              <p>{m.text || `[${m.kind} sem texto]`}</p>
-              {m.intent && <small><Badge>{m.intent}{m.confidence !== null ? ` ${Math.round(m.confidence * 100)}%` : ""}</Badge></small>}
+              <p>{m.display_text ?? m.text ?? `[${m.kind} sem texto]`}</p>
+              {m.intent && (
+                <small>
+                  <Badge>{m.contextual_intent ?? m.intent}{m.confidence !== null ? ` ${Math.round(m.confidence * 100)}%` : ""}</Badge>
+                  {m.route ? <> <Badge>{ROUTE_LABEL[m.route] ?? m.route}</Badge></> : null}
+                </small>
+              )}
+              {m.direction === "in" && (
+                <button className="small secondary" onClick={() => setOpenId(openId === m.id ? null : m.id)}>
+                  {openId === m.id ? "Ocultar detalhes" : "Por que o bot respondeu assim?"}
+                </button>
+              )}
+              {openId === m.id && <MessageDetail id={m.id} />}
             </li>
           ))}
         </ol>
@@ -130,11 +229,25 @@ export function Conversations() {
         <Loading error={learning.error} loading={learning.loading} />
         <ul className="learning-list">
           {(learning.data?.rows ?? []).map((row) => (
-            <li key={row.id}><strong>{learningText(row)}</strong><br /><small className="muted">{formatDate(row.created_at)} · {row.display_name ?? "Sistema"}{row.job_code ? ` · ${row.job_code}` : ""} · {row.status}</small></li>
+            <li key={row.id}>
+              <strong>{learningText(row)}</strong>
+              <br />
+              <small className="muted">
+                {formatDate(row.created_at)} · {row.display_name ?? "Sistema"}{row.job_code ? ` · ${row.job_code}` : ""} · {row.status === "APLICADO" ? "aplicado" : row.status.toLowerCase()}
+                {typeof row.confidence === "number" && row.confidence < 1 ? ` · confiança ${Math.round(row.confidence * 100)}%` : ""}
+              </small>
+              {(row.source_text || row.message_text) && (
+                <>
+                  <br />
+                  <small>Fala original: {row.source_text ?? row.message_text}</small>
+                </>
+              )}
+            </li>
           ))}
         </ul>
         {!learning.loading && (learning.data?.rows ?? []).length === 0 && <p className="muted">O aprendizado começará conforme as conversas acontecerem.</p>}
       </Section>
+      <TechniqueLearning />
     </>
   );
 }

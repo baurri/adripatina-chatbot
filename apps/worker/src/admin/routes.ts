@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { JOB_STATUSES, PROJECT_FIELDS, QUOTE_STATUSES, type ProjectField } from "@adripatina/domain";
 import { PricingSettingsSchema, RecipeStepSchema } from "@adripatina/pricing";
-import { newId, normalizePersonName } from "@adripatina/shared";
+import { Dec, newId, normalizePersonName } from "@adripatina/shared";
+import { humanizeCallback } from "../conversation/callbacks.js";
 import type { AppEnv } from "../app.js";
 import { nowIso } from "../context.js";
 import { json } from "../db/sql.js";
@@ -74,7 +75,8 @@ export function adminRoutes(): Hono<AppEnv> {
     const from = filters.from ?? null;
     const to = filters.to ?? null;
     const rows = await c.get("ctx").db.all(
-      `SELECT cm.id, cm.direction, cm.kind, COALESCE(cm.transcript, cm.text) AS text, cm.intent, cm.confidence, cm.status, cm.created_at,
+      `SELECT cm.id, cm.direction, cm.kind, COALESCE(cm.transcript, cm.text) AS text, cm.text AS raw_text, cm.transcript, cm.intent, cm.confidence, cm.status, cm.created_at,
+              cm.contextual_intent, cm.route, cm.routing_json,
               u.id AS user_id, u.display_name, u.role, j.code AS job_code, j.title AS job_title
          FROM conversation_messages cm
          LEFT JOIN users u ON u.id = cm.user_id
@@ -92,7 +94,54 @@ export function adminRoutes(): Hono<AppEnv> {
       limit,
       offset,
     );
-    return c.json({ rows });
+    // callbacks técnicos ("prog:confirm") viram texto compreensível; o valor bruto fica nos detalhes
+    return c.json({
+      rows: (rows as { kind: string; text: string | null; display_name: string | null }[]).map((r) => ({
+        ...r,
+        display_text: r.kind === "callback" ? humanizeCallback(r.text, r.display_name ?? "Usuário") : r.text,
+      })),
+    });
+  });
+  // detalhe de uma mensagem: por que o bot respondeu assim e o que mudou no banco
+  r.get("/conversations/:id", async (c) => {
+    const ctx = c.get("ctx");
+    const msg = await ctx.db.first<{ id: string; routing_json: string | null; kind: string; text: string | null; transcript: string | null; created_at: string; user_id: string | null }>(
+      "SELECT * FROM conversation_messages WHERE id = ?",
+      c.req.param("id"),
+    );
+    if (!msg) throw new DomainError("NOT_FOUND", "Mensagem não encontrada", 404);
+    const routing = json<{ requestId?: string } | null>(msg.routing_json, null);
+    const changes = routing?.requestId ? await ctx.db.all("SELECT action, entity_type, entity_id, before_json, after_json, created_at FROM audit_events WHERE request_id = ? ORDER BY created_at", routing.requestId) : [];
+    const learned = await ctx.db.all("SELECT kind, entity_key, data_json, confidence, status, origin, created_at FROM learning_observations WHERE message_id = ?", msg.id);
+    const prices = await ctx.db.all(
+      "SELECT m.name, h.price_cents, h.previous_price_cents, h.package_size, h.previous_package_size, h.confidence, h.source, h.source_text, h.recorded_at FROM material_price_history h JOIN materials m ON m.id = h.material_id WHERE h.message_id = ?",
+      msg.id,
+    );
+    return c.json({
+      message: { ...msg, display_text: msg.kind === "callback" ? humanizeCallback(msg.text) : (msg.transcript ?? msg.text) },
+      routing,
+      changes,
+      learned,
+      prices,
+    });
+  });
+  // resumo de aprendizado por técnica: amostras e sugestão SEPARADA do parâmetro oficial
+  r.get("/learning/techniques", async (c) => {
+    const rows = await c.get("ctx").db.all<{ entity_key: string; data_json: string }>("SELECT entity_key, data_json FROM learning_observations WHERE kind = 'TECHNIQUE_TIME'");
+    const acc = new Map<string, { n: number; sum: Dec }>();
+    for (const r0 of rows) {
+      const h = Dec.tryParse(json<{ hours?: string }>(r0.data_json, {}).hours ?? null);
+      if (!h) continue;
+      const a = acc.get(r0.entity_key) ?? { n: 0, sum: Dec.ZERO };
+      a.n++;
+      a.sum = a.sum.add(h);
+      acc.set(r0.entity_key, a);
+    }
+    return c.json({
+      minSamplesForPromotion: null,
+      note: "Sugestões não são aplicadas automaticamente: um serviço só não calibra uma técnica. Promoção automática exige regra explícita, amostra mínima e limites seguros (não configurados).",
+      rows: [...acc.entries()].map(([key, a]) => ({ technique: key, samples: a.n, avgHoursPerJob: a.sum.div(a.n).round(2).toString(), status: "SUGESTAO_NAO_APLICADA" })),
+    });
   });
   r.get("/learning-observations", async (c) => {
     const filters = z.object({ userId: z.string().min(1).optional(), from: optionalDate, to: optionalDate }).parse({

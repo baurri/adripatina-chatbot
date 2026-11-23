@@ -63,3 +63,13 @@ Legenda: ✅ implementado e testado · 🟡 implementado, depende de ativação/
 2. Cadastrar preços reais e calibrar técnicas no painel de staging.
 3. Ligar Workers AI em staging e testar áudios reais (com consentimento).
 4. Rodar os cinco serviços históricos e ajustar parâmetros.
+
+## Rodada 23/11/2026
+- ✅ Roteamento contextual centralizado, pergunta pendente tipada, pilha de objetivos com retomada
+- ✅ `job_progress` só com evidência explícita; estado físico separado; IA sem poder de introduzir dinheiro/estado
+- ✅ Pedido com vários móveis e clientes: extração, ambiguidades, referências ("um deles", "os outros"), datas, agrupamento por cliente ou único
+- ✅ Coleta de preço durante o orçamento com confirmação, histórico, auditoria, idempotência e recálculo automático
+- ✅ Painel: decisão de roteamento por mensagem, callbacks legíveis, aprendizado de preços com valor anterior/novo e confiança, origem do preço por material, sugestões de tempo por técnica (não aplicadas)
+- 🟡 PDF continua um por peça (o agrupamento por cliente/único vale para a apresentação no Telegram)
+- 🟡 Deduplicação semântica não é aplicada peça a peça no pedido multi-item (a varredura noturna ainda detecta duplicidades)
+- 🟡 OCR de recibo: foto é guardada como evidência; valor só por confirmação (modelo de visão não configurado)

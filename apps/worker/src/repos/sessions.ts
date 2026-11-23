@@ -1,5 +1,5 @@
 import type { ProjectField } from "@adripatina/domain";
-import type { Entities } from "@adripatina/conversations";
+import type { Entities, PriceConfidence, QuoteRequestDraft } from "@adripatina/conversations";
 import { newId } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { nowIso } from "../context.js";
@@ -20,7 +20,117 @@ export type Flow =
   | "progress_confirm"
   | "learning_time"
   | "resume_prompt"
-  | "admin_confirm";
+  | "admin_confirm"
+  | "quote_request"
+  | "quote_material_pricing";
+
+/** Fluxos que representam um OBJETIVO do usuário (sobrevivem a interrupções). */
+export const GOAL_FLOWS: readonly Flow[] = ["intake", "collecting", "confirm_calc", "quote_request", "quote_material_pricing"];
+
+/** Tipo da pergunta pendente: a resposta é interpretada primeiro dentro deste tipo. */
+export type PendingQuestionType =
+  | "client_identity"
+  | "item_identity"
+  | "item_count"
+  | "furniture_type"
+  | "item_owner"
+  | "item_condition"
+  | "item_dimensions"
+  | "service_type"
+  | "service_scope"
+  | "material_source"
+  | "material_purchase_price"
+  | "material_package_size"
+  | "quote_grouping"
+  | "confirmation"
+  | "job_operational_status"
+  | "repair_hours"
+  | "application_method"
+  | "logistics"
+  | "transport_cost"
+  | "amount"
+  | "job_field";
+
+export interface PendingQuestion {
+  type: PendingQuestionType;
+  entity: { kind: "job" | "quote_request" | "item" | "material" | "purchase" | "payment"; id?: string; refs?: string[] };
+  field?: ProjectField;
+  askedAt: string;
+}
+
+/** Objetivo suspenso por uma interrupção clara (pilha). */
+export interface SuspendedGoal {
+  flow: Flow;
+  context: Omit<SessionContext, "goalStack">;
+  activeJobId: string | null;
+  lastQuestion: ProjectField | null;
+  suspendedAt: string;
+  reason: string;
+}
+
+export type QuoteRequestStep =
+  | "owner_confirm"
+  | "owner_each"
+  | "identity"
+  | "scope"
+  | "condition"
+  | "review"
+  | "review_fix"
+  | "grouping"
+  | "dims"
+  | "repair_hours"
+  | "method"
+  | "material_source"
+  | "logistics"
+  | "transport_cost"
+  | "calculating"
+  | "done";
+
+export interface QuoteRequestState {
+  id: string;
+  draft: QuoteRequestDraft;
+  step: QuoteRequestStep;
+  currentRefs: string[];
+  ownerProposal?: Record<string, string>;
+  grouping?: "agrupado" | "por_cliente";
+  groupingAsked?: boolean;
+  reviewed?: boolean;
+  jobByRef?: Record<string, string>;
+  askedDims?: string[];
+  askedRepair?: string[];
+  askedCondition?: boolean;
+  method?: "pincel" | "rolo" | "pistola" | null;
+  methodAsked?: boolean;
+  materialSourceAsked?: boolean;
+  logisticsAsked?: boolean;
+  transportAsked?: boolean;
+  logistics?: { pickup: boolean; delivery: boolean };
+  unparsed?: number;
+}
+
+export interface PricingCurrent {
+  key: string;
+  step: "ask_price" | "ask_size" | "confirm" | "confirm_high" | "paused" | "fix_choice";
+  amountCents?: number;
+  packages?: number;
+  packageSize?: string;
+  sizeLabel?: string;
+  confidence?: PriceConfidence;
+  totalGiven?: boolean;
+  rawTexts: string[];
+  sourceMessageId?: string;
+  token: string;
+}
+
+export interface PricingState {
+  target: { kind: "job"; jobId: string } | { kind: "quote_request"; requestId: string };
+  quoteIds: string[];
+  pending: string[];
+  resolved: string[];
+  total: number;
+  current: PricingCurrent | null;
+  recalcFailed?: boolean;
+}
 
 export interface MentionSnapshot extends Partial<Entities> {
   text: string;
@@ -53,6 +163,10 @@ export interface SessionContext {
   questionHistory?: ProjectField[];
   unparsedCount?: number;
   deferredText?: string;
+  pendingQuestion?: PendingQuestion;
+  goalStack?: SuspendedGoal[];
+  quoteRequest?: QuoteRequestState;
+  pricing?: PricingState;
 }
 
 export interface Session {

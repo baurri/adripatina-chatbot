@@ -59,6 +59,8 @@ export function questionFor(field: ProjectField): Question {
       return q(field, "Como o cliente vai pagar? Por exemplo: \"à vista\" ou \"metade agora e metade na entrega\".", "Por exemplo: \"à vista\" ou \"metade de entrada e o resto na entrega\".");
     case "details":
       return q(field, "Tem algum detalhe especial, como entalhes, puxadores ou vidros? Se não tiver, é só dizer \"não\".", "Pode dizer \"não\" ou contar o detalhe.");
+    case "scope":
+      return q(field, "Você vai trabalhar só no tampo ou na peça inteira?", "Pode dizer \"só o tampo\" ou \"ela inteira\".");
   }
 }
 
@@ -163,6 +165,11 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
     case "details":
       if (NO_RE.test(norm)) return { kind: "value", field, value: "nenhum" };
       return norm.length > 2 ? { kind: "value", field, value: text.trim() } : { kind: "unparsed" };
+    case "scope": {
+      if (/\b(so|somente|apenas)( o| no)? tampo\b|\bso tampo\b/.test(norm)) return { kind: "value", field, value: { part: "tampo" } };
+      if (/\b(inteir[oa]|tod[oa]|completa|completo)\b/.test(norm)) return { kind: "value", field, value: { part: "inteiro" } };
+      return { kind: "unparsed" };
+    }
   }
 }
 
@@ -230,6 +237,10 @@ export function describeFact(field: ProjectField, value: unknown): string {
       return `pagamento: ${v as string}`;
     case "details":
       return `detalhes: ${v as string}`;
+    case "scope": {
+      const sc = v as FactValueMap["scope"];
+      return sc.part === "tampo" ? "trabalho só no tampo" : "trabalho na peça inteira";
+    }
   }
 }
 

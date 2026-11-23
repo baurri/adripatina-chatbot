@@ -31,6 +31,7 @@ export const DEMO_SETTINGS: PricingSettings = {
     grande: ["3.5", "6"],
   },
   internalAreaFactor: "0.8",
+  priceSanity: { minPackagePriceCents: 100, maxPackagePriceCents: 200_000 },
 };
 
 export const DEMO_METHODS: MethodDef[] = [

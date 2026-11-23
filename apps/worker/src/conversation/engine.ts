@@ -31,7 +31,7 @@ import {
   transitionJob,
   type Job,
 } from "../repos/jobs.js";
-import { linkMessageToJob, loadSession, saveSession, type MentionSnapshot, type Session } from "../repos/sessions.js";
+import { GOAL_FLOWS, linkMessageToJob, loadSession, saveSession, type MentionSnapshot, type PendingQuestion, type PendingQuestionType, type Session } from "../repos/sessions.js";
 import type { User } from "../repos/users.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { getActiveSettings, getMaterialByKey } from "../repos/catalog.js";
@@ -50,6 +50,19 @@ import {
   submitForReview,
 } from "../services/quotes.js";
 import { handleAdminCommand } from "./admin-commands.js";
+import { decideRoute, type RoutingDecision } from "./router.js";
+import { missingPriceKeys } from "../services/material-pricing.js";
+import { askCurrent as askPricingCurrent, isPlausiblePricingAnswer, onPricingCallback, pricingText, startPricing, targetPhrase } from "./pricing-flow.js";
+import {
+  askQuoteRequestAgain,
+  buildDraft,
+  isPlausibleQuoteRequestAnswer,
+  onQuoteRequestCallback,
+  quoteRequestCalculate,
+  quoteRequestText,
+  shouldStartQuoteRequest,
+  startQuoteRequest,
+} from "./quote-request-flow.js";
 
 export interface EngineInput {
   user: User;
@@ -92,7 +105,7 @@ const MATERIAL_WORDS: Record<string, string> = {
 };
 const TRANSPORT_RE = /\b(gasolina|combustivel|frete|uber|taxi|estacionamento|pedagio|onibus|carreto)\b/;
 
-class Conversation {
+export class Conversation {
   readonly out: OutgoingMessage[] = [];
   /** confirmação curta da última resposta, enviada junto com a próxima pergunta */
   ack: string | null = null;
@@ -110,6 +123,17 @@ class Conversation {
     this.out.push(buttons ? { text, buttons } : { text });
   }
 
+  /** decisão de roteamento da mensagem atual (auditoria) */
+  routing: RoutingDecision | null = null;
+
+  setPending(p: Omit<PendingQuestion, "askedAt">): void {
+    this.session.context.pendingQuestion = { ...p, askedAt: this.ctx.clock().toISOString() };
+  }
+
+  clearPending(): void {
+    delete this.session.context.pendingQuestion;
+  }
+
   async run(): Promise<OutgoingMessage[]> {
     this.session = await loadSession(this.ctx, this.input.user.id);
     const gapHours = (this.ctx.clock().getTime() - new Date(this.session.lastActivityAt).getTime()) / 3_600_000;
@@ -118,8 +142,13 @@ class Conversation {
     // confirmações financeiras/associações antigas expiram: nada é gravado sem confirmação recente
     if (resuming && ["expense", "payment", "confirm_match", "choose_match", "confirm_new_similar", "disambiguate", "progress_confirm", "admin_confirm"].includes(this.session.flow)) {
       const wasFinance = this.session.flow === "expense" || this.session.flow === "payment";
-      this.session.flow = this.session.activeJobId ? "collecting" : "idle";
-      this.session.context = { questionHistory: this.session.context.questionHistory ?? [] };
+      const stack = this.session.context.goalStack;
+      if (stack?.length) {
+        this.restoreGoal(stack.pop()!);
+      } else {
+        this.session.flow = this.session.activeJobId ? "collecting" : "idle";
+        this.session.context = { questionHistory: this.session.context.questionHistory ?? [] };
+      }
       if (wasFinance) this.say("Aquele registro que estávamos fazendo da outra vez não foi confirmado, então não anotei nada. Se quiser, é só me falar de novo.");
     }
 
@@ -137,6 +166,57 @@ class Conversation {
   }
 
   // ------------------------------------------------------------------ texto
+  /** A mensagem responde plausivelmente à pergunta pendente? (por tipo) */
+  isPlausibleAnswer(text: string, nlu: NluResult): boolean {
+    const flow = this.session.flow;
+    // nesses fluxos qualquer resposta é dirigida à pergunta feita (o handler pede de novo se não entender)
+    if (flow === "disambiguate" || flow === "contradiction") return true;
+    if (flow === "quote_material_pricing") return isPlausiblePricingAnswer(this, text, nlu);
+    if (flow === "quote_request") return isPlausibleQuoteRequestAnswer(this, text, nlu);
+    if (flow === "expense" || flow === "payment") return nlu.entities.amountCents !== undefined || ["yes", "no"].includes(nlu.intent) || /\d/.test(text);
+    if (flow === "learning_time") return /\d|hora|nao sei|não sei|nao lembro|não lembro/i.test(text);
+    if (flow === "intake") return parseAnswer("furniture_type", text).kind !== "unparsed";
+    if ((flow === "collecting" || flow === "confirm_calc") && this.session.lastQuestion) {
+      const field = this.session.lastQuestion;
+      if (field === "condition" && nlu.entities.conditionStatement) return true;
+      const ans = parseAnswer(field, text);
+      if (ans.kind === "dont_know") return true;
+      // campos de texto livre aceitam quase tudo: só são "plausíveis" sem intenção forte concorrente
+      if (ans.kind === "value") return !["condition", "deadline", "payment_terms", "details"].includes(field) || nlu.intent === "unknown" || nlu.intent === "new_job" || nlu.entities.conditionStatement;
+    }
+    if (flow === "confirm_calc") return nlu.intent === "yes" || nlu.intent === "no";
+    return false;
+  }
+
+  async logRouting(nlu: NluResult, decision: RoutingDecision): Promise<void> {
+    this.routing = decision;
+    const e = nlu.entities;
+    const detail = {
+      ...decision,
+      flow: this.session.flow,
+      requestId: this.ctx.requestId,
+      entities: {
+        furnitureType: e.furnitureType ?? null,
+        clients: e.clientNames,
+        techniques: e.techniques,
+        amountCents: e.amountCents ?? null,
+        progress: e.progress ?? null,
+        conditionStatement: e.conditionStatement,
+        materialStatus: e.materialStatus ?? null,
+      },
+      nluSource: nlu.source,
+    };
+    await this.ctx.db.run(
+      "UPDATE conversation_messages SET intent = ?, confidence = ?, contextual_intent = ?, route = ?, routing_json = ? WHERE id = ?",
+      nlu.intent,
+      nlu.confidence,
+      decision.contextualIntent,
+      decision.route,
+      JSON.stringify(detail),
+      this.input.inboundMessageId,
+    );
+  }
+
   async onText(text: string, resuming: boolean): Promise<void> {
     const trimmed = text.trim();
     if (trimmed.startsWith("/")) {
@@ -144,10 +224,49 @@ class Conversation {
       if (handled) return;
     }
     const nlu = await interpret(this.ctx, trimmed);
-    await this.ctx.db.run("UPDATE conversation_messages SET intent = ?, confidence = ? WHERE id = ?", nlu.intent, nlu.confidence, this.input.inboundMessageId);
+    const decision = decideRoute({ nlu, flow: this.session.flow, pendingQuestion: this.session.context.pendingQuestion ?? null, plausibleAnswer: this.isPlausibleAnswer(trimmed, nlu) });
+    await this.logRouting(nlu, decision);
 
-    // comandos universais
-    switch (nlu.intent) {
+    // retomada depois de horas/dias num objetivo de orçamento: lembrar onde paramos
+    if (resuming && decision.route !== "pending_answer" && decision.route !== "universal" && (this.session.flow === "quote_material_pricing" || this.session.flow === "quote_request")) {
+      return this.resumePrompt();
+    }
+
+    switch (decision.route) {
+      case "universal":
+        return this.onUniversal(nlu.intent);
+      case "expected_confirmation":
+      case "pending_answer":
+      case "active_goal":
+        return this.continueFlow(trimmed, nlu, resuming);
+      case "interruption":
+        return this.interrupt(trimmed, nlu);
+      case "global":
+        return this.onGlobal(trimmed, nlu);
+      default:
+        return this.onFallback(trimmed, nlu);
+    }
+  }
+
+  async resumePrompt(): Promise<void> {
+    const where = await this.goalPhrase();
+    let missing = "";
+    const p = this.session.context.pricing;
+    if (this.session.flow === "quote_material_pricing" && p?.current) {
+      const m = await getMaterialByKey(this.ctx, p.current.key);
+      const nm = (m?.name ?? p.current.key).toLowerCase();
+      missing = ` Faltava confirmar o preço ${/a$/.test(nm.split(/[\s/(]/)[0] ?? "") ? "da" : "do"} ${nm}.`;
+    }
+    this.say(`${this.firstName}, podemos continuar ${where.replace(/^ao /, "aquele ").replace(/^à /, "aquela ")}?${missing}`, [
+      [
+        { text: "Sim, continuar", data: this.session.flow === "quote_material_pricing" ? "mp:resume" : "qr:resume" },
+        { text: "Continuar depois", data: this.session.flow === "quote_material_pricing" ? "mp:later" : "cmd:pause" },
+      ],
+    ]);
+  }
+
+  async onUniversal(intent: string): Promise<void> {
+    switch (intent) {
       case "menu":
       case "greeting":
         return this.greet();
@@ -157,49 +276,85 @@ class Conversation {
         return this.cancel();
       case "pause":
         return this.pause();
+      case "back":
+        return this.back();
     }
+  }
 
+  /** Mensagem pertence ao fluxo/objetivo atual. */
+  async continueFlow(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
     const flow = this.session.flow;
-    if (flow === "expense") return this.expenseText(trimmed, nlu);
-    if (flow === "payment") return this.paymentText(trimmed, nlu);
-    if (flow === "learning_time") return this.learningTimeText(trimmed);
-    if (flow === "contradiction") return this.contradictionText(trimmed, nlu);
-    if (["confirm_match", "choose_match", "confirm_new_similar"].includes(flow)) {
-      if (nlu.intent === "yes") return this.onCallback(flow === "confirm_new_similar" ? "match:no" : "match:yes");
-      if (nlu.intent === "no") return this.onCallback(flow === "confirm_new_similar" ? "match:yes" : "match:no");
-      if (nlu.intent === "dont_know") return this.onCallback("match:unsure");
+    switch (flow) {
+      case "quote_material_pricing":
+        return pricingText(this, text, nlu);
+      case "quote_request":
+        return quoteRequestText(this, text, nlu);
+      case "expense":
+        return this.expenseText(text, nlu);
+      case "payment":
+        return this.paymentText(text, nlu);
+      case "learning_time":
+        return this.learningTimeText(text);
+      case "contradiction":
+        return this.contradictionText(text, nlu);
+      case "disambiguate":
+        return this.disambiguateText(text, nlu);
+      case "confirm_match":
+      case "choose_match":
+      case "confirm_new_similar":
+        if (nlu.intent === "yes") return this.onCallback(flow === "confirm_new_similar" ? "match:no" : "match:yes");
+        if (nlu.intent === "no") return this.onCallback(flow === "confirm_new_similar" ? "match:yes" : "match:no");
+        if (nlu.intent === "dont_know") return this.onCallback("match:unsure");
+        return this.onGlobal(text, nlu);
+      case "progress_confirm":
+      case "admin_confirm":
+        if (nlu.intent === "yes") return this.onCallback(flow === "progress_confirm" ? "prog:confirm" : `adm:approve_confirm:${this.session.context.adminAction?.quoteId ?? ""}`);
+        return this.cancel();
+      case "resume_prompt":
+        if (nlu.intent === "yes") return this.onCmd("continue");
+        if (nlu.intent === "no") return this.onCmd("other_subject");
+        this.session.flow = this.session.activeJobId ? "collecting" : "idle";
+        return this.onText(text, false);
+      case "confirm_calc":
+        if (nlu.intent === "yes") return this.onCallback("calc:yes");
+        return this.collectingText(text, nlu, resuming);
+      case "collecting":
+        if (this.session.activeJobId) return this.collectingText(text, nlu, resuming);
+        break;
+      case "intake":
+        return this.intakeText(text, nlu);
     }
-    if (flow === "disambiguate") return this.disambiguateText(trimmed, nlu);
-    if (flow === "progress_confirm" || flow === "admin_confirm") {
-      if (nlu.intent === "yes") return this.onCallback(flow === "progress_confirm" ? "prog:confirm" : `adm:approve_confirm:${this.session.context.adminAction?.quoteId ?? ""}`);
-      if (nlu.intent === "no") return this.cancel();
-    }
-    if (flow === "confirm_calc" && nlu.intent === "yes") return this.onCallback("calc:yes");
+    return this.onGlobal(text, nlu);
+  }
 
-    // intenções que trocam de assunto com segurança
-    if (nlu.intent === "register_expense" && nlu.confidence >= 0.7) return this.startExpense(trimmed, nlu);
+  /** Intenção global sem objetivo ativo. */
+  async onGlobal(text: string, nlu: NluResult): Promise<void> {
+    if (nlu.intent === "register_expense" && nlu.confidence >= 0.7) return this.startExpense(text, nlu);
     if (nlu.intent === "register_payment" && nlu.confidence >= 0.7) return this.startPayment(nlu);
     if (nlu.intent === "list_jobs") return this.listJobs();
     if (nlu.intent === "agenda") return this.agenda();
-    if (nlu.intent === "query_status") return this.queryStatus(trimmed, nlu);
-    if (nlu.intent === "job_progress") return this.startProgress(trimmed, nlu);
+    if (nlu.intent === "query_status") return this.queryStatus(text, nlu);
+    if (nlu.intent === "job_progress" && nlu.entities.progress) return this.startProgress(text, nlu);
     if (nlu.intent === "back") return this.back();
 
-    // dentro de um projeto
-    if ((flow === "collecting" || flow === "confirm_calc") && this.session.activeJobId) {
-      return this.collectingText(trimmed, nlu, resuming);
+    // pedido com vários móveis/clientes → objetivo persistente de orçamento
+    if (nlu.intent === "new_job" || nlu.entities.furnitureType) {
+      const draft = await buildDraft(this, text);
+      if (shouldStartQuoteRequest(draft)) return startQuoteRequest(this, draft);
+      return this.newJobMention(text, nlu);
     }
-    if (flow === "intake") return this.intakeText(trimmed, nlu);
+    return this.onFallback(text, nlu);
+  }
 
-    if (nlu.intent === "new_job" || nlu.entities.furnitureType) return this.newJobMention(trimmed, nlu);
-
+  async onFallback(text: string, nlu: NluResult): Promise<void> {
     // sem fluxo: informações soltas sobre o último projeto
     if (this.session.activeJobId && hasProjectInfo(nlu)) {
       const job = await getJob(this.ctx, this.session.activeJobId);
       if (job) {
         this.session.flow = "confirm_match";
-        this.session.context.mention = this.mention(trimmed, nlu);
+        this.session.context.mention = this.mention(text, nlu);
         this.session.context.candidateJobIds = [job.id];
+        this.setPending({ type: "confirmation", entity: { kind: "job", id: job.id } });
         this.say(`${this.firstName}, isso é sobre ${jobPhrase(job)}?`, matchButtons());
         return;
       }
@@ -213,7 +368,124 @@ class Conversation {
 ${GUIDE}`);
   }
 
-  private mention(text: string, nlu: NluResult, extra: Partial<MentionSnapshot> = {}): MentionSnapshot {
+  // --------------------------------------------- suspensão e retomada de objetivos
+  /** Suspende o objetivo atual (pilha) para atender uma ação lateral clara. */
+  suspendGoal(reason: string): void {
+    if (!GOAL_FLOWS.includes(this.session.flow)) return;
+    const { goalStack, ...rest } = this.session.context;
+    const stack = goalStack ?? [];
+    stack.push({
+      flow: this.session.flow,
+      context: structuredClone(rest),
+      activeJobId: this.session.activeJobId,
+      lastQuestion: this.session.lastQuestion,
+      suspendedAt: this.ctx.clock().toISOString(),
+      reason,
+    });
+    this.session.context = { goalStack: stack };
+    this.session.flow = "idle";
+  }
+
+  restoreGoal(g: NonNullable<Session["context"]["goalStack"]>[number]): void {
+    const stack = this.session.context.goalStack ?? [];
+    this.session.flow = g.flow;
+    this.session.context = { ...structuredClone(g.context), goalStack: stack };
+    if (!stack.length) delete this.session.context.goalStack;
+    this.session.activeJobId = g.activeJobId;
+    this.session.lastQuestion = g.lastQuestion;
+  }
+
+  /** Ao terminar a ação lateral: retoma o objetivo suspenso, se houver, e repete a pergunta. */
+  async resumeGoal(): Promise<boolean> {
+    const stack = this.session.context.goalStack;
+    if (!stack?.length) return false;
+    const g = stack.pop()!;
+    this.restoreGoal(g);
+    this.say(`Agora, voltando ${await this.goalPhrase()}:`);
+    await this.reaskGoal();
+    return true;
+  }
+
+  async goalPhrase(): Promise<string> {
+    const flow = this.session.flow;
+    if (flow === "quote_request") {
+      const n = this.session.context.quoteRequest?.draft.items.reduce((a, i) => a + i.quantity, 0) ?? 0;
+      return n > 1 ? `ao orçamento dos ${n} móveis` : "ao orçamento";
+    }
+    if (flow === "quote_material_pricing" && this.session.context.pricing) return `ao orçamento ${await targetPhrase(this, this.session.context.pricing)}`;
+    const job = this.session.activeJobId ? await getJob(this.ctx, this.session.activeJobId) : null;
+    return job ? aPrep(job) : "ao que estávamos fazendo";
+  }
+
+  async reaskGoal(): Promise<void> {
+    switch (this.session.flow) {
+      case "quote_material_pricing":
+        return askPricingCurrent(this);
+      case "quote_request":
+        return askQuoteRequestAgain(this);
+      case "intake":
+        this.say(questionFor("furniture_type").text);
+        return;
+      case "collecting":
+      case "confirm_calc": {
+        const job = this.session.activeJobId ? await getJob(this.ctx, this.session.activeJobId) : null;
+        if (job) return this.askNext(job);
+      }
+    }
+  }
+
+  /** Interrupção clara: suspende o objetivo, atende e (se terminar na hora) retoma. */
+  async interrupt(text: string, nlu: NluResult): Promise<void> {
+    const readOnly = ["list_jobs", "agenda", "query_status"].includes(nlu.intent);
+    this.suspendGoal(`interrupção: ${nlu.intent}`);
+    await this.onGlobal(text, nlu);
+    // consultas terminam na hora; ações (gasto, pagamento, andamento) retomam ao concluir
+    if (readOnly || this.session.flow === "idle") await this.resumeGoal();
+  }
+
+  /** Chamado ao concluir/cancelar uma ação lateral. */
+  async endSideAction(): Promise<void> {
+    this.clearPending();
+    if (await this.resumeGoal()) return;
+    this.session.flow = this.session.activeJobId ? "collecting" : "idle";
+  }
+
+  /** Calcula o orçamento de um serviço; falta de preço vira coleta com o artesão. */
+  async calculateAndPresent(jobId: string): Promise<void> {
+    const job = await getJob(this.ctx, jobId);
+    if (!job) return this.greet();
+    const quote = await calculateQuote(this.ctx, job.id, this.input.user.id);
+    const missing = missingPriceKeys([quote.result]);
+    if (missing.length && quote.result.computable) return startPricing(this, { kind: "job", jobId: job.id }, missing, [quote.id]);
+    this.say(`Orçamento ${de(job)}:\n${artisanQuoteSummary(quote)}`);
+    if (!quote.result.computable) {
+      this.session.flow = "collecting";
+      return this.askNext(job);
+    }
+    const settings = await getActiveSettings(this.ctx);
+    this.clearPending();
+    if (settings.params.requireAdminReview || !quote.definitiveAllowed) {
+      await submitForReview(this.ctx, quote.id, this.input.user.id);
+      this.session.flow = "idle";
+      this.say("Mandei o orçamento para o administrador conferir. Assim que ele aprovar, eu te aviso aqui e preparo o PDF para você mandar ao cliente.\n\nEnquanto isso, se quiser, pode me contar sobre outro serviço.");
+      return;
+    }
+    // sem revisão obrigatória e sem pendências: aprovação automática registrada como "sistema"
+    await approveQuote(this.ctx, quote.id, "system", { finalPriceCents: null });
+    this.session.flow = "idle";
+    this.say("Orçamento pronto. Quer que eu gere o PDF para você mandar ao cliente?", [
+      [
+        { text: "Gerar PDF", data: `pdf:issue:${quote.id}` },
+        { text: "Ainda não", data: "cmd:noop" },
+      ],
+    ]);
+  }
+
+  async quoteRequestCalculate(): Promise<void> {
+    return quoteRequestCalculate(this);
+  }
+
+  mention(text: string, nlu: NluResult, extra: Partial<MentionSnapshot> = {}): MentionSnapshot {
     const source = this.input.kind === "voice" ? "telegram_voice" : this.input.kind === "photo" ? "telegram_photo" : "telegram_text";
     return { ...nlu.entities, text, source, messageId: this.input.inboundMessageId, ...extra };
   }
@@ -230,7 +502,7 @@ ${GUIDE}`);
       return true;
     }
     if (name === "/cancelar") {
-      this.cancel();
+      await this.cancel();
       return true;
     }
     const adminCommands = ["/admin", "/pendentes", "/servicos", "/caixa", "/alertas", "/custos", "/ajuda_admin", "/aprovar"];
@@ -251,6 +523,11 @@ ${GUIDE}`);
   }
 
   async greet(): Promise<void> {
+    // objetivo de orçamento em aberto: oferecer continuar de onde parou
+    if (this.session.flow === "quote_material_pricing" || this.session.flow === "quote_request") {
+      this.say(`Oi, ${this.firstName}! Que bom te ver. 😊`);
+      return this.resumePrompt();
+    }
     const job = this.session.activeJobId ? await getJob(this.ctx, this.session.activeJobId) : null;
     const pending = job && ["collecting", "confirm_calc"].includes(this.session.flow) ? nextQuestion(job.facts) : null;
     if (job && pending) {
@@ -312,7 +589,14 @@ ${GUIDE}`);
     );
   }
 
-  cancel(): void {
+  async cancel(): Promise<void> {
+    // cancelar uma ação lateral não derruba o objetivo suspenso: ele é retomado
+    if (["expense", "payment", "progress_confirm", "learning_time"].includes(this.session.flow) && this.session.context.goalStack?.length) {
+      this.say("Tudo bem, não fiz essa alteração.");
+      return void (await this.resumeGoal());
+    }
+    const qr = this.session.context.quoteRequest;
+    if (qr) await this.ctx.db.run("UPDATE quote_requests SET status = 'CANCELADO', updated_at = ? WHERE id = ?", this.ctx.clock().toISOString(), qr.id);
     const hadJob = !!this.session.activeJobId;
     this.session.flow = "idle";
     this.session.context = {};
@@ -645,14 +929,18 @@ ${GUIDE}`);
     const p = questionProgress(job.facts);
     const ack = this.ack ? `${this.ack}\n\n` : "";
     this.ack = null;
+    // linguagem natural em vez de "Pergunta 4 de 13" (o total muda conforme as respostas)
+    const remaining = p.total - p.current;
+    const hint = remaining === 0 ? "Última pergunta: " : remaining <= 2 ? "Estamos quase lá. " : "";
+    this.setPending({ type: FIELD_QUESTION_TYPE[field], entity: { kind: "job", id: job.id }, field });
     if (field === "material_status") {
       const keys = materialKeysForJob(job);
       const names = (await Promise.all(keys.map((key) => getMaterialByKey(this.ctx, key)))).filter(Boolean).map((m) => m!.name.toLowerCase());
       const subject = humanList(names);
-      this.say(`${ack}Pergunta ${p.current} de ${p.total}:\nPara ${jobPhrase(job)}, você vai usar ${subject || "material"} que já tem no estoque, comprar tudo ou comprar só uma parte?\n\nPode responder do seu jeito, por exemplo: “já tenho tudo” ou “vou precisar comprar o verniz”.`);
+      this.say(`${ack}${hint}Para ${jobPhrase(job)}, você vai usar ${subject || "material"} que já tem no estoque, comprar tudo ou comprar só uma parte?\n\nPode responder do seu jeito, por exemplo: “já tenho tudo” ou “vou precisar comprar o verniz”.`);
       return;
     }
-    this.say(`${ack}Pergunta ${p.current} de ${p.total}:\n${q.text}`);
+    this.say(`${ack}${hint}${q.text}`);
   }
 
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
@@ -856,6 +1144,11 @@ ${GUIDE}`);
     if (ns === "job") return this.openJob(arg ?? action);
     if (ns === "photo") return this.onPhotoChoice(action, arg);
     if (ns === "adm") return this.onAdmin(action, arg);
+    if (ns === "mp") return onPricingCallback(this, action, arg);
+    if (ns === "qr") {
+      if (action === "resume") return askQuoteRequestAgain(this);
+      return onQuoteRequestCallback(this, action);
+    }
     this.say(`Esse botão é de uma conversa antiga, então não fiz nada com ele. ${GUIDE}`);
   }
 
@@ -980,28 +1273,7 @@ ${GUIDE}`);
       this.say("O que você quer corrigir? Pode falar, por exemplo: \"a altura é 1,90\" ou \"vai ser decapê\".");
       return;
     }
-    const quote = await calculateQuote(this.ctx, job.id, this.input.user.id);
-    this.say(`Orçamento ${de(job)}:\n${artisanQuoteSummary(quote)}`);
-    if (!quote.result.computable) {
-      this.session.flow = "collecting";
-      return this.askNext(job);
-    }
-    const settings = await getActiveSettings(this.ctx);
-    if (settings.params.requireAdminReview || !quote.definitiveAllowed) {
-      await submitForReview(this.ctx, quote.id, this.input.user.id);
-      this.session.flow = "idle";
-      this.say("Mandei o orçamento para o administrador conferir. Assim que ele aprovar, eu te aviso aqui e preparo o PDF para você mandar ao cliente.\n\nEnquanto isso, se quiser, pode me contar sobre outro serviço.");
-      return;
-    }
-    // sem revisão obrigatória e sem pendências: aprovação automática registrada como "sistema"
-    await approveQuote(this.ctx, quote.id, "system", { finalPriceCents: null });
-    this.session.flow = "idle";
-    this.say("Orçamento pronto. Quer que eu gere o PDF para você mandar ao cliente?", [
-      [
-        { text: "Gerar PDF", data: `pdf:issue:${quote.id}` },
-        { text: "Ainda não", data: "cmd:noop" },
-      ],
-    ]);
+    return this.calculateAndPresent(job.id);
   }
 
   async onPdf(action: string, quoteId?: string): Promise<void> {
@@ -1042,6 +1314,17 @@ ${GUIDE}`);
   // ------------------------------------------------------------- foto
   async onPhoto(): Promise<void> {
     const photo = this.input.photo!;
+    // foto de recibo/etiqueta durante a coleta de preço: guardada como evidência, valor só com confirmação
+    const pricing = this.session.context.pricing;
+    if (this.session.flow === "quote_material_pricing" && pricing?.current) {
+      const jobId = pricing.target.kind === "job" ? pricing.target.jobId : null;
+      await this.ctx.db.run("UPDATE attachments SET classification = 'recibo', job_id = COALESCE(?, job_id) WHERE id = ?", jobId, photo.attachmentId);
+      const caption = this.input.text.trim();
+      if (caption) return pricingText(this, caption, await interpret(this.ctx, caption));
+      pricing.current.step = "ask_price";
+      this.say(`Guardei a foto junto do orçamento. 📸 ${photo.visionHint ? `Pela imagem, parece: ${photo.visionHint} (isso é só uma sugestão). ` : ""}Qual é o valor que aparece nela? Pode me dizer, por exemplo: "90 reais a lata de 900 ml".`);
+      return;
+    }
     const existing = await this.ctx.db.first<{ job_id: string | null; id: string }>(
       "SELECT job_id, id FROM attachments WHERE sha256 = ? AND id <> ? AND job_id IS NOT NULL AND deleted_at IS NULL LIMIT 1",
       photo.hash,
@@ -1221,9 +1504,8 @@ Está certo? Pode responder "sim" ou "não".`, [
     }
     if (action === "cancel") {
       delete this.session.context.expense;
-      this.session.flow = this.session.activeJobId ? "collecting" : "idle";
       this.say("Tudo bem, não anotei nada.");
-      return;
+      return this.endSideAction();
     }
     if (action === "force") e.sequence = (e.sequence ?? 0) + 1;
     if (action !== "confirm" && action !== "force") return;
@@ -1257,12 +1539,12 @@ Está certo? Pode responder "sim" ou "não".`, [
       return;
     }
     delete this.session.context.expense;
-    this.session.flow = this.session.activeJobId ? "collecting" : "idle";
     this.say(
       isTransport
         ? `Anotado: ${e.description}, ${formatBRL(e.amountCents!)}.`
         : `Anotado: compra de ${e.description}, ${formatBRL(e.amountCents!)}.${e.materialKey && e.packages && e.packageSize ? " Também atualizei o preço de reposição desse material com o que você confirmou. Obrigado por me ensinar! 🙂" : ""} Isso conta como dinheiro que saiu. O valor do material usado em cada serviço entra no orçamento separado, sem contar duas vezes.`,
     );
+    await this.endSideAction();
   }
 
   // ------------------------------------------------------------- pagamentos
@@ -1355,9 +1637,8 @@ Está certo? Pode responder "sim" ou "não".`, [
     }
     if (action === "cancel") {
       delete this.session.context.payment;
-      this.session.flow = this.session.activeJobId ? "collecting" : "idle";
       this.say("Tudo bem, não anotei nada.");
-      return;
+      return this.endSideAction();
     }
     if (action === "force") p.sequence = (p.sequence ?? 0) + 1;
     if (action !== "confirm" && action !== "force") return;
@@ -1383,13 +1664,23 @@ Está certo? Pode responder "sim" ou "não".`, [
     } else {
       this.say(`Anotado! Já recebeu ${formatBRL(bal.paidCents)} de ${formatBRL(bal.contractedCents)}. ${bal.balanceCents! > 0 ? `Falta ${formatBRL(bal.balanceCents!)}.` : "Está quitado!"}`);
     }
+    await this.endSideAction();
   }
 
   // ------------------------------------------------------------- andamento
   async startProgress(text: string, nlu: NluResult): Promise<void> {
-    const to: "EM_EXECUCAO" | "CONCLUIDO" | "ENTREGUE" = nlu.entities.progress === "entregue" ? "ENTREGUE" : nlu.entities.progress === "concluido" ? "CONCLUIDO" : "EM_EXECUCAO";
+    const progress = nlu.entities.progress;
+    // nunca presumir andamento: sem evidência explícita, não há transição
+    if (!progress) return this.endSideAction();
     const job = await this.findJobFromMention(text, nlu);
     if (!job) return;
+    if (progress === "nao_iniciado" || progress === "parado") {
+      await addJobEvent(this.ctx, job.id, "andamento_informado", { progress }, this.input.user.id);
+      this.say(progress === "nao_iniciado" ? `Certo, anotado que ${jobPhrase(job)} ainda não começou.` : `Certo, anotado que ${jobPhrase(job)} está parado por enquanto.`);
+      return this.endSideAction();
+    }
+    const to: "EM_EXECUCAO" | "CONCLUIDO" | "ENTREGUE" = progress === "entregue" ? "ENTREGUE" : progress === "concluido" ? "CONCLUIDO" : "EM_EXECUCAO";
+    this.setPending({ type: "job_operational_status", entity: { kind: "job", id: job.id } });
     this.session.flow = "progress_confirm";
     this.session.context.progress = { jobId: job.id, to };
     const label = { EM_EXECUCAO: "em execução", CONCLUIDO: "concluído", ENTREGUE: "entregue" }[to];
@@ -1406,6 +1697,7 @@ Está certo? Pode responder "sim" ou "não".`, [
     if (!p || action !== "confirm") return this.cancel();
     delete this.session.context.progress;
     this.session.flow = "idle";
+    let learning = false;
     try {
       const job = await transitionJob(this.ctx, p.jobId, p.to as JobStatus, this.input.user.id);
       this.say(`Pronto: ${jobPhrase(job)} agora está ${JOB_STATUS_LABEL[job.status].toLowerCase()}.`);
@@ -1414,6 +1706,7 @@ Está certo? Pode responder "sim" ou "não".`, [
         if (bal.balanceCents && bal.balanceCents > 0) this.say(`Lembrete: ainda falta receber ${formatBRL(bal.balanceCents)} desse serviço.`);
       }
       if (p.to === "CONCLUIDO") {
+        learning = true;
         this.session.flow = "learning_time";
         this.session.context.learning = { jobId: job.id, step: "hours" };
         this.say(`Que ótimo! 🎉 Só mais uma curiosidade para eu aprender com o seu jeito de trabalhar: mais ou menos quantas horas de trabalho você gastou ${em(job)}?\n\nPode responder, por exemplo: “6 horas”.`);
@@ -1422,6 +1715,7 @@ Está certo? Pode responder "sim" ou "não".`, [
       const job = await getJob(this.ctx, p.jobId);
       this.say(`Não dá para mudar ${job ? jobPhrase(job) : "esse serviço"} direto para esse estado agora (está ${job ? JOB_STATUS_LABEL[job.status].toLowerCase() : "?"}).`);
     }
+    if (!learning) await this.endSideAction();
   }
 
   async learningTimeText(text: string): Promise<void> {
@@ -1434,7 +1728,7 @@ Está certo? Pode responder "sim" ou "não".`, [
       delete this.session.context.learning;
       this.session.flow = "idle";
       this.say("Sem problema nenhum. Quando lembrar, pode me contar. Cada serviço me ajuda a entender melhor o seu trabalho. 🙂");
-      return;
+      return this.endSideAction();
     }
     const hours = parseHours(text);
     if (!hours) {
@@ -1458,6 +1752,7 @@ Está certo? Pode responder "sim" ou "não".`, [
     delete this.session.context.learning;
     this.session.flow = "idle";
     this.say(`Perfeito, anotei ${hours.replace(".", ",")} horas. Obrigado, ${this.firstName}! Vou comparar com os próximos serviços para aprender sem tirar conclusão por uma experiência só. 🧠`);
+    await this.endSideAction();
   }
 
   /** Para consultas e andamento: encontra o projeto citado (somente leitura até confirmar). */
@@ -1549,7 +1844,7 @@ Está certo? Pode responder "sim" ou "não".`, [
       this.say(`Aprovado: ${q.finalPriceCents ? formatBRL(q.finalPriceCents) : ""}. O artesão será avisado.`);
       return;
     }
-    this.cancel();
+    await this.cancel();
   }
 }
 
@@ -1564,6 +1859,26 @@ const GUIDE = [
 ].join("\n");
 
 /** Nomes curtos e claros de cada informação, para resumos e pendências. */
+/** Tipo de pergunta pendente para cada campo do fluxo de um serviço. */
+const FIELD_QUESTION_TYPE: Record<ProjectField, PendingQuestionType> = {
+  furniture_type: "furniture_type",
+  techniques: "service_type",
+  client_name: "client_identity",
+  condition: "item_condition",
+  dimensions: "item_dimensions",
+  size_class: "item_dimensions",
+  surfaces: "service_scope",
+  details: "job_field",
+  repairs: "job_field",
+  subcontract: "job_field",
+  logistics: "logistics",
+  material_status: "material_source",
+  application_method: "application_method",
+  deadline: "job_field",
+  payment_terms: "job_field",
+  scope: "service_scope",
+};
+
 const FIELD_LABEL: Record<ProjectField, string> = {
   furniture_type: "qual é o móvel",
   techniques: "qual trabalho vai ser feito",
@@ -1580,6 +1895,7 @@ const FIELD_LABEL: Record<ProjectField, string> = {
   application_method: "se vai usar pincel, rolo ou pistola",
   deadline: "o prazo combinado",
   payment_terms: "como o cliente vai pagar",
+  scope: "se é só o tampo ou a peça inteira",
 };
 
 /** "Pergunta 3 de 11": deixa claro quanto falta (previsibilidade). */

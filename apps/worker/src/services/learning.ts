@@ -1,52 +1,18 @@
 import { newId } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { nowIso } from "../context.js";
-import { auditStmt } from "../repos/audit.js";
-import { getMaterialByKey } from "../repos/catalog.js";
+import { learnPriceFromPurchase } from "./material-pricing.js";
 
 /**
  * Uma compra confirmada pelo artesão é uma fonte objetiva para preço de reposição.
  * O valor da embalagem é derivado do total / número de embalagens; nunca da IA.
+ * Delegado ao serviço único de preços (histórico, auditoria e idempotência).
  */
 export async function learnFromConfirmedPurchase(
   ctx: Ctx,
-  input: { userId: string; jobId: string | null; messageId: string; materialKey: string; totalCents: number; packages: number; packageSize: string },
+  input: { userId: string; jobId: string | null; messageId: string; materialKey: string; totalCents: number; packages: number; packageSize: string; purchaseKey?: string },
 ): Promise<void> {
-  const material = await getMaterialByKey(ctx, input.materialKey);
-  if (!material || input.packages < 1 || input.totalCents < 1) return;
-  const priceCents = Math.round(input.totalCents / input.packages);
-  const now = nowIso(ctx);
-  const observationId = newId();
-  await ctx.db.batch([
-    ctx.db.stmt(
-      "UPDATE materials SET package_size = ?, replacement_price_cents = ?, price_updated_at = ?, origin = 'telegram_confirmed', updated_at = ? WHERE id = ?",
-      input.packageSize,
-      priceCents,
-      now,
-      now,
-      material.id,
-    ),
-    ctx.db.stmt(
-      "INSERT INTO material_price_history (id, material_id, price_cents, source, recorded_by, recorded_at) VALUES (?, ?, ?, 'telegram_confirmed', ?, ?)",
-      newId(),
-      material.id,
-      priceCents,
-      input.userId,
-      now,
-    ),
-    ctx.db.stmt(
-      "INSERT INTO learning_observations (id, user_id, job_id, message_id, kind, entity_type, entity_key, data_json, confidence, status, applied_at, created_at) VALUES (?, ?, ?, ?, 'MATERIAL_PURCHASE', 'material', ?, ?, 1, 'APLICADO', ?, ?)",
-      observationId,
-      input.userId,
-      input.jobId,
-      input.messageId,
-      input.materialKey,
-      JSON.stringify({ totalCents: input.totalCents, packages: input.packages, packageSize: input.packageSize, replacementPriceCents: priceCents }),
-      now,
-      now,
-    ),
-    auditStmt(ctx, input.userId, "material.learn_purchase", "material", material.id, undefined, { observationId, priceCents, packageSize: input.packageSize, packages: input.packages }),
-  ]);
+  await learnPriceFromPurchase(ctx, { ...input, purchaseKey: input.purchaseKey ?? `${input.messageId}:${input.materialKey}` });
 }
 export async function recordMaterialSourceObservation(
   ctx: Ctx,
@@ -94,11 +60,12 @@ export async function listLearningObservations(
 ): Promise<unknown[]> {
   const limit = options.limit ?? 100;
   return ctx.db.all(
-    `SELECT lo.id, lo.kind, lo.entity_type, lo.entity_key, lo.data_json, lo.confidence, lo.status, lo.created_at,
-            u.display_name, j.code AS job_code
+    `SELECT lo.id, lo.kind, lo.entity_type, lo.entity_key, lo.data_json, lo.confidence, lo.status, lo.created_at, lo.origin, lo.source_text, lo.message_id,
+            u.display_name, j.code AS job_code, j.title AS job_title, cm.created_at AS message_at, COALESCE(cm.transcript, cm.text) AS message_text
        FROM learning_observations lo
        LEFT JOIN users u ON u.id = lo.user_id
        LEFT JOIN jobs j ON j.id = lo.job_id
+       LEFT JOIN conversation_messages cm ON cm.id = lo.message_id
       WHERE (? IS NULL OR lo.user_id = ?)
         AND (? IS NULL OR substr(lo.created_at, 1, 10) >= ?)
         AND (? IS NULL OR substr(lo.created_at, 1, 10) <= ?)

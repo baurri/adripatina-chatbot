@@ -29,3 +29,17 @@ Cada decisão segue o princípio da especificação: a opção mais simples, seg
 | D-023 | Entrada recomendada = máx(% configurado do preço, compras + terceiros + transporte previstos). | Especificação 3.5: cobrir desembolsos iniciais. |
 
 Valores inventados para testes estão no catálogo **demo_only / calibrated=false** e nos fixtures de teste (preços fictícios), nunca no seed de produção.
+
+## Rodada de 23/11/2026 — objetivos conversacionais e coleta de preços
+
+| ID | Decisão | Motivo |
+|----|---------|--------|
+| D-024 | **Política única de roteamento** em `apps/worker/src/conversation/router.ts`: universal → confirmação esperada → resposta à pergunta pendente → objetivo ativo → interrupção clara → intenção global → fallback. | Corrige o sequestro do fluxo (resposta sobre estado do móvel virava `job_progress`). Uma resposta plausível à pergunta pendente vence intenções globais de média confiança. |
+| D-025 | `job_progress` exige **evidência operacional explícita** (`detectProgress`: verbo de ação ou pedido de marcação). Estado físico (`detectConditionStatement`) nunca é andamento. Sem evidência, não há transição (antes o padrão era "em execução"). | Palavras soltas ("reparos", "melhores", "pronto") não bastam. |
+| D-026 | A IA **nunca** introduz valor em dinheiro nem intenções que mudam estado (andamento, pagamento, gasto) sem evidência literal no texto. | Teste 22 encontrou a IA abrindo um gasto de R$ 999 não dito. |
+| D-027 | **Pergunta pendente tipada** (`pendingQuestion`) e **pilha de objetivos** (`goalStack`) persistidas na sessão. Interrupções claras suspendem o objetivo e ele é retomado ao concluir/cancelar a ação lateral. | Objetivo de orçamento não pode desaparecer por uma classificação secundária. |
+| D-028 | **Pedido com vários móveis/clientes** usa representação intermediária (`QuoteRequestDraft`, tabela `quote_requests`) e só cria serviços (um por peça) depois de confirmar donos, tipos, escopo e estado. Ambiguidades viram perguntas, uma por vez. | Não reduzir plurais a singular nem inventar associações. |
+| D-029 | **Coleta de preço durante o orçamento** (`quote_material_pricing`): material sem preço vira pergunta ao artesão; grava só após confirmação, com origem `telegram_quote_confirmed`, histórico (valor/embalagem anteriores, conversa, serviço, orçamento), observação de aprendizado e auditoria; idempotente; não altera `calibrated`; recalcula automaticamente. Serviço único `services/material-pricing.ts` também usado pela compra. | O administrador não precisa cadastrar/aprovar preços do dia a dia. |
+| D-030 | Limites configuráveis `priceSanity` (padrão R$ 1,00 a R$ 2.000,00 por embalagem) disparam **confirmação reforçada**, nunca rejeição silenciosa. Valor ≤ 0 é recusado. | Erros de transcrição ("R$ 90" → "R$ 9.000"). |
+| D-031 | Escopo "só o tampo" (`scope`) chega ao motor: área = largura × fundura; sem medidas, fração do porte (0,25, NÃO CALIBRADA, usando o maior valor da faixa). | Precificar corretamente peças em que só o tampo é trabalhado. |
+| D-032 | Sem "Pergunta X de Y": o total muda conforme as respostas; usa-se linguagem natural ("Estamos quase lá", "Última pergunta"). | Previsibilidade sem números que mudam. |
