@@ -68,6 +68,9 @@ const tokens = (s: string) => Math.ceil(s.length / 3);
  */
 export async function composeMessage(ctx: Ctx, plan: MessagePlan): Promise<{ text: string; source: "ai" | "fallback"; reasons: string[] }> {
   if (!ctx.config.phrasingVariety || !available(ctx)) return { text: plan.fallback, source: "fallback", reasons: ["ia_indisponivel"] };
+  // D-073: com o Claude dando voz a todas as mensagens no fim do turno, a reescrita por pergunta
+  // seria dobrada (mais lenta e mais chance de recusa): fica só o texto-base
+  if (ctx.config.conversationAi && /^claude/.test(ctx.ai.extraction!.name)) return { text: plan.fallback, source: "fallback", reasons: ["voz_no_fim_do_turno"] };
   const provider = ctx.ai.extraction!;
   let reasons: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {

@@ -54,3 +54,9 @@ Ver `.env.example`. Segredos: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
 - Aplicar a migration antes do deploy: `node node_modules/wrangler/bin/wrangler.js d1 migrations apply DB --remote --config wrangler.jsonc` (0007 só acrescenta a coluna `quotes.price_adjustment_json`).
 - O administrador recebe "Fulano fechou o orçamento S-000X por R$ ..." no Telegram, com desconto/acréscimo e aviso quando ficou abaixo do mínimo. A nota de aprovação do orçamento guarda o mesmo resumo.
 - Materiais que o Adriano disse não usar ficam em `pricingOverrides.excludedMaterials` do serviço (o painel preserva) e viram `learning_observations` (`MATERIAL_USAGE`, status `COLETADO`) para revisar a receita da técnica.
+
+## Claude em toda mensagem (D-073)
+
+- Ligado por padrão quando há `ANTHROPIC_API_KEY`. Para desligar sem deploy de código: variável `CONVERSATION_AI=false` no Worker.
+- Custo esperado: ~3 chamadas Haiku por mensagem (entender, ler intenção, dar voz) — centavos por dia no uso do Adriano; o teto de US$ 5/mês no console da Anthropic protege.
+- Diagnóstico: `wrangler tail` mostra `understand_rejected` / `polish_rejected` quando a conferência descarta algo; o texto entendido de cada mensagem fica em `conversation_messages.routing_json.understood`.

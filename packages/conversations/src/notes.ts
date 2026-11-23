@@ -76,7 +76,7 @@ export function extractNotes(text: string, ctx: NoteContext = {}): string[] {
 
   // ferramenta ou etapa extra: "pincel e estilete pra raspar" (teste real 23/11/2026: o estilete se perdia)
   const tools: string[] = [];
-  for (const m of f.matchAll(/\b(estilete|espatula|lixadeira|soprador termico|soprador|removedor|formao|grosa|palha de aco|escova de aco|esponja de aco)\b(?:\s+(?:pra|para|p\/)\s+([a-z]+))?/g)) {
+  for (const m of f.matchAll(/\b(estilete|espatula|faca|lamina|lixadeira|soprador termico|soprador|removedor|formao|grosa|palha de aco|escova de aco|esponja de aco)\b(?:\s+(?:pra|para|p\/)\s+([a-z]+))?/g)) {
     tools.push(text.slice(m.index!, m.index! + m[0].length).trim().toLowerCase());
   }
   if (!tools.length && /\b(raspar|raspagem|decapar|decapagem)\b/.test(f)) tools.push(/\bdecap/.test(f) ? "decapagem" : "raspagem");

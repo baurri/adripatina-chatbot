@@ -79,6 +79,7 @@ import { decideRoute, type RoutingDecision } from "./router.js";
 import { dataCollectionText, isPlausibleCollectionAnswer, onDataCollectionCallback, releaseCollection } from "./data-collection-flow.js";
 import { missingPriceKeys } from "../services/material-pricing.js";
 import { askCurrent as askPricingCurrent, isPlausiblePricingAnswer, onPricingCallback, pricingText, startPricing, targetPhrase } from "./pricing-flow.js";
+import { polishOutbound, understandInbound } from "./ai-layer.js";
 import { onQuoteDecisionCallback, presentQuoteDecision, quoteDecisionText, reaskQuoteDecision } from "./quote-decision-flow.js";
 import {
   askQuoteRequestAgain,
@@ -165,6 +166,8 @@ export class Conversation {
 
   /** decisão de roteamento da mensagem atual (auditoria) */
   routing: RoutingDecision | null = null;
+  /** o que o Claude entendeu da mensagem (D-073), para a auditoria */
+  understood: { text: string; kind: string | null; rewritten: boolean } | null = null;
 
   setPending(p: Omit<PendingQuestion, "askedAt">): void {
     this.session.context.pendingQuestion = { ...p, askedAt: this.ctx.clock().toISOString() };
@@ -195,14 +198,24 @@ export class Conversation {
     try {
       if (this.input.kind === "callback") await this.onCallback(this.input.text);
       else if (this.input.kind === "photo") await this.onPhoto();
-      else await this.onText(this.input.text, resuming);
+      else {
+        // D-073: o Claude lê a mensagem no contexto e entrega o texto claro para os fluxos
+        const u = await understandInbound(this, this.input.text);
+        this.understood = u;
+        await this.onText(u.text, resuming);
+      }
     } catch (err) {
       if (err instanceof DomainError) this.say(friendlyDomainError(err));
       else throw err;
     }
     await saveSession(this.ctx, this.session);
     if (this.session.activeJobId) await linkMessageToJob(this.ctx, this.input.inboundMessageId, this.session.activeJobId);
-    return this.out;
+    // D-073: todas as mensagens do turno ganham a voz do Claude (conferidas; falhou → original)
+    try {
+      return await polishOutbound(this, this.out);
+    } catch {
+      return this.out;
+    }
   }
 
   // ------------------------------------------------------------------ texto
@@ -246,6 +259,7 @@ export class Conversation {
         materialStatus: e.materialStatus ?? null,
       },
       nluSource: nlu.source,
+      ...(this.understood?.rewritten ? { understood: this.understood.text.slice(0, 1500), understoodKind: this.understood.kind } : {}),
     };
     await this.ctx.db.run(
       "UPDATE conversation_messages SET intent = ?, confidence = ?, contextual_intent = ?, route = ?, routing_json = ? WHERE id = ?",

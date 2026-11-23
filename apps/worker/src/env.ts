@@ -22,6 +22,7 @@ export interface Env {
   TELEGRAM_MODE: string;
   DAILY_SUMMARY_HOUR: string;
   PHRASING_VARIETY?: string;
+  CONVERSATION_AI?: string;
   /** coleta proativa: off | dry_run | live (live ainda exige ativação no painel) */
   PROACTIVE_MODE?: string;
   /** modelo Claude para texto quando ANTHROPIC_API_KEY existe (padrão claude-haiku-5-5) */
@@ -57,6 +58,8 @@ export const ConfigSchema = z.object({
   dailySummaryHour: z.number(),
   /** varia a forma das perguntas (testes usam false para textos estáveis) */
   phrasingVariety: z.boolean(),
+  /** D-073: Claude lê toda mensagem recebida e dá voz a toda mensagem enviada */
+  conversationAi: z.boolean(),
   /** coleta proativa: off (nada), dry_run (só simula), live (envia, se ligada no painel) */
   proactiveMode: z.enum(["off", "dry_run", "live"]),
   /** modelo Claude para texto (usado só se houver ANTHROPIC_API_KEY; a chave fica fora da Config) */
@@ -84,6 +87,7 @@ export function loadConfig(env: Partial<Env>): Config {
     telegramMode: env.TELEGRAM_MODE === "live" ? "live" : "mock",
     dailySummaryHour: intStr(7).parse(env.DAILY_SUMMARY_HOUR),
     phrasingVariety: env.PHRASING_VARIETY !== "false",
+    conversationAi: env.CONVERSATION_AI !== "false",
     // fora de produção o padrão é só simular — nunca enviar mensagens reais automaticamente
     claudeModel: env.AI_CLAUDE_MODEL || "claude-haiku-5-5",
     proactiveMode: (["off", "dry_run", "live"].includes(env.PROACTIVE_MODE ?? "") ? env.PROACTIVE_MODE : environment === "production" ? "live" : "dry_run") as "off" | "dry_run" | "live",

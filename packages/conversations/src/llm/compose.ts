@@ -204,3 +204,17 @@ export function keyTermsOf(question: string, extra: string[] = []): string[] {
   const words = normalizeText(question).replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length >= 5 && !stop.has(w));
   return [...new Set([...extra, ...words.slice(0, 2)])];
 }
+
+/**
+ * Checagens de tom/segurança reutilizadas pela camada de conversa (entrada e saída pelo Claude):
+ * termos proibidos, história pessoal inventada, tratamento formal/pt-PT, emojis demais.
+ */
+export function toneIssues(text: string, maxEmojis = 4): string[] {
+  const issues: string[] = [];
+  for (const re of FORBIDDEN) if (re.test(text)) issues.push(`termo proibido: ${re.source}`);
+  const norm = normalizeText(text);
+  if (PERSONAL_STORY.test(norm)) issues.push("história pessoal inventada");
+  if (FORMAL_OR_PT_PT.test(norm)) issues.push("tratamento formal ou português de Portugal");
+  if (countEmojis(text) > maxEmojis) issues.push("emojis demais");
+  return issues;
+}
