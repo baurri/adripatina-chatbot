@@ -1001,7 +1001,7 @@ ${GUIDE}`);
         const cand = byId.get(c.jobId)!;
         const job = await getJob(this.ctx, c.jobId);
         const desc = cand.descriptors.length ? ` (${cand.descriptors.join(", ")})` : "";
-        rows.push([{ text: `${job ? capitalize(jobPhrase(job)) : cand.code}${desc} — desde ${formatDateBR(cand.createdAt)}`.slice(0, 60), data: `match:pick:${c.jobId}` }]);
+        rows.push([{ text: `${job ? capitalize(jobPhrase(job)) : "serviço sem nome"}${desc} — desde ${formatDateBR(cand.createdAt)}`.slice(0, 60), data: `match:pick:${c.jobId}` }]);
       }
       rows.push([
         { text: "É outro serviço", data: "match:no" },
@@ -2314,7 +2314,7 @@ Está certo? Pode responder "sim" ou "não".`, [
     const job = p.jobId ? await getJob(this.ctx, p.jobId) : null;
     if (!job) return this.askPaymentJob();
     const client = (job.facts.client_name?.value as string | undefined) ?? job.clientName ?? p.clientName ?? "cliente";
-    this.say(`Vou anotar: recebi ${formatBRL(p.amountCents!)} de ${client}, referente ${aPrep(job)} (${job.code}).
+    this.say(`Vou anotar: recebi ${formatBRL(p.amountCents!)} de ${client}, referente ${aPrep(job)}.
 
 Está certo? Pode responder "sim" ou "não".`, [
       [
@@ -2520,7 +2520,7 @@ Está certo? Pode responder "sim" ou "não".`, [
     const s = summarizeJob(job);
     const bal = await jobBalance(this.ctx, job.id);
     const q = await latestQuoteForJob(this.ctx, job.id);
-    const lines = [`${s.headline} (${job.code})`, `Situação: ${JOB_STATUS_LABEL[job.status]}`];
+    const lines = [s.headline, `Situação: ${JOB_STATUS_LABEL[job.status]}`];
     if (s.confirmed.length) lines.push(`Já anotado: ${s.confirmed.join("; ")}`);
     if (s.pending.length) lines.push(`Ainda falta saber: ${s.pending.map((f) => FIELD_LABEL[f]).slice(0, 4).join("; ")}`);
     if (q) lines.push(`Orçamento: ${q.status.toLowerCase().replace(/_/g, " ")}${q.finalPriceCents ? ` — ${formatBRL(q.finalPriceCents)}` : ""}`);

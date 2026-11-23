@@ -347,7 +347,7 @@ export function jobPhrase(job: Pick<Job, "facts" | "clientName" | "code"> & { ti
   const article = type && ["cristaleira", "comoda", "mesa", "cadeira", "estante", "penteadeira", "poltrona", "cama", "escrivaninha", "sapateira", "moldura", "porta"].includes(type) ? "a" : "o";
   const label = furnitureLabel(type);
   const client = (job.facts.client_name?.value as string | null | undefined) ?? job.clientName;
-  return client ? `${article} ${label} d${clientArticle(client)} ${client}` : `${article} ${label} (${job.code})`;
+  return client ? `${article} ${label} d${clientArticle(client)} ${client}` : `${article} ${label} (ainda sem cliente)`;
 }
 
 function clientArticle(name: string): string {

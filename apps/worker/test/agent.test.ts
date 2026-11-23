@@ -114,6 +114,21 @@ describe("motor novo (D-075): travas do código", () => {
     expect(["APROVADO", "ENVIADO"]).toContain(q.status);
   });
 
+  it("código interno do serviço (S-0001) nunca aparece para o artesão", async () => {
+    const { stripJobCodes } = await import("../src/agent/engine.js");
+    expect(stripJobCodes("Tem a cômoda da Dona Carla (S-0001) e o serviço S-0002, aguardando.")).toBe("Tem a cômoda da Dona Carla e o, aguardando.");
+    const { h } = await setup([() => tool("listar_servicos", {}), (m) => {
+      expect(JSON.stringify(lastToolResult(m))).not.toMatch(/S-\d{4}/);
+      return say("Tá aqui a cristaleira (S-0001) da Dona Maria. 🙂");
+    }]);
+    const { createJob, setFact } = await import("../src/repos/jobs.js");
+    const job = await createJob(h.ctx, { actor: h.artisanId, description: "cristaleira da dona Maria" });
+    await setFact(h.ctx, job.id, "client_name", "Dona Maria" as never, { actor: h.artisanId, source: "telegram_text" });
+    const r = h.allText(await h.send("o que tem em andamento?"));
+    expect(r).not.toMatch(/S-\d{4}/);
+    expect(r).toMatch(/cristaleira da Dona Maria/);
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };

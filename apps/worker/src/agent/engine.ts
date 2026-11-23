@@ -4,7 +4,7 @@ import type { Ctx } from "../context.js";
 import type { AgentMessage, AgentTool, OutgoingMessage } from "../ports.js";
 import { logUsage } from "../ai/service.js";
 import { loadSession, saveSession } from "../repos/sessions.js";
-import { listActiveJobs } from "../repos/jobs.js";
+import { jobPhrase, listActiveJobs } from "../repos/jobs.js";
 import type { EngineInput } from "../conversation/engine.js";
 import { AGENT_TOOLS, executePending, runTool, type AgentState, type ToolContext } from "./tools.js";
 
@@ -20,6 +20,11 @@ import { AGENT_TOOLS, executePending, runTool, type AgentState, type ToolContext
 
 const MAX_ROUNDS = 8;
 const HISTORY = 16;
+
+/** Códigos internos (S-0001) e ids nunca aparecem para o artesão. */
+export function stripJobCodes(text: string): string {
+  return text.replace(/\s*[([\[]?(?:servi[çc]o\s+)?\bS-\d{3,}\b[)\]]?/gi, "").replace(/ +([,.!?;:])/g, "$1");
+}
 
 const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Orçamento de uma peça precisa de: o móvel; o que vai ser feito (técnica); de quem é (cliente); tamanho (medidas em cm ou pequeno/médio/grande); estado (bom, reparos, danificado); só por fora ou por dentro também (móveis com parte de dentro); só o tampo ou a peça inteira (mesas, cômodas, aparadores); se precisa de conserto; pincel, rolo ou pistola; quem leva e traz (se ele busca/entrega, e o frete). Material em casa, prazo e pagamento são opcionais: anote se ele disser, não pergunte.
@@ -41,6 +46,8 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Conversa encerrada e ele só se despedindo/agradecendo: responda numa linha, sem repetir resumo nem valores.
 - Gavetas e portas: SEMPRE no campo gavetas/portas quando ele disser (além da observação, se quiser).
 - Nunca fale de "sistema", "registro", "ferramenta" ou erro técnico. Se algo não deu certo, diga de forma simples o que precisa dele (ex.: "me confirma o valor?").
+- Fale dos serviços pelo móvel e pelo cliente ("a cômoda da Dona Carla"), nunca por código ou id.
+- Só liste os serviços em andamento se ele perguntar ou se precisar saber de qual peça ele está falando.
 - Resposta final: curta, em parágrafos curtos, uma pergunta no fim. Nada de listas longas de campos.`;
 
 function systemFor(firstName: string, today: string): string {
@@ -71,7 +78,7 @@ async function stateSnapshot(ctx: Ctx, state: AgentState): Promise<string> {
   const jobs = await listActiveJobs(ctx, 8);
   const focus = state.focus ?? [];
   const sorted = [...jobs].sort((a, b) => (focus.indexOf(a.id) === -1 ? 99 : focus.indexOf(a.id)) - (focus.indexOf(b.id) === -1 ? 99 : focus.indexOf(b.id)));
-  const brief = sorted.map((j) => ({ servico_id: j.id, codigo: j.code, titulo: j.title, situacao: j.status, em_foco: focus.includes(j.id) }));
+  const brief = sorted.map((j) => ({ servico_id: j.id, nome: jobPhrase(j), situacao: j.status, em_foco: focus.includes(j.id) }));
   return JSON.stringify({
     servicos_em_andamento: brief,
     em_foco: focus,
@@ -166,7 +173,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
       const uses = step.content.filter((c) => c.type === "tool_use") as { type: "tool_use"; id: string; name: string; input: unknown }[];
       const text = step.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim();
       if (!uses.length) {
-        finalText = text;
+        finalText = stripJobCodes(text);
         break;
       }
       messages.push({ role: "assistant", content: step.content.map((c) => (c.type === "text" ? { type: "text", text: c.text } : { type: "tool_use", id: c.id, name: c.name, input: c.input })) });
@@ -201,6 +208,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     return null; // motor antigo assume
   }
   if (!finalText) finalText = "Opa, me perdi aqui. 😅 Pode me falar de novo?";
+  finalText = stripJobCodes(finalText);
 
   const buttons: Button[][] = [];
   if (state.pending) {

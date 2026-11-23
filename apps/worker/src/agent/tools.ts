@@ -92,7 +92,6 @@ function describeJob(job: Job): Record<string, unknown> {
   const ft = v("furniture_type") as (FactValueMap["furniture_type"] & { attributes?: Record<string, unknown> }) | null;
   return {
     servico_id: job.id,
-    codigo: job.code,
     nome: jobPhrase(job),
     situacao: job.status,
     movel: ft ? { tipo: furnitureLabel(ft.type), quantidade: ft.quantity ?? 1, gavetas: ft.drawers ?? ft.attributes?.drawers_count ?? null, portas: ft.doors ?? ft.attributes?.doors_count ?? null, detalhes: ft.descriptors ?? [] } : null,
@@ -424,19 +423,19 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         if (typeof job === "string") return { erro: job };
         const falta = missingFor(job);
         if (falta.length) {
-          items.push({ servico: job.code, nome: jobPhrase(job), pode_calcular: false, falta });
+          items.push({ servico_id: job.id, nome: jobPhrase(job), pode_calcular: false, falta });
           continue;
         }
         const q = await calculateQuote(t.ctx, job.id, t.user.id);
         for (const k of missingPriceKeys([q.result])) missingPrices.add(k);
         const r = q.result;
         if (!r.computable) {
-          items.push({ servico: job.code, nome: jobPhrase(job), pode_calcular: false, falta: r.blockers.map((x) => x.message) });
+          items.push({ servico_id: job.id, nome: jobPhrase(job), pode_calcular: false, falta: r.blockers.map((x) => x.message) });
           continue;
         }
         quotes.push(q);
         items.push({
-          servico: job.code,
+          servico_id: job.id,
           nome: jobPhrase(job),
           sugestao: reais(r.recommendedCents),
           minimo_sem_prejuizo: reais(r.floorCents),
