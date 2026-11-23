@@ -3,7 +3,9 @@ import {
   FURNITURE,
   nounFeminine,
   conditionOf,
+  extractClientName,
   extractQuoteRequest,
+  findTechniques,
   furnitureHasTop,
   parseOwnerStatement,
   parseQuantityCorrection,
@@ -38,6 +40,8 @@ import { missingPriceKeys } from "../services/material-pricing.js";
 import { approveQuote, calculateQuote, getOverrides, saveOverrides, submitForReview, type QuoteRecord } from "../services/quotes.js";
 import type { QuoteRequestState } from "../repos/sessions.js";
 import { startPricing } from "./pricing-flow.js";
+import { interpretQuoteRequestAnswer, type QrAiResult } from "./quote-request-ai.js";
+import { presentMultiQuoteDecision } from "./quote-decision-flow.js";
 
 /**
  * Objetivo persistente CALCULATE_QUOTE para pedidos com vários móveis/clientes.
@@ -178,6 +182,7 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
   }
   const d = qr.draft;
   qr.unparsed = 0;
+  numberDuplicates(d);
   // 0) nomes ditos juntos: casal (um cliente) ou dois clientes? Nunca adivinhar.
   if (d.clientsJoined && !qr.clientsRelation && d.clients.length === 2) {
     qr.step = "clients_relation";
@@ -273,6 +278,24 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
     );
     return persist(c);
   }
+  // 4b) o que vai ser feito (sem técnica não há conta: pergunta em vez de orçamento "preliminar")
+  const noTech = d.items.filter((i) => !i.generic && i.techniqueKeys.length === 0);
+  if (noTech.length && !qr.techniquesAsked) {
+    qr.step = "techniques";
+    qr.currentRefs = noTech.map((i) => i.ref);
+    qr.techniquesAsked = true;
+    c.setPending({ type: "confirmation", entity: { kind: "quote_request", id: qr.id } });
+    c.say(`E o que você vai fazer ${noTech.length === d.items.length ? "nas peças" : `n${humanList(noTech.map(itemName))}`}? 🎨 Por exemplo: "lixar e passar verniz", "pintar" ou "pátina".`);
+    return persist(c);
+  }
+  // 4c) de quem são os móveis (sem cliente o PDF sai sem nome)
+  if (d.clients.length === 0 && !qr.clientAsked) {
+    qr.step = "client";
+    qr.clientAsked = true;
+    c.setPending({ type: "client_identity", entity: { kind: "quote_request", id: qr.id } });
+    c.say(`E ${totalPieces(d) > 1 ? "esses móveis são" : "esse móvel é"} de quem? Só o nome do cliente, tipo "da dona Maria". 🙂`);
+    return persist(c);
+  }
   // 5) confirmação estrutural
   if (!qr.reviewed) {
     qr.step = "review";
@@ -303,7 +326,7 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
   for (const it of d.items) {
     if (qr.askedDims?.includes(it.ref)) continue;
     const job = await getJob(c.ctx, qr.jobByRef![it.ref]!);
-    if (job && (job.facts.dimensions || job.facts.size_class)) continue;
+    if (job && (job.facts.dimensions?.value || job.facts.size_class?.value)) continue;
     const firstDims = !(qr.askedDims?.length);
     qr.step = "dims";
     qr.currentRefs = [it.ref];
@@ -315,7 +338,16 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
     );
     return persist(c);
   }
-  // 9) horas de reparo (estimativa do próprio artesão)
+  // 9) horas de reparo (estimativa do próprio artesão) — uma pergunta só quando são várias peças
+  const toRepair = d.items.filter((i) => (i.condition === "reparos" || i.condition === "danificado") && !qr.askedRepair?.includes(i.ref));
+  if (toRepair.length > 1 && !qr.repairAskedAll) {
+    qr.step = "repair_hours";
+    qr.currentRefs = toRepair.map((i) => i.ref);
+    qr.repairAskedAll = true;
+    c.setPending({ type: "repair_hours", entity: { kind: "quote_request", id: qr.id, refs: qr.currentRefs } });
+    c.say(`Quanto tempo você acha que leva pra acertar os detalhes de ${toRepair.length === d.items.length ? "todas as peças" : humanList(toRepair.map(itemName))}, somando tudo? 🛠️ Por exemplo: "3 horas". Se não souber, tudo bem.`);
+    return persist(c);
+  }
   for (const it of d.items) {
     if (!(it.condition === "reparos" || it.condition === "danificado") || qr.askedRepair?.includes(it.ref)) continue;
     qr.step = "repair_hours";
@@ -337,7 +369,7 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
     qr.step = "material_source";
     c.setPending({ type: "material_source", entity: { kind: "quote_request", id: qr.id } });
     const mat = materialWord(d);
-    c.say(`E ${mat === "verniz" ? "o verniz" : `o material (${mat})`}: você vai usar o que já tem no estoque ou vai comprar? (Mesmo usando do estoque, ele entra no preço pelo valor de reposição.)`);
+    c.say(`E ${mat === "verniz" ? "o verniz" : mat === "material" ? "o material" : `o material (${mat})`}: você já tem aí ou vai precisar comprar? 📦`);
     return persist(c);
   }
   // 12) busca e entrega
@@ -418,7 +450,11 @@ export function isPlausibleQuoteRequestAnswer(c: Conversation, text: string, nlu
     case "method":
       return !!nlu.entities.method;
     case "material_source":
-      return !!nlu.entities.materialStatus;
+      return !!nlu.entities.materialStatus || /\b(estoque|tenho|ja t\w{2,4}|compr\w*)\b/.test(normalizeText(text));
+    case "techniques":
+      return findTechniques(text).length > 0;
+    case "client":
+      return !!extractClientName(text) || text.trim().split(/\s+/).length <= 4;
     case "logistics": {
       if (parseLogistics(text) !== null) return true;
       const ans = parseAnswer("logistics", text);
@@ -502,6 +538,13 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
   const global = await applyGlobalChanges(c, qr, text, nlu);
   if (global === "handled") return;
   if (global === "changed") return askQuoteRequestAgain(c);
+
+  // o Claude lê a resposta no contexto (peças, pergunta): medidas de várias peças de uma vez,
+  // "duas aparadoras", "já trnho"... Nas medidas sempre; nas outras perguntas quando as regras não entendem.
+  if (AI_STEPS.includes(qr.step) && !dontKnow && (qr.step === "dims" || !isPlausibleQuoteRequestAnswer(c, text, nlu))) {
+    const ai = await interpretQuoteRequestAnswer(c.ctx, d.items, questionOf(qr), text);
+    if (ai && (await applyAi(c, qr, ai))) return nextQuoteRequestStep(c);
+  }
 
   // informação útil dita fora de hora (ex.: estado das peças) é guardada, nunca descartada
   const answersItself = ["condition", "review_fix", "scope", "identity", "review"].includes(qr.step);
@@ -635,19 +678,40 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
       return nextQuoteRequestStep(c);
     }
     case "repair_hours": {
-      const ref = qr.currentRefs[0]!;
-      qr.askedRepair = [...(qr.askedRepair ?? []), ref];
+      const refs = [...qr.currentRefs];
+      qr.askedRepair = [...new Set([...(qr.askedRepair ?? []), ...refs])];
       const hours = dontKnow ? null : parseHoursLoose(text);
       if (!hours && !dontKnow) {
-        qr.askedRepair = qr.askedRepair.filter((r) => r !== ref);
+        qr.askedRepair = qr.askedRepair.filter((r) => !refs.includes(r));
+        if (refs.length > 1) qr.repairAskedAll = false;
         return retry('Pode dizer, por exemplo, "2 horas" ou "meia hora".');
       }
       if (hours) {
-        const jobId = qr.jobByRef![ref]!;
-        const it = d.items.find((i) => i.ref === ref)!;
-        const ov = await getOverrides(c.ctx, jobId);
-        await saveOverrides(c.ctx, jobId, { ...ov, extraLabor: [...ov.extraLabor, { description: `Reparo${it.repairPart ? ` do ${it.repairPart}` : ""} (estimativa do artesão)`, hours }] }, c.input.user.id);
+        // total dito para várias peças: dividido igualmente
+        const each = Dec.from(hours).div(refs.length).toString();
+        for (const ref of refs) {
+          const jobId = qr.jobByRef![ref]!;
+          const it = d.items.find((i) => i.ref === ref)!;
+          const ov = await getOverrides(c.ctx, jobId);
+          await saveOverrides(c.ctx, jobId, { ...ov, extraLabor: [...ov.extraLabor, { description: `Reparo${it.repairPart ? ` do ${it.repairPart}` : ""} (estimativa do artesão)`, hours: each }] }, c.input.user.id);
+        }
       }
+      return nextQuoteRequestStep(c);
+    }
+    case "techniques": {
+      const techs = findTechniques(text);
+      if (!techs.length && !dontKnow) return retry('Pode dizer, por exemplo: "lixar e passar verniz", "pintar" ou "pátina".');
+      for (const it of d.items.filter((i) => qr.currentRefs.includes(i.ref))) {
+        if (!techs.length) continue;
+        it.techniqueKeys = techs;
+        const jobId = qr.jobByRef?.[it.ref];
+        if (jobId) await setFact(c.ctx, jobId, "techniques", techs, { actor: c.input.user.id, source: c.sourceKind(), messageId: c.input.inboundMessageId });
+      }
+      return nextQuoteRequestStep(c);
+    }
+    case "client": {
+      const name = extractClientName(text.match(/^(d[ao]s?|de) /i) ? text : `da ${text}`) ?? extractClientName(text);
+      if (name && !dontKnow) setClient(qr, name);
       return nextQuoteRequestStep(c);
     }
     case "method": {
@@ -659,7 +723,9 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
       return nextQuoteRequestStep(c);
     }
     case "material_source": {
-      const status = nlu.entities.materialStatus ?? (/\b(estoque|tenho|ja tenho)\b/.test(normalizeText(text)) ? "tem_tudo" : /\bcompr/.test(normalizeText(text)) ? "precisa_comprar" : undefined);
+      // tolera erro de digitação: "já trnho", "ja tenhu" (teste real 23/11/2026)
+      const nm = normalizeText(text);
+      const status = nlu.entities.materialStatus ?? (/\bcompr/.test(nm) ? "precisa_comprar" : /\b(estoque|tenho|ja t\w{2,4}|tem tudo|ja tem|tenho tudo|tenho sim)\b/.test(nm) ? "tem_tudo" : undefined);
       if (!status && !dontKnow) return retry('Pode dizer "uso do estoque", "tenho uma parte" ou "vou comprar".');
       qr.materialSourceAsked = true;
       if (status) {
@@ -671,7 +737,7 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
           const techs = [...new Set(d.items.flatMap((i) => i.techniqueKeys))];
           await recordMaterialSourceObservation(c.ctx, { userId: c.input.user.id, jobId: firstJob, messageId: c.input.inboundMessageId, materialKeys: techs.map((t) => (t === "verniz" ? "verniz" : t)), source: status });
         }
-        c.ack = status === "precisa_comprar" ? "Certo, vou considerar a compra." : "Certo! Mesmo vindo do estoque, o material entra no preço pelo valor de reposição — assim você não perde dinheiro.";
+        c.ack = status === "precisa_comprar" ? "Certo, vou considerar a compra. 🛒" : "Beleza! 👍 Mesmo já tendo, o material entra no preço (pra você repor depois sem sair no prejuízo).";
       }
       return nextQuoteRequestStep(c);
     }
@@ -1035,10 +1101,25 @@ export async function quoteRequestCalculate(c: Conversation): Promise<void> {
     if (!jobId) continue;
     quotes.push({ ref: it.ref, quote: await calculateQuote(c.ctx, jobId, c.input.user.id) });
   }
+  // trava de cálculo vira pergunta (uma vez por campo e peça), nunca "orçamento preliminar"
+  if (await askBlocked(c, quotes)) return;
   const missing = missingPriceKeys(quotes.map((q) => q.quote.result));
   if (missing.length) {
     await persist(c);
     return startPricing(c, { kind: "quote_request", requestId: qr.id }, missing, quotes.map((q) => q.quote.id));
+  }
+  // D-070: com tudo calculado, o artesão decide o valor (concorda, desconto ou acréscimo)
+  if (quotes.length && quotes.every((q) => q.quote.result.computable && q.quote.recommendedCents !== null)) {
+    const names = quotes.map(({ ref, quote }) => {
+      const it = qr.draft.items.find((i) => i.ref === ref)!;
+      const owner = qr.draft.clients.length > 1 ? clientName(qr.draft, it.ownerRef) : null;
+      return { name: `${itemName(it)}${owner ? ` (${owner})` : ""}`, quote };
+    });
+    qr.step = "done";
+    await c.ctx.db.run("UPDATE quote_requests SET status = 'CALCULADO', state_json = ?, updated_at = ? WHERE id = ?", JSON.stringify(qr), nowIso(c.ctx), qr.id);
+    const notes = qr.draft.rawText;
+    delete c.session.context.quoteRequest;
+    return presentMultiQuoteDecision(c, names, notes);
   }
   await presentQuoteRequest(c, quotes);
 }
@@ -1121,4 +1202,162 @@ export async function askQuoteRequestAgain(c: Conversation): Promise<void> {
   if (qr.step === "transport_cost") qr.transportAsked = false;
   if (qr.step === "review") qr.reviewed = false;
   return nextQuoteRequestStep(c);
+}
+
+/** Peças iguais ganham número: "o 1º criado-mudo", "o 2º criado-mudo" (antes as perguntas pareciam repetidas). */
+function numberDuplicates(d: QuoteRequestDraft): void {
+  const groups = new Map<string, MentionedItem[]>();
+  for (const it of d.items) {
+    if (it.generic || it.quantity > 1) continue;
+    const k = normalizeText(it.description);
+    groups.set(k, [...(groups.get(k) ?? []), it]);
+  }
+  for (const list of groups.values()) list.forEach((it, i) => (it.ordinal = list.length > 1 ? i + 1 : undefined));
+}
+
+/** Um cliente só para todas as peças (pedido sem nome de cliente). */
+function setClient(qr: QuoteRequestState, name: string): void {
+  const ref = "c1";
+  qr.draft.clients = [{ ref, rawName: name, name, confidence: 1 }];
+  for (const it of qr.draft.items) {
+    it.ownerRef = ref;
+    it.ownerConfirmed = true;
+  }
+}
+
+/** Pergunta atual em palavras (contexto para a IA). */
+function questionOf(qr: QuoteRequestState): string {
+  const names = humanList(qr.draft.items.filter((i) => qr.currentRefs.includes(i.ref)).map(itemName));
+  switch (qr.step) {
+    case "identity":
+      return "Quais são os outros móveis?";
+    case "scope":
+      return `Em ${names}, vai trabalhar só no tampo ou na peça inteira?`;
+    case "condition":
+      return `Como estão ${names}? Alguma precisa de reparo?`;
+    case "dims":
+      return `Quais são as medidas de ${names}?`;
+    case "method":
+      return "Vai aplicar com pincel, rolo ou pistola?";
+    case "material_source":
+      return "O material: já tem ou vai comprar?";
+    case "logistics":
+      return "Precisa buscar ou entregar os móveis?";
+    case "techniques":
+      return "O que vai ser feito nas peças?";
+    case "client":
+      return "De quem são os móveis?";
+    default:
+      return qr.step;
+  }
+}
+
+const AI_STEPS: readonly string[] = ["identity", "scope", "condition", "review_fix", "dims", "method", "material_source", "logistics", "techniques", "client"];
+
+/**
+ * Aplica o que o Claude entendeu. Devolve o que ficou resolvido para a pergunta atual
+ * (as informações extras — medida de outra peça, estado dito de passagem — também ficam).
+ */
+async function applyAi(c: Conversation, qr: QuoteRequestState, ai: QrAiResult): Promise<boolean> {
+  const d = qr.draft;
+  const opts = { actor: c.input.user.id, source: c.sourceKind(), messageId: c.input.inboundMessageId };
+  let resolved = false;
+  if (qr.step === "identity" && ai.furniture.length) {
+    const group = d.items.find((i) => i.ref === qr.currentRefs[0]);
+    if (group?.generic) {
+      replaceGroup(qr, group, ai.furniture);
+      resolved = true;
+    }
+  }
+  for (const x of ai.items) {
+    const it = d.items.find((i) => i.ref === x.ref);
+    if (!it) continue;
+    if (x.condition && (it.condition === null || qr.step === "condition" || qr.step === "review_fix")) {
+      it.condition = x.condition;
+      if (x.repairPart) it.repairPart = x.repairPart;
+      if (qr.step === "condition" && qr.currentRefs.includes(it.ref)) resolved = true;
+    }
+    if (x.affectedPart && (!it.affectedPart || qr.step === "scope")) {
+      it.affectedPart = x.affectedPart;
+      if (qr.step === "scope" && qr.currentRefs.includes(it.ref)) resolved = true;
+    }
+    const jobId = qr.jobByRef?.[it.ref];
+    if (jobId && (x.dims || x.sizeClass)) {
+      if (x.dims) await setFact(c.ctx, jobId, "dimensions", x.dims, { ...opts, correction: true });
+      else await setFact(c.ctx, jobId, "size_class", x.sizeClass!, opts);
+      qr.askedDims = [...new Set([...(qr.askedDims ?? []), it.ref])];
+      if (qr.step === "dims" && qr.currentRefs.includes(it.ref)) resolved = true;
+    }
+  }
+  if (ai.techniques.length) {
+    for (const it of d.items) {
+      if (it.generic || it.techniqueKeys.length) continue;
+      it.techniqueKeys = ai.techniques;
+      const jobId = qr.jobByRef?.[it.ref];
+      if (jobId) await setFact(c.ctx, jobId, "techniques", ai.techniques, opts);
+    }
+    if (qr.step === "techniques") resolved = true;
+  }
+  if (ai.clientName && d.clients.length === 0) {
+    setClient(qr, ai.clientName);
+    if (qr.step === "client") resolved = true;
+  }
+  const jobIds = Object.values(qr.jobByRef ?? {});
+  if (ai.method && (qr.step === "method" || !qr.methodAsked)) {
+    qr.method = ai.method;
+    qr.methodAsked = true;
+    for (const jobId of jobIds) await setFact(c.ctx, jobId, "application_method", ai.method, opts);
+    if (qr.step === "method") resolved = true;
+  }
+  if (ai.materialStatus && qr.step === "material_source") {
+    qr.materialSourceAsked = true;
+    for (const jobId of jobIds) await setFact(c.ctx, jobId, "material_status", ai.materialStatus, opts);
+    c.ack = ai.materialStatus === "precisa_comprar" ? "Certo, vou considerar a compra. 🛒" : "Beleza! 👍 Mesmo já tendo, o material entra no preço (pra você repor depois sem sair no prejuízo).";
+    resolved = true;
+  }
+  if (qr.step === "logistics" && ai.pickup !== undefined && ai.delivery !== undefined) {
+    const l = { pickup: ai.pickup, delivery: ai.delivery };
+    delete qr.partialLogistics;
+    qr.logisticsAsked = true;
+    qr.logistics = l;
+    for (const jobId of jobIds) await setFact(c.ctx, jobId, "logistics", l, opts);
+    resolved = true;
+  }
+  return resolved;
+}
+
+/** Bloqueio do cálculo → pergunta (nunca orçamento "preliminar" com texto técnico). */
+async function askBlocked(c: Conversation, quotes: { ref: string; quote: QuoteRecord }[]): Promise<boolean> {
+  const qr = c.session.context.quoteRequest!;
+  qr.calcRetry ??= [];
+  for (const { ref, quote } of quotes) {
+    if (quote.result.computable) continue;
+    const it = qr.draft.items.find((i) => i.ref === ref);
+    if (!it) continue;
+    const codes = quote.result.blockers.map((b) => b.code);
+    if (codes.includes("TECHNIQUE_UNKNOWN") && !quote.result.blockers.some((b) => b.code === "TECHNIQUE_UNKNOWN" && b.ref) && !qr.calcRetry.includes(`tech:${ref}`)) {
+      qr.calcRetry.push(`tech:${ref}`);
+      qr.techniquesAsked = false;
+      it.techniqueKeys = [];
+      c.ack = `Pra fechar a conta d${itemName(it)} eu ainda preciso saber o que vai ser feito nela.`;
+      await nextQuoteRequestStep(c);
+      return true;
+    }
+    if (codes.includes("AREA_UNKNOWN") && !qr.calcRetry.includes(`dims:${ref}`)) {
+      qr.calcRetry.push(`dims:${ref}`);
+      qr.askedDims = (qr.askedDims ?? []).filter((r) => r !== ref);
+      const jobId = qr.jobByRef?.[ref];
+      if (jobId) await setFact(c.ctx, jobId, "dimensions", null, { actor: c.input.user.id, source: c.sourceKind() });
+      c.ack = `Pra fechar a conta d${itemName(it)} eu ainda preciso do tamanho. 📏 Se não tiver a medida, me diz só se é pequena, média ou grande.`;
+      await nextQuoteRequestStep(c);
+      return true;
+    }
+    if (codes.includes("METHOD_REQUIRED") && !qr.calcRetry.includes("method")) {
+      qr.calcRetry.push("method");
+      qr.methodAsked = false;
+      await nextQuoteRequestStep(c);
+      return true;
+    }
+  }
+  return false;
 }

@@ -20,6 +20,8 @@ export type ItemCondition = "bom" | "reparos" | "danificado" | "melhor_que_outro
 
 export interface MentionedItem {
   ref: string;
+  /** peças iguais no mesmo pedido: "o 1º criado-mudo", "o 2º criado-mudo" */
+  ordinal?: number;
   /** "mesinha de centro", "outros dois móveis" */
   description: string;
   furnitureType: string | null;
@@ -80,8 +82,9 @@ function toCount(raw: string | undefined): number | null {
 }
 
 const SERVICE_PATTERNS: [RegExp, string][] = [
-  [/\b(lixar|lixamento|lixa)\b/, "lixar"],
-  [/\b(envernizar|verniz|envernizad\w*)\b/, "envernizar"],
+  // "lixado", "invernizar": como o Whisper transcreve a fala real (teste 23/11/2026)
+  [/\b(lixar|lixamento|lixa|lixad\w*|lixo a|lixe)\b/, "lixar"],
+  [/\b(envernizar|verniz|envernizad\w*|invernizar|invernizad\w*|envernizo|vernizar|passar verniz)\b/, "envernizar"],
   [/\b(pintar|pintura|repintar)\b/, "pintar"],
   [/\b(patina|patinar)\b/, "patina"],
   [/\b(decape|decapar)\b/, "decape"],
@@ -98,17 +101,21 @@ function servicesOf(clause: string): string[] {
 export function partOf(clause: string): "tampo" | "inteiro" | null {
   const n = normalizeText(clause);
   if (/\b(so|somente|apenas|unicamente)\s+(o\s+|no\s+|do\s+)?tampo\b|\bso no tampo\b|\bo tampo so\b/.test(n)) return "tampo";
-  if (/\b(inteir[oa]s?|tod[oa]s? (ela|ele|elas|eles)|nela toda|nele todo|completa|completo|a peca toda|o movel todo)\b/.test(n)) return "inteiro";
+  // "toda ela" = a peça inteira; "em todos eles" = todas as peças (não muda o escopo — teste real 23/11/2026)
+  if (/\b(inteir[oa]s?|tod[oa] (ela|ele)|nela toda|nele todo|completa|completo|a peca toda|o movel todo)\b/.test(n)) return "inteiro";
   return null;
 }
 
+/** "acertar os detalhes", "arrumar uns detalhes", "uns retoques": reparo leve (teste real 23/11/2026) */
+const ACERTAR_DETALHES = /\b(acert|arrum|ajeit|consert)\w*\s+(?:os |uns |alguns |umas |as |o |a )?(detalhes?|detalhezinhos?|coisinhas?|partes?)\b|\bretoques?\b/;
+
 export function conditionOf(clause: string): { condition: ItemCondition; repairPart: string | null } | null {
   const n = normalizeText(clause);
-  if (!detectConditionStatement(clause) && !/\b(bom|boa|bons|boas|boazinha|bonzinho|bonzinha|razoavel|inteirinh[oa])\b/.test(n)) return null;
+  if (!detectConditionStatement(clause) && !ACERTAR_DETALHES.test(n) && !/\b(bom|boa|bons|boas|boazinha|bonzinho|bonzinha|razoavel|inteirinh[oa]|danificad[oa]s?)\b/.test(n)) return null;
   const repairPart = /\b(tampo|perna|pernas|gaveta|gavetas|porta|portas|pe|pes|lateral|laterais|fundo|puxador)\b/.exec(n)?.[1] ?? null;
   if (/\b(melhor|melhores)\b/.test(n)) return { condition: "melhor_que_outros", repairPart: null };
   if (/\b(quebrad|podre|cupim|carcomid|muito estragad|bem estragad|detonad|pessim)\w*/.test(n)) return { condition: "danificado", repairPart };
-  if (/\b(reparos?|conserto|consertos|ajuste|massa|cola|riscad|arranhad|descascand|desgastad|manchad|rachad|lascad|estragad|ruim|ruins)\w*/.test(n)) return { condition: "reparos", repairPart };
+  if (/\b(reparos?|conserto|consertos|ajuste|massa|cola|riscad|arranhad|descascand|desgastad|manchad|rachad|lascad|estragad|ruim|ruins|um pouco danificad|levemente danificad)\w*/.test(n) || ACERTAR_DETALHES.test(n)) return { condition: "reparos", repairPart };
   if (/\b(bom|boa|bons|boas|boazinha|bonzinho|bonzinha|razoavel|inteirinh[oa]|otim[oa]s?|conservad\w*|inteir[oa]s?|em bom estado)\b/.test(n)) return { condition: "bom", repairPart: null };
   return null;
 }
@@ -314,6 +321,7 @@ export function itemName(item: MentionedItem): string {
   const label = item.description || furnitureLabel(item.furnitureType);
   const fem = nounFeminine(label, item.furnitureType);
   if (item.quantity > 1) return `${fem ? "as" : "os"} ${item.quantity} ${pluralLabel(label, item.quantity)}`;
+  if (item.ordinal) return `${fem ? "a" : "o"} ${item.ordinal}${fem ? "ª" : "º"} ${label}`;
   return `${fem ? "a" : "o"} ${label}`;
 }
 
@@ -431,7 +439,13 @@ export function parseQuantityCorrection(text: string): { from: number | null; to
 export function parseFurnitureList(text: string): { key: string; description: string; quantity: number }[] {
   return findFurnitureHits(text)
     .filter((h) => !h.generic)
-    .map((h) => ({ key: h.key, description: accentDescription(h.description, h.key), quantity: h.quantity }));
+    .map((h) => {
+      // plural ou variante falada ("aparadoras", "criados mudos") vira o nome do catálogo, no singular
+      const base = FURNITURE[h.key];
+      const spoken = normalizeText(h.description);
+      const isVariant = base && (base.variants.some((v) => normalizeText(v) === spoken) || normalizeText(pluralLabel(base.label, 2)) === spoken);
+      return { key: h.key, description: isVariant ? base.label : accentDescription(h.description, h.key), quantity: h.quantity };
+    });
 }
 
 export function parseGrouping(text: string): "agrupado" | "por_cliente" | null {

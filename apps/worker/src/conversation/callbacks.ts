@@ -28,6 +28,8 @@ const LABELS: Record<string, string> = {
   "pdf:prelim": "pediu uma estimativa não definitiva",
   "outcome:accept": "informou que o cliente aceitou",
   "outcome:reject": "informou que o cliente recusou",
+  "outcome:acceptall": "informou que o cliente aceitou todos",
+  "outcome:rejectall": "informou que o cliente recusou todos",
   "mp:ok": "confirmou o preço do material",
   "mp:fix": "quis corrigir o preço informado",
   "mp:fixprice": "quis corrigir o valor do material",

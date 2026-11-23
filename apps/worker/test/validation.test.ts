@@ -511,3 +511,55 @@ describe("corrigir o que já foi dito, falando do jeito dele (teste real 23/11/2
     expect((await getJob(h.ctx, job.id))!.facts.application_method?.value).toMatch(re);
   });
 });
+
+describe("teste real 23/11/2026 (noite): mesinha + 2 móveis, tudo dito de uma vez", () => {
+  const START = "Oi, viu? Eu preciso montar o orçamento dessa mesinha de centro. Ela tá com o tampo um pouco danificado, precisa ser lixado. Acertar os detalhes e invernizar. E tem outros dois móveis que é só o tampo que precisa ser lixado e invernizado. Eu queria saber, eu vou demorar uns 3 a 5 dias, eu queria saber o valor que eu deveria cobrar. Pelo material, seria mais ou menos 70 reais o material.";
+  it("aparadoras, estado de todos, medidas de todos numa frase, 'já trnho' e nada de orçamento preliminar", async () => {
+    const h = await setup();
+    h.ctx.ai.extraction = h.extraction;
+    // Claude simulado: entende as medidas de todas as peças numa frase só
+    h.extraction.generateHandler = (req) => {
+      if (!req.purpose.startsWith("qr:")) return null;
+      const u = JSON.parse(req.user) as { pecas: { ref: string; tipo: string | null }[]; resposta: string };
+      if (!/aparadores/.test(u.resposta)) return { items: [] };
+      return {
+        items: u.pecas.map((p) => (p.tipo === "aparador" ? { ref: p.ref, widthCm: 80, heightCm: 40 } : { ref: p.ref, diameterCm: 200 })),
+      };
+    };
+    const out: string[] = [h.allText(await h.send(START))];
+    for (let i = 0; i < 16 && !/concorda com esse valor/.test(out.at(-1)!); i++) {
+      const last = out.at(-1)!;
+      const q = lastQuestion(last);
+      let ans: string;
+      if (/Quais são os outros/.test(q)) ans = "Duas aparadoras.";
+      else if (/só no tampo ou/.test(q)) ans = "A mesinha de centro é ela inteira.";
+      else if (/Certo\?$/.test(q)) ans = "certo";
+      else if (/como est/i.test(q)) ans = "É só lixar e acertar os detalhes em todos eles.";
+      else if (/de quem/i.test(q)) ans = "da dona Carla";
+      else if (/medidas|tamanho/i.test(q)) ans = "A mesinha tem 2 metros de largura, ela é redonda e os aparadores tem 80 centímetros de largura e 40 centímetros de altura.";
+      else if (/quanto tempo/i.test(q)) ans = "umas 3 horas";
+      else if (/pincel, rolo ou pistola/.test(q)) ans = "pincel e faca pra raspagem";
+      else if (/já tem aí/.test(q)) ans = "já trnho";
+      else if (/buscar/.test(q)) ans = "a cliente deixa em casa e busca depois de pronto";
+      else if (/fazer nas peças/.test(q)) ans = "lixar e envernizar";
+      else ans = "não sei";
+      out.push(h.allText(await h.send(ans)));
+    }
+    const all = out.join("\n---\n");
+    if (process.env.DUMP) console.info(all);
+    expect(all).not.toMatch(/Não peguei quais são/);
+    expect(all).not.toMatch(/PRELIMINAR|CALIBRADOS|administrador conferir|Pode dizer "uso do estoque"/);
+    expect(all).toMatch(/aparador/);
+    expect((all.match(/medidas d/g) ?? []).length).toBe(1); // pergunta UMA vez e o Claude entende as três
+    expect(out.at(-1)).toMatch(/Total sugerido/);
+    expect(out.at(-1)).toMatch(/Você comentou uns R\$ 70,00 de material/);
+    const jobs = await h.ctx.db.all<{ facts_json: string }>("SELECT facts_json FROM jobs");
+    expect(jobs).toHaveLength(3);
+    for (const j of jobs) {
+      const f = JSON.parse(j.facts_json);
+      expect(f.client_name.value).toBe("Dona Carla");
+      expect(f.condition.value).toBe("reparos");
+      expect(f.techniques.value).toEqual(["verniz"]);
+    }
+  });
+});

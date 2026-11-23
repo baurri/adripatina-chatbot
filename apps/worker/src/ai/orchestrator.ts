@@ -176,3 +176,26 @@ export async function interpretOption(ctx: Ctx, key: string, question: string, a
   });
   return v;
 }
+
+/**
+ * Interpretação estruturada genérica (o chamador valida o resultado antes de usar).
+ * Registra o uso; sem IA ou com falha → null.
+ */
+export async function interpretStructured(ctx: Ctx, purpose: string, system: string, user: string, jsonSchema: object, maxTokens = 600): Promise<unknown | null> {
+  if (!available(ctx)) return null;
+  const r = await call(ctx, { purpose, system, user, jsonSchema, maxTokens }, 9000);
+  if (!r) return null;
+  await logUsage(ctx, {
+    model: ctx.ai.extraction!.name,
+    task: "extraction",
+    inputUnits: tokens(system + user),
+    outputUnits: 150,
+    unitKind: "tokens_estimados",
+    success: true,
+    latencyMs: r.ms,
+    purpose,
+    schemaName: purpose.split(":")[0],
+    fallbackUsed: false,
+  });
+  return r.raw;
+}

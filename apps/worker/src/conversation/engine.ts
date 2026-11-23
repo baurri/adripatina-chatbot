@@ -1804,6 +1804,22 @@ ${await this.questionText(job, field, 4)}`);
   }
 
   async onOutcome(action: string, quoteId?: string): Promise<void> {
+    // vários móveis fechados juntos: a resposta do cliente vale para todos (D-070)
+    if (action === "acceptall" || action === "rejectall") {
+      const ids = this.session.context.lastClosedQuotes ?? [];
+      if (!ids.length) {
+        this.say("Esse já está anotado. 🙂");
+        return;
+      }
+      delete this.session.context.lastClosedQuotes;
+      let total = 0;
+      for (const id of ids) {
+        const q = await markQuoteOutcome(this.ctx, id, this.input.user.id, action === "acceptall" ? "ACEITO" : "RECUSADO");
+        total += q.finalPriceCents ?? q.recommendedCents ?? 0;
+      }
+      this.say(action === "acceptall" ? `Que bom! 🎉 Anotei que o cliente aceitou os ${ids.length} orçamentos, ${formatBRL(total)} no total.` : "Tudo bem, anotei que o cliente recusou. O histórico fica guardado.");
+      return;
+    }
     if (!quoteId) return;
     const q = await markQuoteOutcome(this.ctx, quoteId, this.input.user.id, action === "accept" ? "ACEITO" : "RECUSADO");
     const job = await getJob(this.ctx, q.jobId);

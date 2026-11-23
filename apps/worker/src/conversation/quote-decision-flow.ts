@@ -1,6 +1,6 @@
 import type { Button, NluResult } from "@adripatina/conversations";
 import { findConfidentialTerms } from "@adripatina/pdf";
-import { formatBRL, normalizeText, parseBareAmountCents } from "@adripatina/shared";
+import { allocateCents, extractLooseMoney, formatBRL, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { Conversation } from "./engine.js";
 import { getJob, jobPhrase, type Job } from "../repos/jobs.js";
 import { closeQuoteByArtisan, getQuote, issueDocuments, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
@@ -11,9 +11,17 @@ import { enqueueOutbox } from "../services/outbox.js";
  * Depois do cálculo: "Você concorda? Quer dar desconto? Acrescentar?" → o PDF sai na hora com o
  * valor dele (e o desconto/acréscimo destacado). Nada de "confiança", "pendências" ou
  * "parâmetros não calibrados" para o artesão: isso fica no painel do administrador.
+ * Vale para um móvel ou para vários (total sugerido; o valor dele é dividido entre as peças
+ * na proporção da sugestão de cada uma; um PDF por peça).
  */
 
 const reais = (cents: number) => formatBRL(Math.ceil(cents / 100) * 100);
+
+interface Group {
+  quotes: QuoteRecord[];
+  base: number;
+  floor: number | null;
+}
 
 function decisionButtons(quoteId: string): Button[][] {
   return [
@@ -25,22 +33,26 @@ function decisionButtons(quoteId: string): Button[][] {
   ];
 }
 
-/** Mensagem curta e simples com o valor sugerido. */
-export function artisanQuoteMessage(job: Job, q: QuoteRecord): string {
-  const r = q.result;
-  const lines = [`🧮 Prontinho, fiz as contas d${jobPhrase(job)}!`, "", `💰 Minha sugestão é cobrar ${formatBRL(r.recommendedCents!)}.`, ""];
-  if (r.floorCents !== null) lines.push(`⚠️ Menos que ${reais(r.floorCents)} você começa a ter prejuízo.`);
-  if (r.materials.purchaseCashOutlayCents > 0) lines.push(`🛒 Vai precisar comprar uns ${reais(r.materials.purchaseCashOutlayCents)} de material.`);
-  const hours = Math.round(Number(r.labor.totalHours));
+function extrasLines(quotes: QuoteRecord[]): string[] {
+  const lines: string[] = [];
+  const floor = quotes.reduce((a, q) => a + (q.result.floorCents ?? 0), 0);
+  const buy = quotes.reduce((a, q) => a + q.result.materials.purchaseCashOutlayCents, 0);
+  const hours = Math.round(quotes.reduce((a, q) => a + Number(q.result.labor.totalHours), 0));
+  if (floor > 0) lines.push(`⚠️ Menos que ${reais(floor)}${quotes.length > 1 ? " no total" : ""} você começa a ter prejuízo.`);
+  if (buy > 0) lines.push(`🛒 Vai precisar comprar uns ${reais(buy)} de material.`);
   if (hours > 0) lines.push(`⏱️ Dá umas ${hours} ${hours === 1 ? "hora" : "horas"} de trabalho.`);
-  const gaps = r.gaps ?? [];
+  const gaps = quotes.flatMap((q) => q.result.gaps ?? []);
   if (gaps.some((g) => g.code === "TRANSPORT_COST_MISSING")) lines.push("🚚 O frete não está na conta. Se for cobrar, é só acrescentar.");
   if (gaps.some((g) => g.code === "REPAIRS_HOURS_MISSING")) lines.push("🛠️ O conserto não está na conta. Se for cobrar, é só acrescentar.");
-  if (gaps.some((g) => g.code.startsWith("DIMENSIONS") || g.code === "BED_NOMINAL_SIZE") || r.warnings.some((w) => w.code === "AREA_RANGE_MAX_USED")) {
+  if (gaps.some((g) => g.code.startsWith("DIMENSIONS") || g.code === "BED_NOMINAL_SIZE") || quotes.some((q) => q.result.warnings.some((w) => w.code === "AREA_RANGE_MAX_USED"))) {
     lines.push("📏 Fiz com a medida aproximada, então pode variar um pouco.");
   }
-  lines.push("", "E aí, você concorda com esse valor? 🤝");
-  return lines.join("\n");
+  return lines;
+}
+
+/** Mensagem curta e simples com o valor sugerido (um móvel). */
+export function artisanQuoteMessage(job: Job, q: QuoteRecord): string {
+  return [`🧮 Prontinho, fiz as contas d${jobPhrase(job)}!`, "", `💰 Minha sugestão é cobrar ${formatBRL(q.result.recommendedCents!)}.`, "", ...extrasLines([q]), "", "E aí, você concorda com esse valor? 🤝"].join("\n");
 }
 
 export async function presentQuoteDecision(c: Conversation, job: Job, q: QuoteRecord): Promise<void> {
@@ -50,6 +62,39 @@ export async function presentQuoteDecision(c: Conversation, job: Job, q: QuoteRe
   c.say(artisanQuoteMessage(job, q), decisionButtons(q.id));
 }
 
+/**
+ * Vários móveis: sugestão por peça e total. Se ele tinha falado quanto gasta de material
+ * ("uns 70 reais de material"), compara com a conta — ajuda a calibrar sem jargão.
+ */
+export async function presentMultiQuoteDecision(c: Conversation, items: { name: string; quote: QuoteRecord }[], rawText: string): Promise<void> {
+  const quotes = items.map((i) => i.quote);
+  const total = quotes.reduce((a, q) => a + q.recommendedCents!, 0);
+  const lines = [`🧮 Prontinho, fiz as contas dos ${items.length} móveis!`, ""];
+  for (const it of items) lines.push(`• ${it.name.replace(/^(a|o) /, "").replace(/^./, (s) => s.toUpperCase())}: ${formatBRL(it.quote.recommendedCents!)}`);
+  lines.push("", `💰 Total sugerido: ${formatBRL(total)}`, "", ...extrasLines(quotes));
+  const said = /material/i.test(rawText) ? extractLooseMoney(rawText.slice(Math.max(0, rawText.search(/material/i) - 60), rawText.search(/material/i) + 60)) : null;
+  const matCost = quotes.reduce((a, q) => a + q.result.materials.lines.reduce((s, l) => s + (l.consumptionCostCents ?? 0), 0), 0);
+  if (said && matCost > 0) lines.push(`🧾 Você comentou uns ${formatBRL(said.cents)} de material; pela minha conta o material usado dá uns ${reais(matCost)}.`);
+  lines.push("", "E aí, você concorda com esse valor? 🤝");
+  c.session.flow = "quote_decision";
+  c.session.context.quoteDecision = { quoteId: quotes[0]!.id, quoteIds: quotes.map((q) => q.id), step: "decide" };
+  c.clearPending();
+  c.say(lines.join("\n"), decisionButtons(quotes[0]!.id));
+}
+
+async function loadGroup(c: Conversation): Promise<Group | null> {
+  const d = c.session.context.quoteDecision;
+  if (!d) return null;
+  const quotes: QuoteRecord[] = [];
+  for (const id of d.quoteIds ?? [d.quoteId]) {
+    const q = await getQuote(c.ctx, id);
+    if (!q || q.recommendedCents === null) return null;
+    quotes.push(q);
+  }
+  const floors = quotes.map((q) => q.floorCents);
+  return { quotes, base: quotes.reduce((a, q) => a + q.recommendedCents!, 0), floor: floors.every((f) => f !== null) ? floors.reduce((a, f) => a! + f!, 0) : null };
+}
+
 /** Botões `qa:*`. */
 export async function onQuoteDecisionCallback(c: Conversation, action: string, quoteId?: string): Promise<void> {
   const d = c.session.context.quoteDecision;
@@ -57,11 +102,11 @@ export async function onQuoteDecisionCallback(c: Conversation, action: string, q
     c.say("Esse orçamento já foi fechado. 🙂 Se quiser mudar o valor, é só pedir pra calcular de novo.");
     return;
   }
-  const q = await getQuote(c.ctx, quoteId);
-  if (!q || q.recommendedCents === null) return c.greet();
+  const g = await loadGroup(c);
+  if (!g) return c.greet();
   switch (action) {
     case "ok":
-      return finalize(c, q, q.recommendedCents, null);
+      return finalize(c, g, g.base);
     case "disc":
       d.step = "discount";
       c.say("Beleza! Quanto de desconto? 🙂\n\nPode falar em reais, tipo \"50 reais\", ou em porcentagem, tipo \"10%\".");
@@ -71,23 +116,23 @@ export async function onQuoteDecisionCallback(c: Conversation, action: string, q
       c.say("Certo! Quanto você quer acrescentar? ➕\n\nSe quiser, fala o motivo junto, tipo \"100 reais do frete\".");
       return;
     case "force":
-      if (d.step !== "below_floor" || d.finalCents === undefined) return askAgain(c, q);
-      return finalize(c, q, d.finalCents, adjustmentFor(q, d.finalCents, d.label));
+      if (d.step !== "below_floor" || d.finalCents === undefined) return askAgain(c, g);
+      return finalize(c, g, d.finalCents, d.label);
     case "redo":
       d.step = "decide";
-      return askAgain(c, q);
+      return askAgain(c, g);
   }
 }
 
 /** Texto durante a decisão: "concordo", "dá 50 de desconto", "cobra 650", "10%"... */
 export async function quoteDecisionText(c: Conversation, text: string, nlu: NluResult): Promise<void> {
   const d = c.session.context.quoteDecision;
-  const q = d ? await getQuote(c.ctx, d.quoteId) : null;
-  if (!d || !q || q.recommendedCents === null) {
+  const g = d ? await loadGroup(c) : null;
+  if (!d || !g) {
     c.session.flow = "idle";
     return c.greet();
   }
-  const base = q.recommendedCents;
+  const base = g.base;
   const n = normalizeText(text);
   const percent = /(\d+(?:[.,]\d+)?)\s*(?:%|por ?cento)/.exec(n);
   const amount = percent ? null : parseBareAmountCents(text);
@@ -95,16 +140,16 @@ export async function quoteDecisionText(c: Conversation, text: string, nlu: NluR
   const wantsAdd = d.step === "add" || /\b(acrescent\w*|soma|somar|aumenta\w*|adiciona\w*|a mais)\b|\bmais (uns |um |r\$ ?)?\d/.test(n);
 
   if (d.step === "below_floor") {
-    if (nlu.intent === "yes") return onQuoteDecisionCallback(c, "force", q.id);
-    if (nlu.intent === "no" && amount === null && !percent) return onQuoteDecisionCallback(c, "redo", q.id);
+    if (nlu.intent === "yes") return onQuoteDecisionCallback(c, "force", d.quoteId);
+    if (nlu.intent === "no" && amount === null && !percent) return onQuoteDecisionCallback(c, "redo", d.quoteId);
   }
   if (!percent && amount === null) {
-    if (nlu.intent === "yes" || /\b(concordo|pode ser|ta bom|ta otimo|fechado|fechou|beleza|esse mesmo|isso mesmo|perfeito|combinado|bora)\b/.test(n)) return finalize(c, q, base, null);
-    if (/\bdesconto\b/.test(n)) return onQuoteDecisionCallback(c, "disc", q.id);
-    if (/\b(acrescent\w*|somar|aumentar)\b/.test(n)) return onQuoteDecisionCallback(c, "add", q.id);
+    if (nlu.intent === "yes" || /\b(concordo|pode ser|ta bom|ta otimo|fechado|fechou|beleza|esse mesmo|isso mesmo|perfeito|combinado|bora)\b/.test(n)) return finalize(c, g, base);
+    if (/\bdesconto\b/.test(n)) return onQuoteDecisionCallback(c, "disc", d.quoteId);
+    if (/\b(acrescent\w*|somar|aumentar)\b/.test(n)) return onQuoteDecisionCallback(c, "add", d.quoteId);
     c.say(
       d.step === "discount" ? "Não peguei o valor do desconto. Pode dizer, tipo \"50 reais\" ou \"10%\"." : d.step === "add" ? "Não peguei o valor. Pode dizer, tipo \"100 reais\" ou \"100 reais do frete\"." : "É só tocar num botão, ou me dizer do seu jeito, tipo \"pode ser esse\", \"dá 50 de desconto\" ou \"vou cobrar 650\". 🙂",
-      d.step === "decide" ? decisionButtons(q.id) : undefined,
+      d.step === "decide" ? decisionButtons(d.quoteId) : undefined,
     );
     return;
   }
@@ -123,7 +168,7 @@ export async function quoteDecisionText(c: Conversation, text: string, nlu: NluR
     c.say("Com esse desconto o valor fica zerado. 😅 Me diz um desconto menor, tipo \"50 reais\".");
     return;
   }
-  return confirmOrWarn(c, q, final, label);
+  return confirmOrWarn(c, g, final, label);
 }
 
 function addReason(text: string): string | undefined {
@@ -133,8 +178,7 @@ function addReason(text: string): string | undefined {
   return reason;
 }
 
-function adjustmentFor(q: QuoteRecord, final: number, reason?: string): PriceAdjustment | null {
-  const base = q.recommendedCents!;
+function adjustmentFor(base: number, final: number, reason?: string): PriceAdjustment | null {
   const delta = final - base;
   if (delta === 0) return null;
   let label = delta < 0 ? "Desconto" : reason ? `Acréscimo (${reason})` : "Acréscimo";
@@ -143,73 +187,106 @@ function adjustmentFor(q: QuoteRecord, final: number, reason?: string): PriceAdj
   return { baseCents: base, deltaCents: delta, label };
 }
 
-async function confirmOrWarn(c: Conversation, q: QuoteRecord, final: number, label?: string): Promise<void> {
+async function confirmOrWarn(c: Conversation, g: Group, final: number, label?: string): Promise<void> {
   const d = c.session.context.quoteDecision!;
-  if (q.floorCents !== null && final < q.floorCents) {
+  if (g.floor !== null && final < g.floor) {
     d.step = "below_floor";
     d.finalCents = final;
     if (label) d.label = label;
-    c.say(`Assim fica ${formatBRL(final)}. 😬\n\nSó que abaixo de ${reais(q.floorCents)} você fica no prejuízo. Quer fechar assim mesmo?`, [
+    c.say(`Assim fica ${formatBRL(final)}. 😬\n\nSó que abaixo de ${reais(g.floor)} você fica no prejuízo. Quer fechar assim mesmo?`, [
       [
-        { text: "Sim, fechar assim", data: `qa:force:${q.id}` },
-        { text: "Mudar o valor", data: `qa:redo:${q.id}` },
+        { text: "Sim, fechar assim", data: `qa:force:${d.quoteId}` },
+        { text: "Mudar o valor", data: `qa:redo:${d.quoteId}` },
       ],
     ]);
     return;
   }
-  return finalize(c, q, final, adjustmentFor(q, final, label));
+  return finalize(c, g, final, label);
 }
 
-async function askAgain(c: Conversation, q: QuoteRecord): Promise<void> {
-  const job = await getJob(c.ctx, q.jobId);
-  c.session.context.quoteDecision = { quoteId: q.id, step: "decide" };
-  c.say(`Sem problema! A sugestão continua ${formatBRL(q.recommendedCents!)}${job ? ` pr${jobPhrase(job).startsWith("a ") ? "a" : "o"} ${jobPhrase(job).slice(2)}` : ""}. Como você quer fazer?`, decisionButtons(q.id));
+async function askAgain(c: Conversation, g: Group): Promise<void> {
+  const d = c.session.context.quoteDecision;
+  const first = g.quotes[0]!;
+  const job = g.quotes.length === 1 ? await getJob(c.ctx, first.jobId) : null;
+  c.session.context.quoteDecision = { quoteId: first.id, ...(d?.quoteIds ? { quoteIds: d.quoteIds } : {}), step: "decide" };
+  c.say(`Sem problema! A sugestão continua ${formatBRL(g.base)}${job ? ` pr${jobPhrase(job).startsWith("a ") ? "a" : "o"} ${jobPhrase(job).slice(2)}` : g.quotes.length > 1 ? ` pelos ${g.quotes.length} móveis` : ""}. Como você quer fazer?`, decisionButtons(first.id));
 }
 
-/** Fecha com o valor do artesão e entrega o PDF na hora. */
-async function finalize(c: Conversation, q: QuoteRecord, final: number, adjustment: PriceAdjustment | null): Promise<void> {
-  const job = await getJob(c.ctx, q.jobId);
+function valueLine(final: number, adj: PriceAdjustment | null): string {
+  if (!adj) return formatBRL(final);
+  if (adj.deltaCents < 0) return `${formatBRL(final)} (${formatBRL(adj.baseCents)} com ${formatBRL(-adj.deltaCents)} de desconto)`;
+  return `${formatBRL(final)} (${formatBRL(adj.baseCents)} + ${formatBRL(adj.deltaCents)}${adj.label.startsWith("Acréscimo (") ? ` de ${adj.label.slice(11, -1)}` : ""})`;
+}
+
+/** Fecha com o valor do artesão e entrega o(s) PDF(s) na hora. */
+async function finalize(c: Conversation, g: Group, final: number, reason?: string): Promise<void> {
   delete c.session.context.quoteDecision;
   c.session.flow = "idle";
   c.clearPending();
-  const res = await closeQuoteByArtisan(c.ctx, q.id, c.input.user.id, final, adjustment);
-  const valueLine = !adjustment
-    ? formatBRL(final)
-    : adjustment.deltaCents < 0
-      ? `${formatBRL(final)} (${formatBRL(adjustment.baseCents)} com ${formatBRL(-adjustment.deltaCents)} de desconto)`
-      : `${formatBRL(final)} (${formatBRL(adjustment.baseCents)} + ${formatBRL(adjustment.deltaCents)}${adjustment.label.startsWith("Acréscimo (") ? ` de ${adjustment.label.slice(11, -1)}` : ""})`;
-  const client = (job?.facts.client_name?.value as string | undefined) ?? "o cliente";
-  try {
-    const docs = await issueDocuments(c.ctx, res.quote.id, c.input.user.id, { preliminary: res.preliminary, artisanClosed: true });
-    c.say(`Fechado! ✅\n\n💰 Valor final: ${valueLine}\n\n📄 Te mandei o PDF do orçamento pra você encaminhar pr${/^(dona|a )/i.test(client) ? "a" : "o"} ${client}.${res.preliminary ? "\n\nComo a medida é aproximada, o PDF diz que é uma estimativa." : ""}`);
-    await sendDocumentToArtisan(c.ctx, docs.commercial.id, c.input.user.id, c.input.chatId);
-    c.say("Quando o cliente responder, me avisa aqui: 👇", [
-      [
-        { text: "👍 Cliente aceitou", data: `outcome:accept:${res.quote.id}` },
-        { text: "👎 Cliente recusou", data: `outcome:reject:${res.quote.id}` },
-      ],
-    ]);
-  } catch (err) {
-    console.error(JSON.stringify({ level: "error", msg: "artisan_quote_pdf_failed", error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));
-    c.say(`Fechado! ✅ Valor final: ${valueLine}.\n\nSó não consegui gerar o PDF agora. 😕 Já avisei o administrador; o valor ficou guardado.`);
+  const totalAdj = adjustmentFor(g.base, final, reason);
+  // valor do artesão dividido entre as peças na proporção da sugestão de cada uma
+  const shares = g.quotes.length === 1 ? [final] : allocateCents(final, g.quotes.map((q) => q.recommendedCents!));
+  const closed: QuoteRecord[] = [];
+  const docs: string[] = [];
+  let preliminary = false;
+  let failed = false;
+  for (let i = 0; i < g.quotes.length; i++) {
+    const q = g.quotes[i]!;
+    const share = shares[i]!;
+    const adj = adjustmentFor(q.recommendedCents!, share, reason);
+    const res = await closeQuoteByArtisan(c.ctx, q.id, c.input.user.id, share, adj);
+    closed.push(res.quote);
+    preliminary ||= res.preliminary;
+    try {
+      const issued = await issueDocuments(c.ctx, res.quote.id, c.input.user.id, { preliminary: res.preliminary, artisanClosed: true });
+      docs.push(issued.commercial.id);
+    } catch (err) {
+      failed = true;
+      console.error(JSON.stringify({ level: "error", msg: "artisan_quote_pdf_failed", error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));
+    }
   }
+  const firstJob = await getJob(c.ctx, g.quotes[0]!.jobId);
+  const client = (firstJob?.facts.client_name?.value as string | undefined) ?? "o cliente";
+  const pdfs = docs.length > 1 ? `os ${docs.length} PDFs (um por peça)` : "o PDF do orçamento";
+  if (docs.length) {
+    c.say(`Fechado! ✅\n\n💰 Valor final: ${valueLine(final, totalAdj)}\n\n📄 Te mandei ${pdfs} pra você encaminhar pr${/^(dona|a )/i.test(client) ? "a" : "o"} ${client}.${preliminary ? "\n\nComo alguma medida é aproximada, o PDF diz que é uma estimativa." : ""}${failed ? "\n\nUm dos PDFs não saiu agora; já avisei o administrador." : ""}`);
+    for (const id of docs) await sendDocumentToArtisan(c.ctx, id, c.input.user.id, c.input.chatId);
+    if (closed.length === 1) {
+      c.say("Quando o cliente responder, me avisa aqui: 👇", [
+        [
+          { text: "👍 Cliente aceitou", data: `outcome:accept:${closed[0]!.id}` },
+          { text: "👎 Cliente recusou", data: `outcome:reject:${closed[0]!.id}` },
+        ],
+      ]);
+    } else {
+      c.session.context.lastClosedQuotes = closed.map((q) => q.id);
+      c.say("Quando o cliente responder, me avisa aqui: 👇", [
+        [
+          { text: "👍 Cliente aceitou", data: "outcome:acceptall:x" },
+          { text: "👎 Cliente recusou", data: "outcome:rejectall:x" },
+        ],
+      ]);
+    }
+  } else {
+    c.say(`Fechado! ✅ Valor final: ${valueLine(final, totalAdj)}.\n\nSó não consegui gerar o PDF agora. 😕 Já avisei o administrador; o valor ficou guardado.`);
+  }
+  const codes = (await Promise.all(g.quotes.map(async (q) => (await getJob(c.ctx, q.jobId))?.code ?? ""))).filter(Boolean).join(", ");
   await enqueueOutbox(
     c.ctx,
     "notify_admins",
     {
-      text: `${c.input.user.displayName} fechou o orçamento ${job?.code ?? ""} (${job?.title ?? ""}) por ${formatBRL(final)}. Sugerido: ${formatBRL(q.recommendedCents!)}${adjustment ? ` · ${adjustment.label} ${formatBRL(Math.abs(adjustment.deltaCents))}` : ""}${q.floorCents !== null && final < q.floorCents ? ` · ABAIXO do mínimo (${formatBRL(q.floorCents)})` : ""}.`,
+      text: `${c.input.user.displayName} fechou o orçamento ${codes} (${firstJob?.title ?? ""}${g.quotes.length > 1 ? ` e mais ${g.quotes.length - 1}` : ""}) por ${formatBRL(final)}. Sugerido: ${formatBRL(g.base)}${totalAdj ? ` · ${totalAdj.label} ${formatBRL(Math.abs(totalAdj.deltaCents))}` : ""}${g.floor !== null && final < g.floor ? ` · ABAIXO do mínimo (${formatBRL(g.floor)})` : ""}.`,
     },
-    `artisan-close:${res.quote.id}:${res.quote.rowVersion}`,
+    `artisan-close:${closed.map((q) => `${q.id}:${q.rowVersion}`).join(",").slice(0, 180)}`,
   );
 }
 
 /** Volta à pergunta do valor depois de uma interrupção. */
 export async function reaskQuoteDecision(c: Conversation): Promise<void> {
-  const d = c.session.context.quoteDecision;
-  const q = d ? await getQuote(c.ctx, d.quoteId) : null;
-  if (!q || q.recommendedCents === null) {
+  const g = await loadGroup(c);
+  if (!g) {
     c.session.flow = "idle";
     return;
   }
-  return askAgain(c, q);
+  return askAgain(c, g);
 }

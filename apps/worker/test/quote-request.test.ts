@@ -128,17 +128,17 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
     h.telegram.clear();
     const final = await fullConversation(h);
     msgs.push(...h.telegram.sent.map((s) => s.text ?? ""));
-    expect(msgs.join("\n")).toMatch(/estoque ou vai comprar/);
+    expect(msgs.join("\n")).toMatch(/já tem aí ou vai precisar comprar/);
     const t = h.allText(final);
-    expect(t).toMatch(/Aqui está o orçamento/);
-    expect(t).toMatch(/A mesinha de centro \(Seu Roberto\): recomendado R\$/);
-    expect(t).toMatch(/A cômoda \(Dona Jo\): recomendado R\$/);
-    expect(t).toMatch(/O aparador \(Dona Jo\): recomendado R\$/);
-    expect(t).toMatch(/Seu Roberto: recomendado R\$/);
-    expect(t).toMatch(/Dona Jo: recomendado R\$/);
-    expect(t).toMatch(/Total: recomendado R\$/);
+    // D-070: sugestão por peça + total, e o artesão decide (sem "recomendado/mínimo" técnico)
+    expect(t).toMatch(/Prontinho, fiz as contas dos 3 móveis/);
+    expect(t).toMatch(/Mesinha de centro \(Seu Roberto\): R\$/);
+    expect(t).toMatch(/Cômoda \(Dona Jo\): R\$/);
+    expect(t).toMatch(/Aparador \(Dona Jo\): R\$/);
+    expect(t).toMatch(/Total sugerido: R\$/);
+    expect(t).not.toMatch(/PRELIMINAR|CALIBRADOS|administrador conferir/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM jobs")).toBe(3);
-    expect(await count(h, "SELECT COUNT(*) AS n FROM quotes WHERE status = 'AGUARDANDO_REVISAO'")).toBe(3);
+    expect(await count(h, "SELECT COUNT(*) AS n FROM quotes WHERE status = 'ESTIMATIVA'")).toBe(3); // esperando a decisão dele
     // escopo "só tampo" chega ao motor (área menor que a peça inteira)
     const tops = await h.ctx.db.all<{ facts_json: string }>("SELECT facts_json FROM jobs");
     expect(tops.filter((j) => JSON.parse(j.facts_json).scope?.value.part === "tampo")).toHaveLength(2);
@@ -152,8 +152,7 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
     const h = await setup();
     const final = await fullConversation(h, "tudo junto");
     const t = h.allText(final);
-    expect(t).toMatch(/Total: recomendado R\$/);
-    expect(t).not.toMatch(/^Seu Roberto: recomendado/m);
+    expect(t).toMatch(/Total sugerido: R\$/);
   });
 
   it("22/23. falta de preço do verniz: pergunta preço e embalagem e retoma o orçamento", async () => {
@@ -165,8 +164,8 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
     const done = await h.click(ok);
     const t = h.allText(done);
     expect(t).toMatch(/Atualizei o preço do verniz/);
-    expect(t).toMatch(/Aqui está o orçamento/);
-    expect(t).toMatch(/Total: recomendado/);
+    expect(t).toMatch(/Prontinho, fiz as contas/);
+    expect(t).toMatch(/Total sugerido/);
   });
 
   it("25. material do estoque entra pelo preço de reposição", async () => {
@@ -176,7 +175,7 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
     await h.send(REAL);
     for (const t of ["isso", "uma cômoda e um aparador", "inteira", "estão todos bons", "certo", "tudo junto", "médio", "pequeno", "pequeno", "pincel"]) await h.send(t);
     const r = await h.send("uso do estoque");
-    expect(h.allText(r)).toMatch(/valor de reposição/);
+    expect(h.allText(r)).toMatch(/material entra no preço/);
     await h.send("não precisa");
     const q = await h.ctx.db.first<{ result_json: string }>("SELECT result_json FROM quotes LIMIT 1");
     const line = JSON.parse(q!.result_json).materials.lines.find((l: { materialKey: string }) => l.materialKey === "verniz");

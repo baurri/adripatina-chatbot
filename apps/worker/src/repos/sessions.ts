@@ -85,6 +85,8 @@ export type QuoteRequestStep =
   | "condition"
   | "review"
   | "review_fix"
+  | "client"
+  | "techniques"
   | "grouping"
   | "dims"
   | "repair_hours"
@@ -120,6 +122,12 @@ export interface QuoteRequestState {
   unparsed?: number;
   /** estado dito sem dizer de qual peça ("o tampo está ruim, os outros estão melhores"): perguntado depois, nunca descartado */
   notes?: string[];
+  clientAsked?: boolean;
+  techniquesAsked?: boolean;
+  /** horas de reparo perguntadas uma vez para todas as peças */
+  repairAskedAll?: boolean;
+  /** campos que travaram o cálculo e já foram perguntados de novo (por peça) */
+  calcRetry?: string[];
   /** peças removidas pelo artesão ("esquece o aparador"), para auditoria e desfazer */
   removed?: { ref: string; description: string; at: string; jobId?: string | null }[];
 }
@@ -189,7 +197,9 @@ export interface SessionContext {
   /** campo que bloqueou o cálculo e foi perguntado de novo: ao responder, recalcula direto */
   calcAfter?: { jobId: string; field: ProjectField };
   /** decisão do valor pelo artesão (D-070) */
-  quoteDecision?: { quoteId: string; step: "decide" | "discount" | "add" | "below_floor"; finalCents?: number; label?: string };
+  quoteDecision?: { quoteId: string; quoteIds?: string[]; step: "decide" | "discount" | "add" | "below_floor"; finalCents?: number; label?: string };
+  /** orçamentos fechados juntos (vários móveis): o "cliente aceitou" vale para todos */
+  lastClosedQuotes?: string[];
   /** faixa de preço antecipada já mostrada para este serviço (mostra uma vez só) */
   previewShownFor?: string;
   deferredText?: string;
