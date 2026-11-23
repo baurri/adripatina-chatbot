@@ -110,7 +110,8 @@ export async function listActiveJobs(ctx: Ctx, limit = 20): Promise<Job[]> {
 
 async function nextJobCode(ctx: Ctx): Promise<string> {
   const r = await ctx.db.first<{ last_value: number }>(
-    "UPDATE job_code_sequence SET last_value = last_value + 1 WHERE id = 1 RETURNING last_value",
+    // upsert: se a linha do contador sumir (ex.: banco zerado), recomeça do 1 em vez de quebrar
+    "INSERT INTO job_code_sequence (id, last_value) VALUES (1, 1) ON CONFLICT(id) DO UPDATE SET last_value = last_value + 1 RETURNING last_value",
   );
   return `S-${String(r!.last_value).padStart(4, "0")}`;
 }

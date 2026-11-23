@@ -129,6 +129,13 @@ describe("motor novo (D-075): travas do código", () => {
     expect(r).toMatch(/cristaleira da Dona Maria/);
   });
 
+  it("criar serviço funciona mesmo se o contador de códigos sumir (banco zerado)", async () => {
+    const { h } = await setup([() => tool("criar_servico", { movel: "mesa de cabeceira", campos: { cliente: "Dona Maria" } }), () => say("Anotado! 🙂")]);
+    await h.ctx.db.run("DELETE FROM job_code_sequence");
+    await h.send("tenho uma mesa de cabeceira da dona Maria");
+    expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM jobs").then((r) => r!.n)).toBe(1);
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };
