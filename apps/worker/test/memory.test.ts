@@ -175,7 +175,7 @@ describe("Memória contextual e prevenção de duplicidades", () => {
     await h.send("a cristaleira da dona Maria");
     const r = await h.click("match:yes");
     const text = h.allText(r);
-    expect(text).toMatch(/continuando com a cristaleira da Dona Maria/);
+    expect(text).toMatch(/vamos continuar com a cristaleira da Dona Maria/);
     expect(text).toMatch(/por dentro também/); // próxima pendência real
     expect(text).not.toMatch(/Qual é o móvel|De quem é o móvel/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM jobs")).toBe(1);
@@ -223,7 +223,7 @@ describe("Conversação (aceites 13–17)", () => {
   it("15. mensagem ambígua gera pergunta curta e nenhum registro financeiro", async () => {
     const h = await createHarness();
     const r = await h.send("hmm deixa eu ver isso aí, 200");
-    expect(h.allText(r)).toMatch(/O que você quer fazer/);
+    expect(h.allText(r)).toMatch(/não entendi o que você quer/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM payments")).toBe(0);
     expect(await count(h, "SELECT COUNT(*) AS n FROM purchases")).toBe(0);
     expect(await count(h, "SELECT COUNT(*) AS n FROM expenses")).toBe(0);
@@ -234,7 +234,7 @@ describe("Conversação (aceites 13–17)", () => {
     await startCristaleira(h);
     await h.send("cancelar");
     const r = await h.send("Recebi R$ 200 da dona Maria");
-    expect(h.allText(r)).toMatch(/Confirma\?/);
+    expect(h.allText(r)).toMatch(/Está certo\?/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM payments")).toBe(0);
     await h.click("pay:confirm");
     expect(await count(h, "SELECT COUNT(*) AS n FROM payments")).toBe(1);
@@ -265,7 +265,7 @@ describe("Conversação (aceites 13–17)", () => {
     const jobId = await startCristaleira(h);
     await h.click("ans:bom");
     const back = await h.send("voltar");
-    expect(h.allText(back)).toMatch(/estado do móvel/);
+    expect(h.allText(back)).toMatch(/Como o móvel está/);
     await h.click("ans:danificado");
     const facts = JSON.parse((await h.ctx.db.first<{ facts_json: string }>("SELECT facts_json FROM jobs WHERE id = ?", jobId))!.facts_json);
     expect(facts.condition.value).toBe("danificado");

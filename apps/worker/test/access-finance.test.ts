@@ -18,7 +18,8 @@ describe("Acesso e segurança (aceites 22–26)", () => {
     });
     const reply = h.telegram.sent.slice(n);
     expect(reply).toHaveLength(1);
-    expect(reply[0]!.text).toBe("Desculpe, este bot é de uso privado.");
+    expect(reply[0]!.text).toMatch(/^Desculpe, este bot é de uso privado./);
+    expect(reply[0]!.text).not.toMatch(/Maria|S-0|R$/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM jobs")).toBe(0);
     // botões de estranhos também são ignorados
     await processUpdate(h.ctx, { update_id: 78, callback_query: { id: "c", from: { id: STRANGER_TG }, data: "pay:confirm" } });

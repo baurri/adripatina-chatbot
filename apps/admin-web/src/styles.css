@@ -85,3 +85,5 @@ code { font-size: 13px; word-break: break-all; }
   .sidebar ul { display: flex; flex-wrap: wrap; gap: 4px; }
   main { padding: 16px; }
 }
+.request { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 10px 0; background: #fffdf8; }
+.request p { margin: 0 0 6px; }

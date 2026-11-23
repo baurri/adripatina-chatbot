@@ -15,102 +15,50 @@ export interface Question {
   example?: string;
 }
 
-const NAO_SEI: Button = { text: "Não sei", data: "ans:nao_sei" };
-const DEPOIS: Button = { text: "Continuar depois", data: "cmd:pause" };
+/**
+ * Perguntas pensadas para o Adriano: uma de cada vez, linguagem direta e
+ * acolhedora, sempre com um exemplo de resposta. Sem botões — ele responde
+ * livremente, por áudio ou texto. "Não sei" continua funcionando se ele disser.
+ */
+function q(field: ProjectField, text: string, example: string): Question {
+  return { field, text, buttons: [], example };
+}
 
-/** Uma pergunta curta por vez, sempre com saída "Não sei" e "Continuar depois". */
 export function questionFor(field: ProjectField): Question {
   switch (field) {
     case "furniture_type":
-      return { field, text: "Qual é o móvel?", buttons: [[NAO_SEI, DEPOIS]], example: "Por exemplo: cristaleira, cômoda, cadeira." };
+      return q(field, "Que móvel é esse? Pode falar do seu jeito, por exemplo: \"uma cristaleira\" ou \"uma cômoda de quatro gavetas\".", "Me diga só o nome do móvel, por exemplo: \"cristaleira\", \"cômoda\" ou \"cadeira\".");
     case "techniques":
-      return {
-        field,
-        text: "Que trabalho vai ser feito?",
-        buttons: [
-          [{ text: "Pátina", data: "ans:patina" }, { text: "Pintura", data: "ans:pintura_lisa" }, { text: "Decapê", data: "ans:decape" }],
-          [{ text: "Verniz", data: "ans:verniz" }, { text: "Folha de ouro", data: "ans:folha_ouro" }, { text: "Restauração", data: "ans:restauracao" }],
-          [NAO_SEI, DEPOIS],
-        ],
-        example: "Pode falar mais de um, por exemplo: pátina e verniz.",
-      };
+      return q(field, "Que trabalho você vai fazer nele? Pode ser mais de um, por exemplo: \"pátina e verniz\".", "Por exemplo: \"pátina\", \"pintura\", \"decapê\", \"verniz\", \"folha de ouro\" ou \"restauração\".");
     case "client_name":
-      return { field, text: "De quem é o móvel? Me diga o nome do cliente.", buttons: [[NAO_SEI, DEPOIS]], example: "Por exemplo: dona Maria." };
+      return q(field, "De quem é esse móvel? Pode falar só o nome, por exemplo: \"da dona Maria\".", "Me diga o nome do cliente, por exemplo: \"dona Maria\" ou \"seu João\".");
     case "condition":
-      return {
-        field,
-        text: "Como está o estado do móvel?",
-        buttons: [
-          [{ text: "Bom", data: "ans:bom" }, { text: "Precisa de reparos", data: "ans:reparos" }],
-          [{ text: "Muito danificado", data: "ans:danificado" }, NAO_SEI],
-        ],
-      };
+      return q(field, "Como o móvel está hoje? Por exemplo: \"está bom\", \"precisa de uns reparos\" ou \"está bem estragado\".", "Por exemplo: \"está bom\", \"precisa de reparos\" ou \"está bem estragado\".");
     case "dimensions":
     case "size_class":
-      return {
-        field: "dimensions",
-        text: "Qual é o tamanho? Pode mandar as medidas (altura, largura e fundura) ou só dizer se é pequeno, médio ou grande.",
-        buttons: [
-          [{ text: "Pequeno", data: "ans:pequeno" }, { text: "Médio", data: "ans:medio" }, { text: "Grande", data: "ans:grande" }],
-          [NAO_SEI, DEPOIS],
-        ],
-        example: "Por exemplo: 1,80 de altura, 1 metro de largura e 40 de fundura.",
-      };
+      return q(
+        "dimensions",
+        "Qual é o tamanho dele? Se tiver as medidas, pode falar assim: \"1,80 de altura, 1 metro de largura e 40 de fundura\". Se não tiver, pode só dizer se é pequeno, médio ou grande.",
+        "Pode dizer as medidas, por exemplo \"1,80 de altura e 1 metro de largura\", ou só \"pequeno\", \"médio\" ou \"grande\".",
+      );
     case "surfaces":
-      return {
-        field,
-        text: "Vai trabalhar só por fora ou por dentro também?",
-        buttons: [[{ text: "Só por fora", data: "ans:externa" }, { text: "Dentro e fora", data: "ans:interna_externa" }], [NAO_SEI]],
-      };
+      return q(field, "Você vai trabalhar só na parte de fora ou por dentro também?", "Pode dizer \"só por fora\" ou \"por dentro e por fora\".");
     case "repairs":
-      return {
-        field,
-        text: "Precisa de algum conserto antes? (cola, massa, peça quebrada)",
-        buttons: [[{ text: "Não precisa", data: "ans:nao" }, { text: "Sim, precisa", data: "ans:sim" }], [NAO_SEI]],
-      };
+      return q(field, "Antes da pintura, ele precisa de algum conserto? Por exemplo: colar uma perna, passar massa ou trocar uma peça. Se não precisar, é só dizer \"não\".", "Pode dizer \"não precisa\" ou contar o conserto, por exemplo \"colar a gaveta\".");
     case "subcontract":
-      return {
-        field,
-        text: "Alguma parte vai para outro profissional, como marceneiro ou tapeceiro?",
-        buttons: [[{ text: "Não", data: "ans:nao" }, { text: "Sim", data: "ans:sim" }], [NAO_SEI]],
-      };
+      return q(field, "Alguma parte vai para outro profissional, como marceneiro ou tapeceiro? Se for tudo com você, é só dizer \"não\".", "Pode dizer \"não\" ou, por exemplo, \"o assento vai para o tapeceiro\".");
     case "material_status":
-      return {
-        field,
-        text: "Você já tem o material ou precisa comprar?",
-        buttons: [
-          [{ text: "Já tenho tudo", data: "ans:tem_tudo" }, { text: "Tenho uma parte", data: "ans:tem_parte" }],
-          [{ text: "Preciso comprar", data: "ans:precisa_comprar" }, NAO_SEI],
-        ],
-      };
+      return q(field, "Sobre o material: você já tem em casa ou vai precisar comprar? Pode dizer \"já tenho tudo\", \"tenho uma parte\" ou \"preciso comprar\".", "Pode dizer \"já tenho tudo\", \"tenho uma parte\" ou \"preciso comprar\".");
     case "application_method":
-      return {
-        field,
-        text: "Vai aplicar com pincel, rolo ou pistola?",
-        buttons: [[{ text: "Pincel", data: "ans:pincel" }, { text: "Rolo", data: "ans:rolo" }, { text: "Pistola", data: "ans:pistola" }], [NAO_SEI]],
-      };
+      return q(field, "Você vai aplicar com pincel, rolo ou pistola?", "Pode dizer \"pincel\", \"rolo\" ou \"pistola\".");
     case "logistics":
-      return {
-        field,
-        text: "Precisa buscar ou entregar o móvel?",
-        buttons: [
-          [{ text: "Não", data: "ans:nenhum" }, { text: "Buscar", data: "ans:buscar" }],
-          [{ text: "Entregar", data: "ans:entregar" }, { text: "Os dois", data: "ans:ambos" }],
-        ],
-      };
+      return q(field, "Precisa buscar ou entregar o móvel na casa do cliente? Por exemplo: \"só entregar\", \"buscar e entregar\" ou \"não precisa\".", "Pode dizer \"não precisa\", \"só buscar\", \"só entregar\" ou \"buscar e entregar\".");
     case "deadline":
-      return { field, text: "Tem prazo combinado com o cliente?", buttons: [[{ text: "Sem prazo", data: "ans:sem_prazo" }, NAO_SEI]], example: "Por exemplo: daqui a 15 dias, ou até o Natal." };
+      return q(field, "Você combinou algum prazo com o cliente? Por exemplo: \"daqui a 15 dias\" ou \"sem prazo\".", "Por exemplo: \"daqui a 15 dias\", \"até o Natal\" ou \"sem prazo\".");
     case "payment_terms":
-      return {
-        field,
-        text: "Como o cliente vai pagar?",
-        buttons: [
-          [{ text: "À vista", data: "ans:a_vista" }, { text: "Entrada + resto na entrega", data: "ans:entrada_entrega" }],
-          [NAO_SEI],
-        ],
-      };
+      return q(field, "Como o cliente vai pagar? Por exemplo: \"à vista\" ou \"metade agora e metade na entrega\".", "Por exemplo: \"à vista\" ou \"metade de entrada e o resto na entrega\".");
     case "details":
-      return { field, text: "Tem algum detalhe especial? (entalhes, puxadores, vidros)", buttons: [[{ text: "Não", data: "ans:nao" }, NAO_SEI]] };
+      return q(field, "Tem algum detalhe especial, como entalhes, puxadores ou vidros? Se não tiver, é só dizer \"não\".", "Pode dizer \"não\" ou contar o detalhe.");
   }
 }
 
@@ -210,7 +158,7 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
       return norm.length > 1 ? { kind: "value", field, value: text.trim() } : { kind: "unparsed" };
     case "payment_terms":
       if (is("a_vista") || /\ba vista\b/.test(norm)) return { kind: "value", field, value: "à vista" };
-      if (is("entrada_entrega") || /\bentrada\b/.test(norm)) return { kind: "value", field, value: "entrada e restante na entrega" };
+      if (is("entrada_entrega") || /\b(entrada|metade|sinal)\b/.test(norm)) return { kind: "value", field, value: "entrada e restante na entrega" };
       return norm.length > 2 ? { kind: "value", field, value: text.trim() } : { kind: "unparsed" };
     case "details":
       if (NO_RE.test(norm)) return { kind: "value", field, value: "nenhum" };

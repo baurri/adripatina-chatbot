@@ -12,7 +12,7 @@ import {
   type NluResult,
   type ProjectMention,
 } from "@adripatina/conversations";
-import { nextQuestion, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
+import { nextQuestion, QUESTION_ORDER, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
 import { extractCount, formatBRL, formatDateBR, normalizeText } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { interpret } from "../ai/service.js";
@@ -93,6 +93,8 @@ const TRANSPORT_RE = /\b(gasolina|combustivel|frete|uber|taxi|estacionamento|ped
 
 class Conversation {
   readonly out: OutgoingMessage[] = [];
+  /** confirmação curta da última resposta, enviada junto com a próxima pergunta */
+  ack: string | null = null;
   session!: Session;
   constructor(
     readonly ctx: Ctx,
@@ -201,10 +203,12 @@ class Conversation {
       }
     }
     if (nlu.intent === "yes" || nlu.intent === "no") {
-      this.say("Certo. Como posso ajudar agora?", MAIN_MENU);
+      this.say(`Certo! ${GUIDE}`);
       return;
     }
-    this.say("Não entendi bem. O que você quer fazer?", MAIN_MENU);
+    this.say(`${this.input.kind === "voice" ? "Ouvi seu áudio direitinho! 🙂" : "Recebi sua mensagem! 🙂"} Só não entendi o que você quer que eu faça agora.
+
+${GUIDE}`);
   }
 
   private mention(text: string, nlu: NluResult, extra: Partial<MentionSnapshot> = {}): MentionSnapshot {
@@ -249,29 +253,60 @@ class Conversation {
     const pending = job && ["collecting", "confirm_calc"].includes(this.session.flow) ? nextQuestion(job.facts) : null;
     if (job && pending) {
       this.session.flow = "resume_prompt";
-      this.say(`Oi, ${this.firstName}! Da última vez estávamos falando ${de(job)}. Faltava: ${questionFor(pending).text.toLowerCase()} Quer continuar?`, [
+      this.say(
+        `Oi, ${this.firstName}! Que bom te ver de novo. 😊\n\nDa última vez estávamos falando ${de(job)}. Ainda falta saber ${FIELD_LABEL[pending]}.\n\nQuer continuar com ${pronounFor(job) === "ela" ? "ela" : "ele"} agora?`,
         [
-          { text: "Continuar", data: "cmd:continue" },
-          { text: "Outro assunto", data: "cmd:other_subject" },
+          [
+            { text: "Sim, continuar", data: "cmd:continue" },
+            { text: "Não, é outro assunto", data: "cmd:other_subject" },
+          ],
         ],
-      ]);
+      );
       return;
     }
-    this.say(`Oi, ${this.firstName}! Pode me mandar um áudio ou escrever. Por exemplo: "peguei uma cômoda da dona Ana para fazer pátina". Ou escolha uma opção:`, MAIN_MENU);
+    const seen = await this.ctx.db.first<{ n: number }>("SELECT COUNT(*) AS n FROM conversation_messages WHERE user_id = ? AND direction = 'out'", this.input.user.id);
+    if ((seen?.n ?? 0) === 0) {
+      this.say(
+        [
+          `Olá, ${this.firstName}! Que bom ter você aqui. 😊`,
+          "",
+          "Eu sou o assistente da adripatina. Eu anoto os seus serviços, faço as contas dos orçamentos e guardo tudo organizado para você.",
+          "",
+          "Funciona assim:",
+          "1. Você me conta sobre o móvel, por áudio ou escrevendo, do seu jeito.",
+          "2. Eu faço algumas perguntas, uma de cada vez.",
+          "3. No final, eu calculo o orçamento e preparo o PDF para você mandar ao cliente.",
+          "",
+          "Também posso anotar gastos e pagamentos que você receber.",
+          "",
+          "Para começar, é só me contar. Por exemplo:",
+          "\"Peguei uma cômoda da dona Ana para fazer pátina.\"",
+        ].join("\n"),
+      );
+      return;
+    }
+    this.say(`Oi, ${this.firstName}! Bom te ver. 😊\n\n${GUIDE}`);
   }
 
   help(): void {
     this.say(
       [
-        "Eu anoto seus serviços e calculo os orçamentos para você.",
-        "• Pode falar por áudio ou escrever, do seu jeito.",
-        "• Eu faço uma pergunta de cada vez. Se não souber, toque em \"Não sei\".",
-        "• Para mudar algo, diga \"corrigir\" ou \"na verdade é...\".",
-        "• \"Voltar\" volta para a pergunta anterior; \"cancelar\" desiste do que estamos fazendo; \"continuar depois\" guarda tudo.",
-        "• Gastos: \"gastei 90 reais num verniz\". Pagamentos: \"a dona Ana pagou 200\".",
+        `${this.firstName}, aqui vai um resumo de como eu funciono:`,
+        "",
+        "• Pode falar por áudio ou escrever, do seu jeito. Eu entendo os dois.",
+        "• Eu faço uma pergunta de cada vez e sempre dou um exemplo de resposta.",
+        "• Se não souber alguma coisa, é só dizer \"não sei\". Eu deixo anotado e seguimos.",
+        "• Se precisar mudar algo, é só falar, por exemplo: \"na verdade a altura é 1,90\".",
+        "• Se quiser parar no meio, pode parar. Eu guardo tudo e continuamos depois.",
+        "",
+        "Exemplos do que você pode me dizer:",
+        "• \"Peguei uma cadeira do seu João para pintar\"",
+        "• \"Gastei 90 reais em verniz\"",
+        "• \"A dona Maria me pagou 200 reais\"",
+        "• \"Quais serviços eu tenho?\"",
+        "",
         "Nada é apagado sem você confirmar.",
       ].join("\n"),
-      MAIN_MENU,
     );
   }
 
@@ -280,7 +315,11 @@ class Conversation {
     this.session.flow = "idle";
     this.session.context = {};
     this.session.lastQuestion = null;
-    this.say(hadJob ? "Tudo bem, parei por aqui. Nada foi apagado — o que já anotamos continua guardado." : "Tudo bem, cancelei. Nada foi registrado.", MAIN_MENU);
+    this.say(
+      hadJob
+        ? "Tudo bem, parei por aqui. Nada foi apagado: o que já anotamos continua guardado. Quando quiser, é só me contar outra coisa."
+        : "Tudo bem, cancelei. Nada foi anotado. Quando quiser, é só me contar outra coisa.",
+    );
   }
 
   pause(): void {
@@ -405,8 +444,8 @@ class Conversation {
     if (mention.photoAttachmentId) await this.ctx.db.run("UPDATE attachments SET job_id = ? WHERE id = ?", job.id, mention.photoAttachmentId);
     const res = await this.applyMention(job.id, mention);
     const fresh = (await getJob(this.ctx, job.id))!;
-    const noted = res.added.length ? `Anotei: ${res.added.join("; ")}.` : "Anotei um serviço novo.";
-    this.say(`${noted}`);
+    const noted = res.added.length ? `Anotei um serviço novo:\n${res.added.map((a) => `• ${a}`).join("\n")}` : "Anotei um serviço novo.";
+    this.say(`${noted}\n\nAgora vou te fazer algumas perguntas, uma de cada vez, para montar o orçamento. Pode responder por áudio ou escrevendo.`);
     if (res.conflict) return this.askContradiction(fresh, res.conflict);
     await this.askNext(fresh);
   }
@@ -419,7 +458,7 @@ class Conversation {
     const fresh = (await getJob(this.ctx, job.id))!;
     if (!opts.quiet) {
       const s = summarizeJob(fresh);
-      this.say(`Certo, continuando com ${jobPhrase(fresh)}.${s.confirmed.length ? ` Já tenho: ${s.confirmed.join("; ")}.` : ""}`);
+      this.say(`Certo, vamos continuar com ${jobPhrase(fresh)}.${s.confirmed.length ? `\n\nO que eu já tenho anotado:\n${s.confirmed.map((c) => `• ${c}`).join("\n")}` : ""}`);
       await addJobEvent(this.ctx, job.id, "retomada", { via: this.input.kind }, this.input.user.id);
     }
     if (res.repeated.length) this.say(`Isso, já anotei: ${res.repeated.join("; ")}.`);
@@ -578,19 +617,20 @@ class Conversation {
     const field = nextQuestion(job.facts);
     this.session.context.unparsedCount = 0;
     if (!field) {
+      if (this.ack) this.say(this.ack);
+      this.ack = null;
       this.session.flow = "confirm_calc";
       this.session.lastQuestion = null;
       const s = summarizeJob(job);
-      const unknown = Object.values(job.facts).filter((f) => f?.status === "unknown").map((f) => questionFor(f!.field).text.replace(/\?$/, "").toLowerCase());
-      const lines = [`Resumo ${de(job)}:`, ...s.confirmed.map((c) => `• ${c}`)];
-      if (unknown.length) lines.push("", "Ficou pendente:", ...unknown.map((u) => `• ${u}`));
-      lines.push("", "Posso calcular o orçamento?");
+      const unknown = Object.values(job.facts).filter((f) => f?.status === "unknown").map((f) => FIELD_LABEL[f!.field]);
+      const lines = [`Pronto, ${this.firstName}! Já tenho o que preciso sobre ${jobPhrase(job)}. Confere comigo:`, "", ...s.confirmed.map((c) => `• ${c}`)];
+      if (unknown.length) lines.push("", "Ficou para depois (sem problema):", ...unknown.map((u) => `• ${u}`));
+      lines.push("", "Se estiver tudo certo, me diga \"pode calcular\" que eu faço as contas do orçamento.", "Se quiser mudar alguma coisa, é só falar, por exemplo: \"a altura é 1,90\".");
       this.say(lines.join("\n"), [
         [
-          { text: "Calcular", data: "calc:yes" },
-          { text: "Corrigir algo", data: "calc:fix" },
+          { text: "Pode calcular", data: "calc:yes" },
+          { text: "Quero corrigir", data: "calc:fix" },
         ],
-        [{ text: "Continuar depois", data: "cmd:pause" }],
       ]);
       return;
     }
@@ -600,7 +640,10 @@ class Conversation {
     if (hist[hist.length - 1] !== field) hist.push(field);
     this.session.context.questionHistory = hist.slice(-20);
     const q = questionFor(field);
-    this.say(q.text, q.buttons);
+    const p = questionProgress(job.facts);
+    const ack = this.ack ? `${this.ack}\n\n` : "";
+    this.ack = null;
+    this.say(`${ack}Pergunta ${p.current} de ${p.total}:\n${q.text}`);
   }
 
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
@@ -673,7 +716,7 @@ class Conversation {
     const ans = parseAnswer(field, text);
     if (ans.kind === "dont_know") {
       await setFact(this.ctx, job.id, field, null, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
-      this.say(resuming ? `Continuando sobre ${jobPhrase(job)}. Sem problema, deixo isso pendente.` : "Sem problema, deixo isso pendente.");
+      this.say(`${resuming ? `Continuando sobre ${jobPhrase(job)}. ` : ""}Sem problema! Deixei isso anotado como pendente e seguimos.`);
       return this.askNext((await getJob(this.ctx, job.id))!);
     }
     if (ans.kind === "unparsed") {
@@ -693,7 +736,11 @@ class Conversation {
       const count = (this.session.context.unparsedCount ?? 0) + 1;
       this.session.context.unparsedCount = count;
       const q = questionFor(field);
-      this.say(count === 1 ? `Não entendi bem. ${q.example ?? q.text}` : `Tudo bem se não souber agora — é só tocar em "Não sei". ${q.text}`, q.buttons);
+      this.say(
+        count === 1
+          ? `Não consegui entender essa resposta. Pode tentar de novo? ${q.example ?? q.text}`
+          : `Tudo bem se não souber agora. É só dizer "não sei" que eu deixo anotado e seguimos.\n\n${q.text}`,
+      );
       return;
     }
     const r = await setFact(this.ctx, job.id, ans.field, ans.value as never, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId });
@@ -701,7 +748,8 @@ class Conversation {
     if (r.kind === "conflict") return this.askContradiction(fresh, { field: ans.field, oldValue: r.previous.value, newValue: ans.value });
     if (resuming) this.say(`Continuando sobre ${jobPhrase(job)}.`);
     if (r.kind === "same") this.say(`Isso, já tinha anotado: ${describeFact(ans.field, ans.value)}.`);
-    if (ans.field === "material_status") this.say(stockExplanation(ans.value as string));
+    else if (ans.field === "material_status") this.ack = stockExplanation(ans.value as string);
+    else this.ack = `Anotado: ${describeFact(ans.field, ans.value)}. ✅`;
     // aproveita outras informações na mesma frase (sem repetir perguntas)
     const extra = this.mention(text, nlu);
     delete extra.materialStatus;
@@ -776,7 +824,7 @@ class Conversation {
       if (this.session.flow === "intake") return this.intakeText(action === "nao_sei" ? "não sei" : action, await interpret(this.ctx, action));
       if (this.session.flow === "collecting" && this.session.activeJobId) return this.collectingText(`ans:${action}`, await interpret(this.ctx, action), false);
       if (this.session.flow === "disambiguate") return this.disambiguateText(action, await interpret(this.ctx, action));
-      this.say("Essa pergunta já foi respondida. Como posso ajudar?", MAIN_MENU);
+      this.say(`Essa pergunta já foi respondida, está tudo anotado. ${GUIDE}`);
       return;
     }
     if (ns === "match") return this.onMatch(action, arg);
@@ -790,7 +838,7 @@ class Conversation {
     if (ns === "job") return this.openJob(arg ?? action);
     if (ns === "photo") return this.onPhotoChoice(action, arg);
     if (ns === "adm") return this.onAdmin(action, arg);
-    this.say("Esse botão não é mais válido. Como posso ajudar?", MAIN_MENU);
+    this.say(`Esse botão é de uma conversa antiga, então não fiz nada com ele. ${GUIDE}`);
   }
 
   async onCmd(action: string): Promise<void> {
@@ -841,11 +889,11 @@ class Conversation {
         this.session.context = {};
         this.session.lastQuestion = null;
         if (deferred) return this.onText(deferred, false);
-        this.say("Certo. O que você quer fazer?", MAIN_MENU);
+        this.say(`Certo! ${GUIDE}`);
         return;
       }
     }
-    this.say("Como posso ajudar?", MAIN_MENU);
+    this.say(GUIDE);
   }
 
   async onMatch(action: string, arg?: string): Promise<void> {
@@ -924,7 +972,7 @@ class Conversation {
     if (settings.params.requireAdminReview || !quote.definitiveAllowed) {
       await submitForReview(this.ctx, quote.id, this.input.user.id);
       this.session.flow = "idle";
-      this.say("Mandei para o administrador revisar. Assim que aprovar, eu te aviso para gerar o PDF.", [[{ text: "Gerar estimativa (não definitiva)", data: `pdf:prelim:${quote.id}` }]]);
+      this.say("Mandei o orçamento para o administrador conferir. Assim que ele aprovar, eu te aviso aqui e preparo o PDF para você mandar ao cliente.\n\nEnquanto isso, se quiser, pode me contar sobre outro serviço.");
       return;
     }
     // sem revisão obrigatória e sem pendências: aprovação automática registrada como "sistema"
@@ -1079,12 +1127,13 @@ class Conversation {
     const e = this.session.context.expense!;
     e.step = "confirm";
     const job = e.jobId ? await getJob(this.ctx, e.jobId) : null;
-    this.say(`Vou anotar: compra de ${e.description}, ${formatBRL(e.amountCents!)} — ${job ? `para ${jobPhrase(job)}` : "estoque geral"}. Confirma?`, [
+    this.say(`Vou anotar: compra de ${e.description}, ${formatBRL(e.amountCents!)} — ${job ? `para ${jobPhrase(job)}` : "estoque geral"}.
+
+Está certo? Pode responder "sim" ou "não".`, [
       [
-        { text: "Confirmar", data: "exp:confirm" },
-        { text: "Corrigir valor", data: "exp:fix" },
+        { text: "Sim, pode anotar", data: "exp:confirm" },
+        { text: "Não, corrigir o valor", data: "exp:fix" },
       ],
-      [{ text: "Cancelar", data: "exp:cancel" }],
     ]);
   }
 
@@ -1106,7 +1155,7 @@ class Conversation {
       return this.askExpenseJob();
     }
     if (nlu.intent === "yes" && e.step === "confirm") return this.onExpense("confirm");
-    if (nlu.intent === "no" && e.step === "confirm") return this.onExpense("cancel");
+    if (nlu.intent === "no" && e.step === "confirm") return this.onExpense("fix");
     this.say("Use os botões acima para confirmar, ou diga \"cancelar\".");
   }
 
@@ -1119,7 +1168,7 @@ class Conversation {
     }
     if (action === "fix") {
       e.step = "amount";
-      this.say("Qual é o valor certo?");
+      this.say("Sem problema. Qual é o valor certo? Por exemplo: \"90 reais\". Se quiser desistir, é só dizer \"cancelar\".");
       return;
     }
     if (action === "cancel") {
@@ -1205,12 +1254,13 @@ class Conversation {
     const job = p.jobId ? await getJob(this.ctx, p.jobId) : null;
     if (!job) return this.askPaymentJob();
     const client = (job.facts.client_name?.value as string | undefined) ?? job.clientName ?? p.clientName ?? "cliente";
-    this.say(`Vou anotar: recebi ${formatBRL(p.amountCents!)} de ${client}, referente ${aPrep(job)} (${job.code}). Confirma?`, [
+    this.say(`Vou anotar: recebi ${formatBRL(p.amountCents!)} de ${client}, referente ${aPrep(job)} (${job.code}).
+
+Está certo? Pode responder "sim" ou "não".`, [
       [
-        { text: "Confirmar", data: "pay:confirm" },
-        { text: "Corrigir valor", data: "pay:fix" },
+        { text: "Sim, pode anotar", data: "pay:confirm" },
+        { text: "Não, corrigir o valor", data: "pay:fix" },
       ],
-      [{ text: "Cancelar", data: "pay:cancel" }],
     ]);
   }
 
@@ -1228,7 +1278,7 @@ class Conversation {
       return this.askPaymentJob();
     }
     if (nlu.intent === "yes" && p.step === "confirm") return this.onPayment("confirm");
-    if (nlu.intent === "no" && p.step === "confirm") return this.onPayment("cancel");
+    if (nlu.intent === "no" && p.step === "confirm") return this.onPayment("fix");
     this.say("Use os botões acima para confirmar, ou diga \"cancelar\".");
   }
 
@@ -1241,7 +1291,7 @@ class Conversation {
     }
     if (action === "fix") {
       p.step = "amount";
-      this.say("Qual é o valor certo?");
+      this.say("Sem problema. Qual é o valor certo? Por exemplo: \"90 reais\". Se quiser desistir, é só dizer \"cancelar\".");
       return;
     }
     if (action === "cancel") {
@@ -1346,7 +1396,7 @@ class Conversation {
     const q = await latestQuoteForJob(this.ctx, job.id);
     const lines = [`${s.headline} (${job.code})`, `Situação: ${JOB_STATUS_LABEL[job.status]}`];
     if (s.confirmed.length) lines.push(`Já anotado: ${s.confirmed.join("; ")}`);
-    if (s.pending.length) lines.push(`Falta: ${s.pending.map((f) => questionFor(f).text.replace(/\?.*$/, "").toLowerCase()).slice(0, 4).join("; ")}`);
+    if (s.pending.length) lines.push(`Ainda falta saber: ${s.pending.map((f) => FIELD_LABEL[f]).slice(0, 4).join("; ")}`);
     if (q) lines.push(`Orçamento: ${q.status.toLowerCase().replace(/_/g, " ")}${q.finalPriceCents ? ` — ${formatBRL(q.finalPriceCents)}` : ""}`);
     if (bal.paidCents > 0 || bal.contractedCents) lines.push(`Recebido: ${formatBRL(bal.paidCents)}${bal.balanceCents !== null ? ` — falta ${formatBRL(Math.max(0, bal.balanceCents))}` : ""}`);
     this.session.activeJobId = job.id;
@@ -1365,7 +1415,7 @@ class Conversation {
   async listJobs(title = "Seus serviços:"): Promise<void> {
     const jobs = await listActiveJobs(this.ctx, 8);
     if (jobs.length === 0) {
-      this.say("Ainda não há serviços anotados. Me conte sobre um móvel que você pegou!", MAIN_MENU);
+      this.say("Ainda não tem nenhum serviço anotado. Quando pegar um móvel, é só me contar, por exemplo: \"peguei uma cômoda da dona Ana para fazer pátina\".");
       return;
     }
     const rows: Button[][] = jobs.map((j) => [{ text: `${capitalize(jobPhrase(j))} — ${JOB_STATUS_LABEL[j.status]}`.slice(0, 60), data: `job:open:${j.id}` }]);
@@ -1401,6 +1451,52 @@ class Conversation {
     }
     this.cancel();
   }
+}
+
+
+/** Texto-guia: mostra o caminho com exemplos concretos, sem botões. */
+const GUIDE = [
+  "Você pode me contar, por exemplo:",
+  "• um móvel novo: \"peguei uma cadeira do seu João para pintar\"",
+  "• um gasto: \"gastei 90 reais em verniz\"",
+  "• um pagamento: \"a dona Maria me pagou 200 reais\"",
+  "• ou perguntar: \"quais serviços eu tenho?\"",
+].join("\n");
+
+/** Nomes curtos e claros de cada informação, para resumos e pendências. */
+const FIELD_LABEL: Record<ProjectField, string> = {
+  furniture_type: "qual é o móvel",
+  techniques: "qual trabalho vai ser feito",
+  client_name: "de quem é o móvel",
+  condition: "como o móvel está",
+  dimensions: "o tamanho do móvel",
+  size_class: "o tamanho do móvel",
+  surfaces: "se é só por fora ou por dentro também",
+  details: "os detalhes especiais",
+  repairs: "se precisa de conserto",
+  subcontract: "se alguma parte vai para outro profissional",
+  logistics: "se precisa buscar ou entregar",
+  material_status: "se você já tem o material",
+  application_method: "se vai usar pincel, rolo ou pistola",
+  deadline: "o prazo combinado",
+  payment_terms: "como o cliente vai pagar",
+};
+
+/** "Pergunta 3 de 11": deixa claro quanto falta (previsibilidade). */
+function questionProgress(facts: Job["facts"]): { current: number; total: number } {
+  let remaining = 0;
+  const skip: ProjectField[] = [];
+  let f = nextQuestion(facts, skip);
+  while (f && remaining < 30) {
+    remaining++;
+    skip.push(f);
+    f = nextQuestion(facts, skip);
+  }
+  const answered = QUESTION_ORDER.filter((field) => {
+    if (field === "dimensions") return !!(facts.dimensions || facts.size_class);
+    return !!facts[field];
+  }).length;
+  return { current: answered + 1, total: answered + remaining };
 }
 
 async function listJobs2(ctx: Ctx): Promise<Job[]> {

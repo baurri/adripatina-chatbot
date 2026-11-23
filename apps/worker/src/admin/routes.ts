@@ -29,6 +29,7 @@ import {
   submitForReview,
 } from "../services/quotes.js";
 import { cashflowReport, dashboardSummary, profitabilityReport, toCsv } from "../services/reports.js";
+import { approveAccessRequest, listAccessRequests, rejectAccessRequest } from "../services/access-requests.js";
 
 const decStr = z.string().regex(/^\d+(\.\d+)?$/);
 const cents = z.number().int().positive();
@@ -498,6 +499,12 @@ export function adminRoutes(): Hono<AppEnv> {
       since,
     );
     return c.json({ rows, dailyLimit: ctx.config.aiDailyRequestLimit, aiEnabled: ctx.config.aiEnabled, note: "Estimativas locais. O teto interno não garante limite na fatura Cloudflare." });
+  });
+  r.get("/access-requests", async (c) => c.json({ rows: await listAccessRequests(c.get("ctx"), c.req.query("status") ?? "PENDENTE") }));
+  r.post("/access-requests/:id/approve", async (c) => c.json(await approveAccessRequest(c.get("ctx"), c.req.param("id"), c.get("admin").id, await c.req.json()), 201));
+  r.post("/access-requests/:id/reject", async (c) => {
+    await rejectAccessRequest(c.get("ctx"), c.req.param("id"), c.get("admin").id);
+    return c.json({ ok: true });
   });
   r.get("/users", async (c) => c.json({ rows: await listUsers(c.get("ctx")) }));
   r.post("/users", async (c) => {

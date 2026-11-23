@@ -18,6 +18,7 @@ export interface DashboardSummary {
   uncalibratedTechniques: number;
   lowStock: number;
   pendingApprovals: number;
+  pendingAccessRequests: number;
 }
 
 function monthBounds(ctx: Ctx): { start: string; end: string } {
@@ -57,6 +58,7 @@ export async function dashboardSummary(ctx: Ctx): Promise<DashboardSummary> {
     uncalibratedTechniques: await n("SELECT COUNT(*) AS v FROM techniques WHERE calibrated = 0"),
     lowStock: inventory.filter((i) => i.low).length,
     pendingApprovals: await n("SELECT COUNT(*) AS v FROM approval_requests WHERE status = 'PENDENTE'"),
+    pendingAccessRequests: await n("SELECT COUNT(*) AS v FROM access_requests WHERE status = 'PENDENTE'"),
   };
 }
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, formatDate } from "../api";
 import { Badge, Field, Notice, Section, Table, useAction, useLoad } from "../ui";
+import { AccessRequests } from "./AccessRequests";
 
 export function Admin() {
   const users = useLoad(() => api<{ rows: { id: string; role: string; displayName: string; telegramUserId: string | null; adminEmail: string | null; active: boolean; telegramChatId: string | null }[] }>("/users"));
@@ -14,6 +15,7 @@ export function Admin() {
     <>
       <h1>Usuários, auditoria e IA</h1>
       <Notice message={message} />
+      <AccessRequests onChange={users.reload} />
       <Section title="Usuários autorizados">
         <p className="muted">O acesso ao bot é por <strong>ID numérico do Telegram</strong> (nunca por @usuário). O painel usa o e-mail autenticado pelo Cloudflare Access.</p>
         <Table

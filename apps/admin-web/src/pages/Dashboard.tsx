@@ -16,6 +16,7 @@ interface Summary {
   uncalibratedTechniques: number;
   lowStock: number;
   pendingApprovals: number;
+  pendingAccessRequests: number;
 }
 
 export function Dashboard() {
@@ -36,6 +37,7 @@ export function Dashboard() {
           </div>
           <Section title="Alertas">
             <ul className="alerts">
+              {data.summary.pendingAccessRequests > 0 && <li className="warn">{data.summary.pendingAccessRequests} pedido(s) de acesso ao bot. <a href="#/administracao">Liberar</a></li>}
               {data.summary.materialsWithoutPrice > 0 && <li className="danger">{data.summary.materialsWithoutPrice} materiais sem preço de reposição — propostas definitivas ficam bloqueadas. <a href="#/catalogo">Cadastrar preços</a></li>}
               {data.summary.uncalibratedTechniques > 0 && <li className="warn">{data.summary.uncalibratedTechniques} técnicas com parâmetros NÃO CALIBRADOS. <a href="#/catalogo">Revisar</a></li>}
               {data.summary.stalePrices > 0 && <li className="warn">{data.summary.stalePrices} preços desatualizados.</li>}

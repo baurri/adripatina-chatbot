@@ -16,7 +16,7 @@ describe("Fluxo ponta a ponta (aceite 28)", () => {
     const calc1 = await h.click("calc:yes");
     const t1 = h.allText(calc1);
     expect(t1).toMatch(/Falta o preço atual/);
-    expect(t1).toMatch(/administrador revisar/);
+    expect(t1).toMatch(/administrador conferir/);
     expect(await count(h, "SELECT COUNT(*) AS n FROM quotes WHERE status = 'AGUARDANDO_REVISAO'")).toBe(1);
     await processOutbox(h.ctx);
     expect(h.telegram.sent.some((s) => s.chatId === String(ADMIN_TG) && /aguardando revisão/.test(s.text ?? ""))).toBe(true);

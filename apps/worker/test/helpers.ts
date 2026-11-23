@@ -50,7 +50,7 @@ export async function artisanCreatesQuote(h: Harness): Promise<string> {
   await h.click("ans:nenhum");
   await h.click("ans:sem_prazo");
   const summary = await h.click("ans:entrada_entrega");
-  expect(h.allText(summary)).toMatch(/Posso calcular o orçamento/);
+  expect(h.allText(summary)).toMatch(/pode calcular/);
   return (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs"))!.id;
 }
 

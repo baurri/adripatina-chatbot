@@ -6,6 +6,7 @@ import { findUserByTelegramId, rememberChatId, type User } from "../repos/users.
 import { loadSession, logMessage } from "../repos/sessions.js";
 import { describeImage, transcribe, TranscriptionUnavailable } from "../ai/service.js";
 import { MediaTooLargeError } from "./client.js";
+import { recordAccessRequest } from "../services/access-requests.js";
 import { TelegramUpdateSchema, type TelegramMessage, type TelegramUpdate } from "./types.js";
 
 export type WebhookOutcome = "ok" | "duplicate" | "unauthorized_sender" | "ignored" | "invalid" | "failed";
@@ -15,7 +16,7 @@ export function verifyTelegramSecret(header: string | null | undefined, secret: 
   return timingSafeEqual(header ?? "", secret);
 }
 
-const GENERIC_DENIAL = "Desculpe, este bot é de uso privado.";
+const GENERIC_DENIAL = "Desculpe, este bot é de uso privado. Se você trabalha com a adripatina, peça ao administrador para liberar seu acesso.";
 
 /**
  * Processa um update:
@@ -73,6 +74,9 @@ async function route(ctx: Ctx, update: TelegramUpdate): Promise<WebhookOutcome> 
   if (!from) return "ignored";
   const user = await findUserByTelegramId(ctx, from.id);
   if (!user) {
+    // usuário inativo (desativado pelo admin) não gera pedido; os demais ficam registrados para aprovação
+    const inactive = await ctx.db.first("SELECT id FROM users WHERE telegram_user_id = ?", String(from.id));
+    if (!inactive && !from.is_bot) await recordAccessRequest(ctx, from, String(msg.chat.id));
     // negação genérica, sem revelar dados
     await ctx.telegram.sendMessage(String(msg.chat.id), GENERIC_DENIAL);
     return "unauthorized_sender";
