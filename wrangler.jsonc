@@ -17,32 +17,57 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "adripatina-local",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "adripatina",
+      "database_id": "c761a787-503e-4f75-829b-e4b08692fdf4",
       "migrations_dir": "db/migrations"
     }
   ],
-  "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files-local" }],
-  // Local: SEM binding de Workers AI (o binding de IA sempre acessa recursos remotos e pode gerar custo).
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files" }],
+  "ai": { "binding": "AI" },
   "triggers": { "crons": ["*/15 * * * *"] },
   "vars": {
-    "ENVIRONMENT": "local",
-    "AI_ENABLED": "false",
-    "AI_STT_MODEL": "",
-    "AI_EXTRACTION_MODEL": "",
+    "ENVIRONMENT": "production",
+    "AI_ENABLED": "true",
+    "AI_STT_MODEL": "@cf/openai/whisper-large-v3-turbo",
+    "AI_EXTRACTION_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
     "AI_VISION_MODEL": "",
     "AI_DAILY_REQUEST_LIMIT": "200",
     "AUDIO_MAX_SECONDS": "300",
     "AUDIO_MAX_BYTES": "10485760",
     "IMAGE_MAX_BYTES": "10485760",
     "MEDIA_RETENTION_DAYS": "180",
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
-    "ADMIN_DEV_BYPASS_EMAIL": "admin@exemplo.local",
-    "TELEGRAM_MODE": "mock",
+    "ACCESS_TEAM_DOMAIN": "https://baurri.cloudflareaccess.com",
+    "ACCESS_AUD": "8adb41e4e2d0046d0825df4cf995eb26a5bda29de7d4ebba6fa21532f5749b7a",
+    "ADMIN_DEV_BYPASS_EMAIL": "",
+    "TELEGRAM_MODE": "live",
     "DAILY_SUMMARY_HOUR": "7"
   },
   "env": {
+    "local": {
+      "name": "adripatina-chatbot-local",
+      "d1_databases": [
+        { "binding": "DB", "database_name": "adripatina-local", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "db/migrations" }
+      ],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files-local" }],
+      "triggers": { "crons": ["*/15 * * * *"] },
+      "vars": {
+        "ENVIRONMENT": "local",
+        "AI_ENABLED": "false",
+        "AI_STT_MODEL": "",
+        "AI_EXTRACTION_MODEL": "",
+        "AI_VISION_MODEL": "",
+        "AI_DAILY_REQUEST_LIMIT": "200",
+        "AUDIO_MAX_SECONDS": "300",
+        "AUDIO_MAX_BYTES": "10485760",
+        "IMAGE_MAX_BYTES": "10485760",
+        "MEDIA_RETENTION_DAYS": "180",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": "",
+        "ADMIN_DEV_BYPASS_EMAIL": "admin@exemplo.local",
+        "TELEGRAM_MODE": "mock",
+        "DAILY_SUMMARY_HOUR": "7"
+      }
+    },
     "staging": {
       "name": "adripatina-chatbot-staging",
       "d1_databases": [

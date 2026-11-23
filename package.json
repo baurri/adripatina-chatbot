@@ -9,6 +9,7 @@
     "node": ">=22.13"
   },
   "scripts": {
+    "postinstall": "pnpm --filter @adripatina/admin-web run build",
     "lint": "eslint .",
     "typecheck": "pnpm -r --parallel run typecheck",
     "test": "pnpm -r run test",
