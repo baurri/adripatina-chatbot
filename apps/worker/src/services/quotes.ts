@@ -1,7 +1,7 @@
-import { assertQuoteTransition, type FactValueMap, type QuoteStatus } from "@adripatina/domain";
-import { estimateArea, priceJob, scaleArea, type PricingInput, type PricingResult } from "@adripatina/pricing";
+import { assertQuoteTransition, isRealMeasurement, type FactValueMap, type QuoteStatus } from "@adripatina/domain";
+import { BED_FRAME_MARGIN_RANGE_M, estimateArea, estimateNominalArea, priceJob, scaleArea, type PricingInput, type PricingResult } from "@adripatina/pricing";
 import { renderCommercialQuote, renderInternalQuote, findConfidentialTerms, type CommercialQuoteDoc } from "@adripatina/pdf";
-import { addDays, canonicalJson, formatBRL, newId, sha256Hex } from "@adripatina/shared";
+import { Dec, addDays, canonicalJson, formatBRL, newId, sha256Hex } from "@adripatina/shared";
 import { BED_SIZES, detectBedSize, furnitureLabel, techniqueLabel } from "@adripatina/conversations";
 import { z } from "zod";
 import type { Ctx } from "../context.js";
@@ -34,7 +34,7 @@ export const PricingOverridesSchema = z.object({
 });
 export type PricingOverrides = z.infer<typeof PricingOverridesSchema>;
 
-export type ServiceGap = { code: "REPAIRS_HOURS_MISSING" | "TRANSPORT_COST_MISSING" | "CLIENT_MISSING" | "DIMENSIONS_UNCONFIRMED" | "BED_NOMINAL_SIZE"; message: string };
+export type ServiceGap = { code: "REPAIRS_HOURS_MISSING" | "TRANSPORT_COST_MISSING" | "CLIENT_MISSING" | "DIMENSIONS_UNCONFIRMED" | "BED_NOMINAL_SIZE" | "DIMENSIONS_NOMINAL"; message: string };
 
 /** Tamanho padrão citado ("queen") → medida do COLCHÃO, usada só como referência. */
 function nominalBedFromDescriptors(descriptors: readonly string[]): { label: string; width: string; length: string } | null {
@@ -154,7 +154,7 @@ export async function buildPricingInput(
   ctx: Ctx,
   job: Job,
   extra: { proposedPriceCents?: number | null; approvals?: { belowFloor?: boolean; uncalibrated?: boolean } } = {},
-): Promise<{ input: PricingInput; gaps: ServiceGap[] }> {
+): Promise<{ input: PricingInput; gaps: ServiceGap[]; notes: { code: string; message: string; ref?: string }[] }> {
   const settings = await getActiveSettings(ctx);
   const overrides = await getOverrides(ctx, job.id);
   const f = job.facts;
@@ -163,12 +163,35 @@ export async function buildPricingInput(
   const surfaces = f.surfaces?.value as FactValueMap["surfaces"] | null | undefined;
   const ft = f.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined;
   const isBed = ft?.type === "cama";
-  // cama com tamanho padrão e sem medida da estrutura: o colchão é só REFERÊNCIA (faixa, nunca exata)
+  const part = (f.scope?.value as FactValueMap["scope"] | null | undefined)?.part ?? null;
+  const profile = isBed ? ("bed" as const) : null;
+  // hipótese nominal do catálogo (ex.: colchão queen guardado como referência, nunca medida real)
+  const nominal = dims && !isRealMeasurement(dims) ? dims : null;
+  // cama com tamanho padrão só como descritor (sem fato de medida): referência em faixa
   const nominalBed = isBed && !dims ? nominalBedFromDescriptors(ft?.descriptors ?? []) : null;
-  const scopePart = (f.scope?.value as FactValueMap["scope"] | null | undefined)?.part ?? null;
-  const perPiece = overrides.areaM2Override
-    ? ({ kind: "exact", m2: overrides.areaM2Override } as const)
-    : estimateArea({ width: dims?.width ?? null, height: dims?.height ?? null, depth: dims?.depth ?? null, surfaces: surfaces ?? null, sizeClass: size ?? null, part: scopePart, profile: isBed ? "bed" : null, nominalBed }, settings.params);
+  const notes: { code: string; message: string; ref?: string }[] = [];
+  let perPiece: PricingInput["area"];
+  if (overrides.areaM2Override) perPiece = { kind: "exact", m2: overrides.areaM2Override };
+  else if (nominal) {
+    // HIPÓTESE nominal: sempre intervalo; colchão ganha a folga da estrutura (NÃO CALIBRADA)
+    const r = nominal.nominalRange ?? { min: nominal, max: nominal };
+    const margin = nominal.kind === "mattress" ? BED_FRAME_MARGIN_RANGE_M : null;
+    const plus = (v: string | undefined, m: string | undefined) => (v ? (m ? Dec.from(v).add(m).toString() : v) : null);
+    const geo = (x: typeof r.min, m: string | undefined) => ({
+      width: plus(x.width, m),
+      depth: plus(x.depth, m),
+      height: x.height ?? null,
+      diameter: x.diameter ?? null,
+      surfaces: surfaces ?? null,
+      sizeClass: null,
+      part,
+      profile,
+    });
+    perPiece = estimateNominalArea({ min: geo(r.min, margin?.min), max: geo(r.max, margin?.max), source: `nominal_${nominal.presetKey ?? "referencia"}` }, settings.params);
+    notes.push({ code: "NOMINAL_DIMENSIONS", message: `Medida de referência usada como hipótese: ${nominalLabel(nominal)}. A medida real da peça pode mudar o valor.` });
+  } else {
+    perPiece = estimateArea({ width: dims?.width ?? null, height: dims?.height ?? null, depth: dims?.depth ?? null, diameter: dims?.diameter ?? null, surfaces: surfaces ?? null, sizeClass: size ?? null, part, profile, nominalBed }, settings.params);
+  }
   // várias peças iguais num mesmo serviço ("duas cadeiras"): área × quantidade
   const quantity = !overrides.areaM2Override && ft?.quantity && ft.quantity > 1 ? ft.quantity : 1;
   const area = perPiece && quantity > 1 ? scaleArea(perPiece, quantity) : perPiece;
@@ -177,7 +200,7 @@ export async function buildPricingInput(
 
   const gaps: ServiceGap[] = [];
   // medida que veio de referência/estimativa e não foi confirmada nunca vira orçamento definitivo
-  if (f.dimensions?.value && f.dimensions.status !== "confirmed") {
+  if (f.dimensions?.value && f.dimensions.status !== "confirmed" && !nominal) {
     gaps.push({ code: "DIMENSIONS_UNCONFIRMED", message: "A medida usada ainda não foi confirmada (é referência ou estimativa)." });
   }
   if (nominalBed) {
@@ -192,6 +215,10 @@ export async function buildPricingInput(
     gaps.push({ code: "TRANSPORT_COST_MISSING", message: "Tem frete (buscar/entregar), mas o custo do transporte ainda não foi informado." });
   }
   if (!f.client_name?.value) gaps.push({ code: "CLIENT_MISSING", message: "Falta o nome do cliente." });
+  // medida nominal sem confirmação nunca vira proposta definitiva em silêncio
+  if (nominal && !nominal.standardConfirmed && !overrides.areaM2Override) {
+    gaps.push({ code: "DIMENSIONS_NOMINAL", message: `Falta a medida real da peça (estou usando ${nominalLabel(nominal)} como hipótese).` });
+  }
 
   const subs = await ctx.db.all<{ scope: string; cost_cents: number | null; logistics_cents: number; confirmed: number; lead_days: number | null }>(
     "SELECT scope, cost_cents, logistics_cents, confirmed, lead_days FROM subcontract_quotes WHERE job_id = ?",
@@ -231,7 +258,17 @@ export async function buildPricingInput(
       approvals: { belowFloor: extra.approvals?.belowFloor ?? false, uncalibrated: extra.approvals?.uncalibrated ?? false },
     },
     gaps,
+    notes,
   };
+}
+
+/** "colchão queen 1,58 × 1,98 m" — rótulo humano de uma hipótese nominal. */
+export function nominalLabel(d: FactValueMap["dimensions"]): string {
+  const m = (v?: string) => (v ? v.replace(".", ",") : "?");
+  const what = d.kind === "mattress" ? "colchão" : d.kind === "top" ? "tampo" : "peça";
+  const size = d.diameter ? `${m(d.diameter)} m de diâmetro` : [d.width, d.depth, d.height].filter(Boolean).map((v) => m(v)).join(" × ") + " m";
+  const range = d.nominalRange ? " (faixa usual)" : "";
+  return `${what} de ${size}${range}`;
 }
 
 function quoteLineStatements(ctx: Ctx, quoteId: string, r: PricingResult): D1PreparedStatement[] {
@@ -312,9 +349,9 @@ export async function calculateQuote(
   if (!job) throw new DomainError("NOT_FOUND", "Projeto não encontrado", 404);
   const settings = await getActiveSettings(ctx);
   const catalog = await loadCatalog(ctx);
-  const { input, gaps } = await buildPricingInput(ctx, job, extra);
+  const { input, gaps, notes } = await buildPricingInput(ctx, job, extra);
   const result = priceJob(input, settings.params, catalog, { now: ctx.clock() });
-  const fullResult = { ...result, gaps, definitiveAllowed: result.definitiveAllowed && gaps.length === 0 };
+  const fullResult = { ...result, warnings: [...result.warnings, ...notes], gaps, definitiveAllowed: result.definitiveAllowed && gaps.length === 0 };
   const now = nowIso(ctx);
   const validUntil = addDays(ctx.clock(), settings.params.quoteValidityDays).toISOString();
   // snapshot dos parâmetros usados — imutável junto ao orçamento
@@ -516,7 +553,8 @@ export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, num
   if (ft?.descriptors?.length) descParts.push(ft.descriptors.join(", "));
   if (ft?.doors) descParts.push(`${ft.doors} portas`);
   if (ft?.drawers) descParts.push(`${ft.drawers} gavetas`);
-  if (dims && (dims.height || dims.width || dims.depth)) {
+  if (dims && !isRealMeasurement(dims)) descParts.push(`medida de referência (hipótese): ${nominalLabel(dims)}`);
+  else if (dims && (dims.height || dims.width || dims.depth)) {
     descParts.push(`medidas aproximadas ${[dims.height, dims.width, dims.depth].filter(Boolean).map((d) => `${d!.replace(".", ",")} m`).join(" × ")}`);
   }
   const scope = [...new Set(r.labor.lines.map((l) => l.label))];

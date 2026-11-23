@@ -4,6 +4,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Quotes, QuoteDetail } from "./pages/Quotes";
 import { Jobs, JobDetail } from "./pages/Jobs";
 import { Catalog } from "./pages/Catalog";
+import { FurnitureCatalog } from "./pages/FurnitureCatalog";
 import { Settings } from "./pages/Settings";
 import { Duplicates } from "./pages/Duplicates";
 import { Reports } from "./pages/Reports";
@@ -17,6 +18,7 @@ const NAV: [string, string][] = [
   ["#/servicos", "Serviços"],
   ["#/clientes", "Clientes"],
   ["#/catalogo", "Materiais e estoque"],
+  ["#/moveis", "Catálogo de móveis"],
   ["#/duplicidades", "Duplicidades"],
   ["#/relatorios", "Relatórios"],
   ["#/conversas", "Conversas e aprendizado"],
@@ -56,6 +58,9 @@ export function App() {
       break;
     case "catalogo":
       page = <Catalog />;
+      break;
+    case "moveis":
+      page = <FurnitureCatalog />;
       break;
     case "duplicidades":
       page = <Duplicates />;

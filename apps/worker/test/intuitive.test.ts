@@ -15,22 +15,28 @@ async function facts(h: Harness): Promise<Record<string, { value: unknown; statu
 }
 
 const START = "Peguei uma cama de casal queen da Dona Licele para envernizar";
-/** estado, escopo da cama e medida da estrutura (ainda sem medir) — antes das perguntas seguintes */
-const BED_PREFIX = ["está boa", "a cama toda", "não sei"];
+
+/** Abertura do caso da cama: escopo (cama inteira) e medida da estrutura (ainda sem medir). */
+async function start(h: Harness): Promise<void> {
+  await h.send(START);
+  await h.send("a cama inteira");
+  await h.send("não tenho como medir agora");
+}
 
 describe("Conversa mais intuitiva (feedback do teste real)", () => {
   it("cama queen: medida do colchão é só referência, pergunta o escopo e nunca pergunta 'por dentro'", async () => {
     const h = await bed();
     const first = h.allText(await h.send(START));
-    expect(first).toMatch(/1,58 × 1,98 m\) é a medida do colchão/);
-    expect(first).not.toMatch(/já vou usar essa/);
+    // referência de mercado do COLCHÃO, com a ressalva de que a estrutura é maior
+    expect(first).toMatch(/Queen normalmente se refere ao colchão de 158 × 198 cm, mas a estrutura da cama costuma ser um pouco maior/);
+    expect(first).toMatch(/só na cabeceira ou na cama inteira\?/);
     expect(first).not.toMatch(/Pergunta \d+ de \d+/);
     const f = await facts(h);
-    // a estrutura NÃO recebe a medida do colchão
-    expect(f.dimensions).toBeUndefined();
-    expect((f.furniture_type?.value as { descriptors: string[] }).descriptors).toContain("queen");
-    expect(h.allText(await h.send("está boa"))).toMatch(/cama toda \(cabeceira, peseira e laterais\) ou só a cabeceira/);
-    expect(h.allText(await h.send("a cama toda"))).toMatch(/estrutura, não o colchão/);
+    // hipótese nominal: nunca medida real
+    expect(f.dimensions).toMatchObject({ value: { width: "1.58", depth: "1.98", source: "nominal", kind: "mattress" }, status: "unconfirmed" });
+    const dimsQ = h.allText(await h.send("a cama inteira"));
+    expect(dimsQ).toMatch(/largura e o comprimento da estrutura, por fora\?/);
+    await h.send("não tenho como medir agora");
     const all: string[] = [];
     for (const m of ["não sei", "não", "não", "já tenho tudo", "pincel"]) all.push(h.allText(await h.send(m)));
     expect(all.join("\n")).not.toMatch(/dentro|por fora|interna/i);
@@ -39,7 +45,7 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("pergunta do artesão ao bot é explicada e não vira resposta gravada", async () => {
     const h = await bed();
-    await h.send(START);
+    await start(h);
     await h.send("está boa");
     const r = h.allText(await h.send("pra que você precisa saber isso?"));
     expect(r).toMatch(/Boa pergunta!/);
@@ -50,6 +56,7 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
   it("'quanto fica?' no meio das perguntas oferece calcular agora como estimativa", async () => {
     const h = await bed();
     await h.send(START);
+    await h.send("a cama inteira");
     const r = await h.send("quanto fica?");
     expect(h.allText(r)).toMatch(/calculo agora com o que já sei/);
     expect(buttonsOf(r.at(-1))).toEqual(["calc:yes", "cmd:continue"]);
@@ -57,8 +64,12 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("'Mas e o valor?' não é gravado como resposta de texto livre", async () => {
     const h = await bed();
-    await h.send(START);
-    for (const m of [...BED_PREFIX, "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
+    await start(h);
+    await h.send("está boa");
+    await h.send("não");
+    await h.send("não");
+    await h.send("já tenho tudo");
+    await h.send("pincel");
     await h.send("não precisa, ela traz e busca");
     await h.send("Mas e o valor?"); // pergunta do prazo pendente
     expect((await facts(h)).deadline).toBeUndefined();
@@ -66,8 +77,10 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("informação repetida é confirmada com naturalidade, sem 'não entendi'", async () => {
     const h = await bed();
-    await h.send(START);
-    for (const m of [...BED_PREFIX, "não", "não"]) await h.send(m);
+    await start(h);
+    await h.send("está boa");
+    await h.send("não");
+    await h.send("não");
     const r = h.allText(await h.send("é uma cama queen"));
     expect(r).toMatch(/Isso, já anotei/);
     expect(r).not.toMatch(/não entendi/);
@@ -76,8 +89,8 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("logística parcial: 'ela vai deixar a cama na minha casa' = não precisa buscar; pergunta só a volta", async () => {
     const h = await bed();
-    await h.send(START);
-    for (const m of [...BED_PREFIX, "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
+    await start(h);
+    for (const m of ["está boa", "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
     const r = h.allText(await h.send("ela vai deixar a cama na minha casa"));
     expect(r).toMatch(/não precisa buscar/);
     expect(r).toMatch(/o cliente vem pegar ou você vai entregar\?/);
@@ -87,8 +100,8 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("resposta de outra pergunta dita antes da hora vai para o campo certo", async () => {
     const h = await bed();
-    await h.send(START);
-    for (const m of [...BED_PREFIX, "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
+    await start(h);
+    for (const m of ["está boa", "não", "não", "já tenho tudo", "pincel"]) await h.send(m);
     // pergunta pendente: transporte
     const r = h.allText(await h.send("sem pressa"));
     expect(r).toMatch(/prazo: sem prazo/);
@@ -103,8 +116,8 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("pagamento dito na pergunta do prazo é guardado como pagamento, não como prazo", async () => {
     const h = await bed();
-    await h.send(START);
-    for (const m of [...BED_PREFIX, "não", "não", "já tenho tudo", "pincel", "não precisa, ela traz e busca"]) await h.send(m);
+    await start(h);
+    for (const m of ["está boa", "não", "não", "já tenho tudo", "pincel", "não precisa, ela traz e busca"]) await h.send(m);
     await h.send("entrada agora metade na entrega");
     const f = await facts(h);
     expect(f.deadline).toBeUndefined();
@@ -113,8 +126,8 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
 
   it("aprendizado de material só registra os materiais que ele citou", async () => {
     const h = await bed();
-    await h.send(START);
-    for (const m of [...BED_PREFIX, "não", "não"]) await h.send(m);
+    await start(h);
+    for (const m of ["está boa", "não", "não"]) await h.send(m);
     await h.send("vou comprar lixa e massa");
     const keys = (await h.ctx.db.all<{ entity_key: string }>("SELECT entity_key FROM learning_observations WHERE kind = 'MATERIAL_SOURCE'")).map((r) => r.entity_key);
     expect(keys).not.toContain("verniz");
@@ -126,7 +139,7 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
     const h = await bed();
     h.ctx.ai.extraction = h.extraction;
     h.extraction.answerResponse = { kind: "value", value: "danificado" };
-    await h.send(START);
+    await start(h);
     await h.send("olha, o pé tá podre e a cabeceira soltando");
     expect(h.extraction.calls.interpretAnswer).toBeGreaterThanOrEqual(0);
     expect((await facts(h)).condition?.value).toBe("danificado");
@@ -136,20 +149,20 @@ describe("Conversa mais intuitiva (feedback do teste real)", () => {
     const h = await bed();
     h.ctx.ai.extraction = h.extraction;
     h.extraction.answerResponse = { kind: "value", value: "R$ 999" };
-    await h.send(START);
+    await start(h);
     await h.send("hmm deixa eu ver aqui");
     expect((await facts(h)).condition).toBeUndefined();
     expect(await h.ctx.db.first("SELECT 1 AS x FROM jobs WHERE facts_json LIKE '%R$ 999%' OR facts_json LIKE '%99900%'")).toBeNull();
   });
 
-  it("reescrita da IA que muda números é descartada (fica a pergunta-base)", async () => {
+  it("mensagem da IA que inventa números é descartada (fica a pergunta-base)", async () => {
     const h = await bed();
     h.ctx.ai.extraction = h.extraction;
     h.ctx.config = { ...h.ctx.config, phrasingVariety: true };
-    h.extraction.rephraseResponse = "Cobra R$ 500 e pronto, tá bom?";
+    h.extraction.generateHandler = (req) => (req.purpose.startsWith("compose") ? { text: "Cobra R$ 500 e pronto, tá bom?" } : null);
     const r = h.allText(await h.send(START));
     expect(r).not.toMatch(/500/);
-    expect(h.extraction.calls.rephrase).toBeGreaterThan(0);
-    expect(r).toMatch(/(está|tá|anda|chegou).*\?/i); // pergunta-base do estado (3 variações sorteadas, sem a reescrita)
+    expect(h.extraction.calls.generate).toBeGreaterThan(0);
+    expect(r).toMatch(/só na cabeceira ou na cama inteira\?/); // pergunta-base determinística
   });
 });

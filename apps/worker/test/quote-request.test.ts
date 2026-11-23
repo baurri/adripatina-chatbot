@@ -266,7 +266,8 @@ describe("Ajuste 2 — fluxo simples (legado) também respeita o contexto", () =
     const t = h.allText(done);
     expect(t).toMatch(/agora está em execução/);
     expect(t).toMatch(/Agora, voltando/);
-    expect(t).toMatch(/como ela está hoje/);
+    // retoma exatamente a pergunta que estava aberta (qual é a mesa)
+    expect(t).toMatch(/Essa mesa é qual destes/);
   });
 
   it("andamento 'ainda não comecei' não muda o status", async () => {

@@ -1,3 +1,4 @@
+import { FURNITURE_CATALOG } from "./furniture/catalog.js";
 import { normalizeText } from "@adripatina/shared";
 
 /** Vocabulário de móveis: forma canônica → variações (sem acento, minúsculas). */
@@ -145,9 +146,12 @@ export function findDescriptors(text: string): string[] {
 }
 
 export function furnitureLabel(key: string | null | undefined): string {
-  if (!key) return "móvel";
-  return FURNITURE[key]?.label ?? key.replace(/_/g, " ");
+  if (!key || key === "movel") return "móvel";
+  return FURNITURE[key]?.label ?? CATALOG_NAMES.get(key) ?? key.replace(/_/g, " ");
 }
+
+/** Nomes do catálogo mestre para tipos que o vocabulário antigo não tem (ex.: "carrinho de chá"). */
+const CATALOG_NAMES = new Map(FURNITURE_CATALOG.map((t) => [t.key, t.name.toLowerCase()]));
 
 export function furnitureArticle(key: string | null | undefined): "a" | "o" {
   return key && FURNITURE[key]?.feminine ? "a" : "o";

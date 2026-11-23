@@ -6,3 +6,5 @@ export * from "./ai.js";
 export * from "./multi.js";
 export * from "./pricing-answers.js";
 export * from "./ai-answers.js";
+export * from "./furniture/index.js";
+export * from "./llm/index.js";

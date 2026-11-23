@@ -5,6 +5,8 @@ export interface GeometryInput {
   width?: string | null; // metros
   height?: string | null;
   depth?: string | null;
+  /** móveis redondos (metros) */
+  diameter?: string | null;
   surfaces?: "externa" | "interna_externa" | null;
   sizeClass?: "pequeno" | "medio" | "grande" | null;
   /** "tampo": só a face superior; "cabeceira": só a cabeceira da cama */
@@ -93,7 +95,13 @@ function estimateTopArea(g: GeometryInput, s: PricingSettings): AreaInput | null
  * Interna: externa × fator interno configurável (NÃO CALIBRADO).
  * Sem medidas completas, usa a faixa do porte (NÃO CALIBRADA) e devolve intervalo.
  */
-export function estimateArea(g: GeometryInput, s: PricingSettings): AreaInput | null {
+/** Lado do quadrado de mesma área que o círculo de diâmetro d: d × √π / 2. */
+const ROUND_TO_SQUARE = "0.8862";
+
+export function estimateArea(g0: GeometryInput, s: PricingSettings): AreaInput | null {
+  const diam = Dec.tryParse(g0.diameter ?? null);
+  // redondo: usa o quadrado de mesma área do tampo (aproximação documentada)
+  const g = diam && diam.gt(0) && !g0.width && !g0.depth ? { ...g0, width: diam.mul(ROUND_TO_SQUARE).round(3).toString(), depth: diam.mul(ROUND_TO_SQUARE).round(3).toString() } : g0;
   if (g.part === "tampo") return estimateTopArea(g, s);
   if (g.profile === "bed") {
     if (g.part === "cabeceira") {
@@ -148,4 +156,27 @@ export function estimateArea(g: GeometryInput, s: PricingSettings): AreaInput | 
     };
   }
   return null;
+}
+
+/**
+ * Folga da estrutura da cama além do colchão (por lado somado), em metros.
+ * NÃO CALIBRADO: a medida do colchão nunca é a medida da estrutura.
+ */
+export const BED_FRAME_MARGIN_RANGE_M = { min: "0", max: "0.20" } as const;
+
+export interface NominalGeometry {
+  min: GeometryInput;
+  max: GeometryInput;
+  /** rótulo da hipótese, ex.: "nominal_queen_158" */
+  source: string;
+}
+
+/** Área de uma HIPÓTESE nominal: sempre um intervalo (nunca "exata"). */
+export function estimateNominalArea(n: NominalGeometry, s: PricingSettings): AreaInput | null {
+  const lo = estimateArea(n.min, s);
+  const hi = estimateArea(n.max, s);
+  if (!lo || !hi) return lo ?? hi ?? null;
+  const minM2 = Dec.from(lo.kind === "exact" ? lo.m2 : lo.minM2);
+  const maxM2 = Dec.from(hi.kind === "exact" ? hi.m2 : hi.maxM2);
+  return { kind: "range", minM2: Dec.min(minM2, maxM2).toString(), maxM2: Dec.max(minM2, maxM2).toString(), source: n.source };
 }

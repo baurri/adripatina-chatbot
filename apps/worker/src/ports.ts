@@ -42,6 +42,18 @@ export interface ExtractionProvider {
   interpretAnswer?(field: string, question: string, answer: string): Promise<unknown>;
   /** reescreve uma pergunta de forma natural (validada pelo chamador) */
   rephrase?(text: string): Promise<string>;
+  /** chamada genérica (JSON quando houver schema); SEMPRE validada pelo chamador */
+  generate?(req: GenerateRequest): Promise<unknown>;
+}
+
+export interface GenerateRequest {
+  /** objetivo da chamada, para auditoria (ex.: "compose:ask_dimensions") */
+  purpose: string;
+  system: string;
+  user: string;
+  jsonSchema?: object;
+  maxTokens: number;
+  temperature?: number;
 }
 
 export interface VisionProvider {

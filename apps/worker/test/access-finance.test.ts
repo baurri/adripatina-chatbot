@@ -220,6 +220,7 @@ describe("Financeiro integrado (aceites 5, 10, 11, 12)", () => {
     await h.send("Peguei uma cadeira do seu João para fazer pátina");
     await h.click("ans:bom");
     await h.send("90 de altura, 45 de largura e 45 de fundura");
+    await h.send("os dois, madeira e estofado"); // pergunta específica de cadeira
     await h.click("ans:nao");
     await h.send("sim, o assento vai para o tapeceiro");
     await h.calibrateAndPrice();

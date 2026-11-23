@@ -282,8 +282,15 @@ export function describeFact(field: ProjectField, value: unknown): string {
       return `estado: ${v as string}`;
     case "dimensions": {
       const d = v as FactValueMap["dimensions"];
-      const parts = [d.height && `altura ${fmtM(d.height)}`, d.width && `largura ${fmtM(d.width)}`, d.depth && `fundura ${fmtM(d.depth)}`].filter(Boolean);
-      return `medidas: ${parts.join(", ")}`;
+      // hipótese nominal (ex.: colchão queen) nunca aparece como se fosse medida da peça
+      if (d.source === "nominal" || d.source === "estimated" || d.source === "inferred") {
+        const what = d.kind === "mattress" ? "colchão" : d.kind === "top" ? "tampo" : "peça";
+        const size = d.diameter ? `${fmtM(d.diameter)} de diâmetro` : [d.width, d.depth, d.height].filter(Boolean).map((x) => fmtM(x!)).join(" × ");
+        return `medida de referência: ${what} ${size}${d.standardConfirmed ? " (tamanho padrão confirmado)" : " (a confirmar)"}`;
+      }
+      const parts = [d.diameter && `diâmetro ${fmtM(d.diameter)}`, d.height && `altura ${fmtM(d.height)}`, d.width && `largura ${fmtM(d.width)}`, d.depth && `fundura ${fmtM(d.depth)}`].filter(Boolean);
+      const open = d.open?.width ? ` (aberta: ${fmtM(d.open.width)})` : "";
+      return `medidas: ${parts.join(", ")}${open}`;
     }
     case "size_class":
       return `tamanho: ${v as string}`;

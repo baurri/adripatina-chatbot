@@ -33,19 +33,65 @@ export async function assertAiBudget(ctx: Ctx): Promise<void> {
   if ((r?.n ?? 0) >= ctx.config.aiDailyRequestLimit) throw new AiBudgetExceeded();
 }
 
-async function logUsage(
-  ctx: Ctx,
-  u: { model: string; task: "stt" | "extraction" | "vision"; inputUnits?: number; outputUnits?: number; unitKind?: string; success: boolean; latencyMs: number; errorCode?: string },
-): Promise<void> {
+export interface AiUsageLog {
+  model: string;
+  task: "stt" | "extraction" | "vision";
+  inputUnits?: number;
+  outputUnits?: number;
+  unitKind?: string;
+  success: boolean;
+  latencyMs: number;
+  errorCode?: string;
+  /** observabilidade (0006): objetivo, schema, fallback, confiança e decisão — sem prompts nem segredos */
+  purpose?: string;
+  schemaName?: string;
+  fallbackUsed?: boolean;
+  confidence?: number | null;
+  decision?: unknown;
+}
+
+export async function logUsage(ctx: Ctx, u: AiUsageLog): Promise<void> {
   let neurons: number | null = null;
   if (u.task === "stt" && u.inputUnits !== undefined) neurons = (NEURONS_PER_AUDIO_MINUTE[u.model] ?? 0) * (u.inputUnits / 60);
   if (u.task === "extraction" && u.inputUnits !== undefined) {
     const rates = NEURONS_PER_M_TOKENS[u.model];
     if (rates) neurons = (rates[0] * u.inputUnits + rates[1] * (u.outputUnits ?? 0)) / 1_000_000;
   }
+  const id = newId();
+  const cost = neurons === null ? null : Math.round((neurons / 1000) * USD_PER_1000_NEURONS * 1_000_000);
+  if (u.purpose !== undefined) {
+    try {
+      await ctx.db.run(
+        `INSERT INTO ai_usage (id, provider, model, task, input_units, output_units, unit_kind, estimated_neurons, estimated_cost_usd_micros, success, latency_ms, error_code, created_at, purpose, schema_name, fallback_used, confidence, decision_json, correlation_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id,
+        "workers-ai",
+        u.model,
+        u.task,
+        u.inputUnits ?? null,
+        u.outputUnits ?? null,
+        u.unitKind ?? null,
+        neurons,
+        cost,
+        u.success ? 1 : 0,
+        u.latencyMs,
+        u.errorCode ?? null,
+        nowIso(ctx),
+        u.purpose,
+        u.schemaName ?? null,
+        u.fallbackUsed === undefined ? null : u.fallbackUsed ? 1 : 0,
+        u.confidence ?? null,
+        u.decision === undefined ? null : JSON.stringify(u.decision).slice(0, 2000),
+        ctx.requestId,
+      );
+      return;
+    } catch {
+      /* migration 0006 ainda não aplicada: grava no formato antigo */
+    }
+  }
   await ctx.db.run(
     `INSERT INTO ai_usage (id, provider, model, task, input_units, output_units, unit_kind, estimated_neurons, estimated_cost_usd_micros, success, latency_ms, error_code, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    newId(),
+    id,
     "workers-ai",
     u.model,
     u.task,
@@ -61,7 +107,7 @@ async function logUsage(
   );
 }
 
-async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+export async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -77,17 +123,17 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 /** Circuit breaker simples por isolate: após falhas seguidas, pausa a IA por alguns minutos. */
 const breaker = { failures: 0, openUntil: 0 };
-function breakerOpen(now: number): boolean {
+export function breakerOpen(now: number): boolean {
   return breaker.openUntil > now;
 }
-function recordFailure(now: number): void {
+export function recordFailure(now: number): void {
   breaker.failures++;
   if (breaker.failures >= 3) {
     breaker.openUntil = now + 5 * 60_000;
     breaker.failures = 0;
   }
 }
-function recordSuccess(): void {
+export function recordSuccess(): void {
   breaker.failures = 0;
 }
 export function resetAiBreaker(): void {
@@ -103,8 +149,8 @@ export async function interpret(ctx: Ctx, text: string): Promise<NluResult> {
   const rules = interpretRules(text);
   const provider = ctx.ai.extraction;
   if (!provider) return rules;
-  // regras com alta confiança dispensam a IA (economia)
-  if (rules.confidence >= 0.9 && rules.intent !== "unknown") return rules;
+  // uso de IA autorizado: só dispensa para respostas curtíssimas e inequívocas (sim/não/cancelar)
+  if (rules.confidence >= 0.9 && ["yes", "no", "cancel", "help"].includes(rules.intent) && text.trim().split(/\s+/).length <= 3) return rules;
   const now = ctx.clock().getTime();
   if (breakerOpen(now)) return rules;
   const started = Date.now();

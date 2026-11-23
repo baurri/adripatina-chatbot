@@ -1,5 +1,18 @@
 # Resultados de testes
 
+## 23/11/2026 — IA conversacional e catálogo mestre (branch feat/ia-catalogo-moveis)
+
+`pnpm check` (lint → typecheck → test → build): **sucesso**.
+
+| Pacote | Testes |
+|---|---|
+| packages/shared | 18 ✅ |
+| packages/domain | 7 ✅ |
+| packages/pricing | 26 ✅ |
+| packages/pdf | 7 ✅ |
+| packages/conversations | 98 ✅ (inclui 16 do catálogo: carga, apelidos, diminutivos, ambiguidade, contexto, presets, ordem das medidas, perguntas por tipo) |
+| apps/worker | 134 ✅, 1 pulado (inclui 20 novos: carga idempotente, edição auditada, tipo inativo, "armário"/"cama grande" pedem esclarecimento, portas/gavetas/estofado/exposição, diâmetro, medida aberta, móvel não identificado, hipótese nominal × medida real, "é o padrão", só cabeceira, validador de mensagens, fallback de IA, JSON inválido sem efeito) |
+
 ## 22/11/2026 — Windows 11, Node 24.14.1, pnpm 9.15.9, Wrangler 4.x
 
 `pnpm check` (lint → typecheck → test → build): **sucesso (exit 0)**.

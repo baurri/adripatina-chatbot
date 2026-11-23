@@ -1,12 +1,12 @@
 import {
-  BED_SIZES,
   FIELD_EXPLANATION,
   AMBIGUOUS_FURNITURE,
   ambiguousFurnitureKind,
   asksForPrice,
   findFurniture,
   resolveAmbiguousFurniture,
-  detectBedSize,
+  findFurnitureMentions,
+  keyTermsOf,
   findMethods,
   furnitureHasInterior,
   isQuestionToBot,
@@ -30,7 +30,10 @@ import {
 import { nextQuestion, QUESTION_ORDER, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
 import { extractCount, formatBRL, formatDateBR, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
-import { aiInterpretAnswer, aiRephrase, interpret } from "../ai/service.js";
+import { aiInterpretAnswer, interpret } from "../ai/service.js";
+import { composeMessage } from "../ai/orchestrator.js";
+import type { LoadedCatalog } from "../repos/furniture.js";
+import { askCatalogStep, catalogAnswer, catalogTypeSync, classifyFurniture, ensureCatalog, nextCatalogStep, nominalSettled } from "./catalog-flow.js";
 import type { OutgoingMessage } from "../ports.js";
 import {
   addJobEvent,
@@ -129,6 +132,8 @@ export class Conversation {
   /** confirmação curta da última resposta, enviada junto com a próxima pergunta */
   ack: string | null = null;
   session!: Session;
+  /** catálogo mestre de móveis (carregado sob demanda, uma vez por mensagem) */
+  furnitureCatalog: LoadedCatalog | null = null;
   constructor(
     readonly ctx: Ctx,
     readonly input: EngineInput,
@@ -140,6 +145,11 @@ export class Conversation {
 
   say(text: string, buttons?: Button[][]): void {
     this.out.push(buttons ? { text, buttons } : { text });
+  }
+
+  /** mensagens já enviadas neste turno (a IA não deve repetir a mesma frase) */
+  recentBotTexts(): string[] {
+    return this.out.map((o) => o.text).slice(-3);
   }
 
   /** decisão de roteamento da mensagem atual (auditoria) */
@@ -386,6 +396,14 @@ export class Conversation {
     if (nlu.intent === "yes" || nlu.intent === "no") {
       this.say(`Certo! ${GUIDE}`);
       return;
+    }
+    // móvel que só o catálogo conhece (apelido novo, "uma peça diferente para restaurar"): é serviço novo
+    {
+      const probe = this.mention(text, nlu);
+      await this.catalogFurniture(probe, text);
+      if (probe.furnitureType && (probe.techniques?.length || probe.clientName || /\b(peguei|pegar|vou pegar|trouxe|chegou|restaurar|reformar|pintar|envernizar|lixar)\b/.test(normalizeText(text)))) {
+        return this.newJobMention(text, nlu);
+      }
     }
     // "testando o áudio", "tá funcionando?" → responder como gente, não como erro
     if (/\b(testar|testando|teste|funcionando|ta me ouvindo|esta me ouvindo|ta ouvindo)\b/i.test(normalizeText(text))) {
@@ -662,6 +680,37 @@ ${GUIDE}`);
   }
 
   // ---------------------------------------------------- novo projeto / dedupe
+  /**
+   * Catálogo mestre na abertura: reconhece tipos que o vocabulário antigo não conhece
+   * ("carrinho de chá", apelidos cadastrados no painel) e registra provisoriamente um
+   * móvel não identificado quando há serviço descrito ("uma peça diferente para restaurar").
+   */
+  async catalogFurniture(m: MentionSnapshot, text: string): Promise<void> {
+    if (m.furnitureType) return;
+    const cat = await ensureCatalog(this);
+    const mentions = findFurnitureMentions(text, cat.types, cat.ambiguous);
+    const hit = mentions.find((x) => x.best && x.best.key !== "movel_nao_identificado");
+    if (hit?.best) {
+      const t = cat.types.find((x) => x.key === hit.best!.key)!;
+      m.furnitureType = t.legacyKey ?? t.key;
+      m.catalogKey = t.key;
+      return;
+    }
+    const generic = mentions.find((x) => x.candidates.length > 1 && !x.candidates.some((c) => c.key === "movel_nao_identificado"));
+    if (generic) {
+      // termo genérico ("armário"): cadastra pelo tipo antigo mais próximo e pergunta qual é depois
+      const t = cat.types.find((x) => x.key === generic.candidates[0]!.key);
+      m.furnitureType = t?.legacyKey ?? "movel";
+      return;
+    }
+    const unknownPiece = mentions.some((x) => x.candidates.some((c) => c.key === "movel_nao_identificado"));
+    if (unknownPiece && (m.techniques?.length || /\b(restaurar|reformar|pintar|envernizar|lixar|consertar)\b/.test(normalizeText(text)))) {
+      m.furnitureType = "movel";
+      m.catalogKey = "movel_nao_identificado";
+      m.descriptors = [...new Set([...(m.descriptors ?? []), text.slice(0, 120)])];
+    }
+  }
+
   async newJobMention(text: string, nlu: NluResult, extra: Partial<MentionSnapshot> = {}): Promise<void> {
     const mention = this.mention(text, nlu, extra);
     // nome que não basta ("mesinha", "o móvel das louças"): pergunta antes de cadastrar, sem assumir
@@ -675,6 +724,7 @@ ${GUIDE}`);
       this.say(q.question, [q.options.map((o, i) => ({ text: o.label, data: `amb:${amb}:${i}` }))]);
       return;
     }
+    await this.catalogFurniture(mention, text);
     if (!mention.furnitureType && !mention.photoHash) {
       // ainda não sabemos o móvel: perguntar antes de cadastrar
       this.session.flow = "intake";
@@ -718,6 +768,7 @@ ${GUIDE}`);
     if (nlu.entities.clientName) m.clientName = nlu.entities.clientName;
     if (nlu.entities.techniques.length) m.techniques = nlu.entities.techniques;
     m.text = `${m.text} ${text}`.trim();
+    if (!m.furnitureType) await this.catalogFurniture(m, text);
     if (!m.furnitureType) {
       if (ans.kind === "dont_know") {
         this.say("Sem problema. Me conta como é o móvel, do seu jeito (por exemplo: \"um armário de cozinha\").");
@@ -790,8 +841,9 @@ ${GUIDE}`);
     if (mention.photoAttachmentId) await this.ctx.db.run("UPDATE attachments SET job_id = ? WHERE id = ?", job.id, mention.photoAttachmentId);
     const res = await this.applyMention(job.id, mention);
     let fresh = (await getJob(this.ctx, job.id))!;
-    const bedNote = await this.applyBedSize(fresh, mention.text);
-    if (bedNote) fresh = (await getJob(this.ctx, job.id))!;
+    // catálogo mestre: tipo exato do móvel e medida de referência (hipótese, nunca medida real)
+    const bedNote = await classifyFurniture(this, job.id, mention.text);
+    fresh = (await getJob(this.ctx, job.id))!;
     const noted = res.added.length ? `${pick(["Anotei um serviço novo:", "Beleza, serviço novo anotado:", "Show! Anotei:"], this.seed())}\n${res.added.map((a) => `• ${a}`).join("\n")}` : "Anotei um serviço novo.";
     const intro = pick(
       ["Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.", "Vou te perguntando o resto aos pouquinhos, tá? Pode responder do jeito que for mais fácil, áudio ou texto."],
@@ -838,7 +890,9 @@ ${GUIDE}`);
       const existing = job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined;
       const descriptors = [...new Set([...(existing?.descriptors ?? []), ...(m.descriptors ?? [])])];
       if (!existing || existing.type === m.furnitureType) {
-        const value: FactValueMap["furniture_type"] = { type: m.furnitureType, descriptors, ...(m.doors !== undefined ? { doors: m.doors } : existing?.doors !== undefined ? { doors: existing.doors } : {}), ...(m.drawers !== undefined ? { drawers: m.drawers } : existing?.drawers !== undefined ? { drawers: existing.drawers } : {}) };
+        // campos do catálogo (tipo exato, detalhes) são preservados: repetir o móvel não é contradição
+        const catalogPart = existing ? Object.fromEntries(Object.entries(existing).filter(([k]) => ["catalogKey", "kindTerm", "kindCandidates", "attributes", "quantity"].includes(k))) : {};
+        const value: FactValueMap["furniture_type"] = { ...catalogPart, ...(m.catalogKey && !catalogPart.catalogKey ? { catalogKey: m.catalogKey } : {}), type: m.furnitureType, descriptors, ...(m.doors !== undefined ? { doors: m.doors } : existing?.doors !== undefined ? { doors: existing.doors } : {}), ...(m.drawers !== undefined ? { drawers: m.drawers } : existing?.drawers !== undefined ? { drawers: existing.drawers } : {}) };
         if (existing && JSON.stringify([...existing.descriptors ?? []].sort()) !== JSON.stringify([...descriptors].sort()) || (existing && m.doors !== undefined && existing.doors !== m.doors && existing.doors === undefined)) {
           // acrescentar características não é contradição
           await setFact(this.ctx, jobId, "furniture_type", value, { actor: this.input.user.id, source: m.source, messageId: m.messageId, correction: true, changeKind: "set" });
@@ -969,9 +1023,12 @@ ${GUIDE}`);
   skipFieldsFor(job: Job): ProjectField[] {
     const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
     const skip: ProjectField[] = [];
-    if (furnitureHasInterior(ft) === false) skip.push("surfaces");
+    const type = catalogTypeSync(this, job);
+    if (type ? !type.hasInterior : furnitureHasInterior(ft) === false) skip.push("surfaces");
     // escopo só é perguntado na cama (cama toda × só a cabeceira) no fluxo de um móvel
     if (ft !== "cama") skip.push("scope");
+    // hipótese nominal já tratada: a medida não volta a ser perguntada (segue como estimativa)
+    if (nominalSettled(this, job)) skip.push("dimensions");
     return skip;
   }
 
@@ -1008,12 +1065,34 @@ ${GUIDE}`);
       ];
       return variants[this.seed(seedOffset) % variants.length]!;
     }
-    return aiRephrase(this.ctx, naturalQuestion(field, this.questionContext(job, seedOffset)));
+    const base = naturalQuestion(field, this.questionContext(job, seedOffset));
+    const known = summarizeJob(job).confirmed.slice(0, 6);
+    const msg = await composeMessage(this.ctx, {
+      purpose: `ask_${field}`,
+      fallback: base,
+      question: base,
+      keyTerms: keyTermsOf(base),
+      facts: known,
+      avoid: known,
+      greet: false,
+      recent: this.recentBotTexts(),
+      topicEmoji: null,
+    });
+    return msg.text;
   }
 
   async askNext(job: Job): Promise<void> {
+    await ensureCatalog(this);
     const field = nextQuestion(job.facts, this.skipFieldsFor(job));
     this.session.context.unparsedCount = 0;
+    delete this.session.context.catalogQ;
+    // catálogo mestre: tipo exato, medidas na ordem do móvel e perguntas específicas (uma por vez)
+    const step = await nextCatalogStep(this, job, field);
+    if (step) {
+      const ack = this.ack ? `${this.ack}\n\n` : "";
+      this.ack = null;
+      return askCatalogStep(this, job, step, ack);
+    }
     if (!field) {
       if (this.ack) this.say(this.ack);
       this.ack = null;
@@ -1070,24 +1149,6 @@ ${GUIDE}`);
     );
   }
 
-  /**
-   * Cama com tamanho padrão (casal, queen, king...). A medida padrão é do COLCHÃO, não da
-   * estrutura: fica só como referência (descritor), nunca como medida da cama. O cálculo usa
-   * uma faixa conservadora e o orçamento continua preliminar até a estrutura ser medida.
-   */
-  async applyBedSize(job: Job, text: string): Promise<string | null> {
-    const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
-    if (ft !== "cama") return null;
-    const size = detectBedSize(text);
-    if (!size) return null;
-    const bed = BED_SIZES[size]!;
-    const fv = job.facts.furniture_type!.value as FactValueMap["furniture_type"];
-    const others = (fv.descriptors ?? []).filter((d) => !detectBedSize(d));
-    if ((fv.descriptors ?? []).includes(bed.label)) return null;
-    await setFact(this.ctx, job.id, "furniture_type", { ...fv, descriptors: [...others, bed.label] }, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
-    return `Anotei: cama ${bed.label}. 🛏️ O padrão ${bed.label} (${bed.width.replace(".", ",")} × ${bed.length.replace(".", ",")} m) é a medida do colchão — a cama por fora é maior. Uso só como referência até você medir a estrutura.`;
-  }
-
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
     const job = await getJob(this.ctx, this.session.activeJobId!);
     if (!job) {
@@ -1095,7 +1156,9 @@ ${GUIDE}`);
       this.session.activeJobId = null;
       return this.onText(text, false);
     }
-    const field = this.session.flow === "collecting" ? this.session.lastQuestion : null;
+    // resposta a uma pergunta do catálogo (tipo do móvel, medidas, portas, estofado...)
+    if (this.session.context.catalogQ && nlu.intent !== "correction" && (await catalogAnswer(this, job, text, nlu.intent))) return;
+    const field = this.session.flow === "collecting" ? (this.session.lastQuestion ?? nextQuestion(job.facts, this.skipFieldsFor(job))) : null;
 
     // pergunta de volta ("como assim? cama tem dentro e fora?") → explicar, nunca gravar
     if (field && isQuestionToBot(text) && !asksForPrice(text)) return this.explainQuestion(job, field);
@@ -1211,7 +1274,7 @@ ${GUIDE}`);
     }
     if (ans.kind === "unparsed") {
       // "é uma cama queen" dito depois: tamanho padrão vira referência, nunca medida
-      const bedNote = await this.applyBedSize(job, text);
+      const bedNote = await classifyFurniture(this, job.id, text);
       if (bedNote) {
         this.ack = bedNote;
         return this.askNext((await getJob(this.ctx, job.id))!);
@@ -1287,8 +1350,8 @@ ${await this.questionText(job, field, 4)}`);
     else if (ans.field === "material_status") this.ack = stockExplanation(value as string);
     else this.ack = methodNote ?? naturalAck(describeFact(ans.field, value), this.seed(9));
     // cama com tamanho padrão dito junto ("cama de casal queen")
-    const bedNote = await this.applyBedSize(fresh, text);
-    if (bedNote) this.ack = `${this.ack}\n${bedNote}`;
+    const bedNote = await classifyFurniture(this, fresh.id, text);
+    if (bedNote) this.ack = `${this.ack}\n\n${bedNote}`;
     // aproveita outras informações na mesma frase (sem repetir perguntas e sem trocar técnica por material)
     const extra = this.mention(text, nlu);
     delete extra.materialStatus;

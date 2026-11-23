@@ -49,7 +49,9 @@ export type PendingQuestionType =
   | "logistics"
   | "transport_cost"
   | "amount"
-  | "job_field";
+  | "job_field"
+  | "furniture_kind"
+  | "furniture_detail";
 
 export interface PendingQuestion {
   type: PendingQuestionType;
@@ -146,6 +148,8 @@ export interface MentionSnapshot extends Partial<Entities> {
   photoAttachmentId?: string;
   source: "telegram_text" | "telegram_voice" | "telegram_photo";
   messageId?: string;
+  /** tipo do catálogo mestre reconhecido na menção (ex.: "carrinho_cha") */
+  catalogKey?: string;
 }
 
 export interface SessionContext {
@@ -174,6 +178,10 @@ export interface SessionContext {
   unparsedCount?: number;
   deferredText?: string;
   pendingQuestion?: PendingQuestion;
+  /** pergunta do catálogo de móveis em aberto (tipo, medidas ou detalhe específico) */
+  catalogQ?: { kind: "kind" | "dims" | "attr"; key?: string; jobId: string; tries?: number };
+  /** serviços em que já perguntamos a medida real sobre uma hipótese nominal */
+  nominalAsked?: string[];
   goalStack?: SuspendedGoal[];
   quoteRequest?: QuoteRequestState;
   pricing?: PricingState;

@@ -2,7 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { JOB_STATUSES, PROJECT_FIELDS, QUOTE_STATUSES, type ProjectField } from "@adripatina/domain";
 import { PricingSettingsSchema, RecipeStepSchema } from "@adripatina/pricing";
-import { Dec, newId, normalizePersonName } from "@adripatina/shared";
+import { Dec, newId, normalizePersonName, normalizeText } from "@adripatina/shared";
+import { CATALOG_SOURCES, PARTS } from "@adripatina/conversations";
+import { addFurnitureAlias, createFurnitureType, loadFurnitureCatalog, setFurnitureAliasActive, syncFurnitureCatalog, updateFurnitureType, type FurnitureTypePatch } from "../repos/furniture.js";
 import { humanizeCallback } from "../conversation/callbacks.js";
 import type { AppEnv } from "../app.js";
 import { nowIso } from "../context.js";
@@ -590,6 +592,94 @@ export function adminRoutes(): Hono<AppEnv> {
     );
     return c.json({ rows, dailyLimit: ctx.config.aiDailyRequestLimit, aiEnabled: ctx.config.aiEnabled, note: "Estimativas locais. O teto interno não garante limite na fatura Cloudflare." });
   });
+  // decisões recentes da IA (objetivo, schema, fallback, confiança, decisão) — sem prompts nem segredos
+  r.get("/ai-decisions", async (c) => {
+    const ctx = c.get("ctx");
+    const limit = Math.min(200, Math.max(1, Number(c.req.query("limit") ?? 50) || 50));
+    try {
+      const rows = await ctx.db.all(
+        "SELECT created_at, purpose, schema_name, model, success, fallback_used, confidence, latency_ms, decision_json, error_code, correlation_id FROM ai_usage WHERE purpose IS NOT NULL ORDER BY created_at DESC LIMIT ?",
+        limit,
+      );
+      return c.json({ rows: rows.map((r) => ({ ...r, decision: json((r as { decision_json?: string }).decision_json, null) })) });
+    } catch {
+      return c.json({ rows: [], note: "Migration 0006 ainda não aplicada." });
+    }
+  });
+
+  // ---------------------------------------------------------------- catálogo mestre de móveis
+  r.get("/furniture-types", async (c) => {
+    const ctx = c.get("ctx");
+    const cat = await loadFurnitureCatalog(ctx);
+    const q = normalizeText(c.req.query("q") ?? "");
+    const category = c.req.query("category") ?? "";
+    const active = c.req.query("active");
+    const rows = cat.types
+      .filter((t) => !category || t.category === category)
+      .filter((t) => active === undefined || active === "" || (active === "1") === (t.active !== false))
+      .filter((t) => !q || normalizeText(`${t.name} ${t.key} ${t.aliases.join(" ")}`).includes(q))
+      .map((t) => ({ ...t, active: t.active !== false, sourceKind: CATALOG_SOURCES.find((s) => s.key === t.sourceKey)?.kind ?? null }));
+    return c.json({ rows, source: cat.source, total: cat.types.length, sources: CATALOG_SOURCES });
+  });
+  r.get("/furniture-types/:key", async (c) => {
+    const ctx = c.get("ctx");
+    const cat = await loadFurnitureCatalog(ctx);
+    const t = cat.types.find((x) => x.key === c.req.param("key"));
+    if (!t) throw new DomainError("NOT_FOUND", "Tipo de móvel não encontrado", 404);
+    const parts = t.parts.map((k) => PARTS.find((p) => p.key === k) ?? { key: k, label: k, variants: [], measurable: false });
+    return c.json({ ...t, active: t.active !== false, partsDetail: parts, source: CATALOG_SOURCES.find((s) => s.key === t.sourceKey) ?? null });
+  });
+  const FurnitureTypePatchBody = z.object({
+    displayName: z.string().min(2).max(80).optional(),
+    category: z.enum(["quarto", "jantar", "estar", "escritorio", "cozinha", "banheiro", "externo", "infantil", "antigo", "outro"]).optional(),
+    description: z.string().max(500).optional(),
+    active: z.boolean().optional(),
+    dimensionPolicy: z.enum(["market_reference", "usual_range", "variable", "custom"]).optional(),
+    measurementSchema: z.enum(["width_length", "length_width_height", "diameter_height", "side_height", "width_depth_height", "width_height", "length_depth_thickness", "open_closed", "two_sides_depth", "per_module", "unknown"]).optional(),
+    typicalRanges: z.record(z.enum(["widthCm", "lengthCm", "depthCm", "heightCm", "diameterCm"]), z.object({ min: z.number().int().min(1).max(1000), max: z.number().int().min(1).max(1000) }).refine((r) => r.max >= r.min, "faixa inválida")).optional(),
+    requiredQuoteFields: z.array(z.string().max(40)).max(20).optional(),
+    optionalQuoteFields: z.array(z.string().max(40)).max(20).optional(),
+    hasInterior: z.boolean().optional(),
+    outdoor: z.boolean().optional(),
+  });
+  r.patch("/furniture-types/:key", async (c) => {
+    const ctx = c.get("ctx");
+    const b = FurnitureTypePatchBody.parse(await c.req.json());
+    const ok = await updateFurnitureType(ctx, c.req.param("key"), b as FurnitureTypePatch, c.get("admin").id);
+    if (!ok) throw new DomainError("NOT_FOUND", "Tipo de móvel não encontrado", 404);
+    return c.json({ ok: true });
+  });
+  r.post("/furniture-types", async (c) => {
+    const ctx = c.get("ctx");
+    const b = z
+      .object({
+        key: z.string().regex(/^[a-z][a-z0-9_]{2,59}$/, "use letras minúsculas, números e _"),
+        displayName: z.string().min(2).max(80),
+        category: FurnitureTypePatchBody.shape.category.unwrap(),
+        feminine: z.boolean().optional(),
+        legacyKey: z.string().max(40).nullable().optional(),
+        measurementSchema: FurnitureTypePatchBody.shape.measurementSchema.unwrap().optional(),
+        aliases: z.array(z.string().min(2).max(60)).max(30).optional(),
+      })
+      .parse(await c.req.json());
+    const r2 = await createFurnitureType(ctx, b, c.get("admin").id);
+    if (r2 === "exists") throw new DomainError("CONFLICT", "Já existe um tipo com essa chave", 409);
+    return c.json({ ok: true }, 201);
+  });
+  r.post("/furniture-types/:key/aliases", async (c) => {
+    const ctx = c.get("ctx");
+    const b = z.object({ alias: z.string().min(2).max(60) }).parse(await c.req.json());
+    const res = await addFurnitureAlias(ctx, c.req.param("key"), b.alias, c.get("admin").id);
+    if (res === "not_found") throw new DomainError("NOT_FOUND", "Tipo de móvel não encontrado", 404);
+    return c.json({ result: res }, res === "added" ? 201 : 200);
+  });
+  r.post("/furniture-types/:key/aliases/deactivate", async (c) => {
+    const ctx = c.get("ctx");
+    const b = z.object({ alias: z.string().min(1).max(60) }).parse(await c.req.json());
+    return c.json({ ok: await setFurnitureAliasActive(ctx, c.req.param("key"), b.alias, false, c.get("admin").id) });
+  });
+  r.post("/furniture-types/sync", async (c) => c.json(await syncFurnitureCatalog(c.get("ctx"))));
+
   r.get("/access-requests", async (c) => c.json({ rows: await listAccessRequests(c.get("ctx"), c.req.query("status") ?? "PENDENTE") }));
   r.post("/access-requests/:id/approve", async (c) => c.json(await approveAccessRequest(c.get("ctx"), c.req.param("id"), c.get("admin").id, await c.req.json()), 201));
   r.post("/access-requests/:id/reject", async (c) => {

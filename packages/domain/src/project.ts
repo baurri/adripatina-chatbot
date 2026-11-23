@@ -49,15 +49,58 @@ export const QUESTION_ORDER: readonly ProjectField[] = [
 
 export type FactStatus = "confirmed" | "unconfirmed" | "unknown";
 
+/**
+ * Origem da medida. Só `measured` e `customer_informed` são medidas da peça;
+ * `nominal` (referência de mercado, ex.: colchão queen) e `estimated`/`inferred`
+ * são HIPÓTESES — nunca viram medida real em silêncio.
+ */
+export type DimensionSource = "measured" | "customer_informed" | "nominal" | "estimated" | "inferred";
+
+/** A que se refere a medida: estrutura externa, colchão, tampo, aberta/fechada... */
+export type DimensionKind = "external" | "mattress" | "top" | "open" | "closed" | "seat" | "module";
+
 export interface Dimensions {
-  /** metros, decimais em string */
+  /** metros, decimais em string. Ordem: largura × profundidade (comprimento, em camas) × altura */
   width?: string;
   height?: string;
   depth?: string;
+  /** móveis redondos */
+  diameter?: string;
+  /** ausente = medida antiga, tratada como informada pelo artesão */
+  source?: DimensionSource;
+  kind?: DimensionKind;
+  confidence?: "alta" | "media" | "baixa";
+  /** preset do catálogo que originou a hipótese (ex.: "queen_158") */
+  presetKey?: string;
+  /** faixa da hipótese nominal (metros) quando a referência é uma faixa */
+  nominalRange?: { min: { width?: string; depth?: string; height?: string; diameter?: string }; max: { width?: string; depth?: string; height?: string; diameter?: string } };
+  /** artesão confirmou que a peça é do tamanho padrão (a hipótese aparece no orçamento) */
+  standardConfirmed?: boolean;
+  /** medidas aberta (extensível, dobrável, sofá-cama); as principais são da peça fechada */
+  open?: { width?: string; depth?: string; height?: string };
+}
+
+/** Medida da peça de verdade (não hipótese)? */
+export function isRealMeasurement(d: Dimensions | null | undefined): boolean {
+  if (!d) return false;
+  return d.source === undefined || d.source === "measured" || d.source === "customer_informed";
 }
 
 export interface FactValueMap {
-  furniture_type: { type: string; quantity?: number; doors?: number; drawers?: number; descriptors?: string[] };
+  furniture_type: {
+    type: string;
+    quantity?: number;
+    doors?: number;
+    drawers?: number;
+    descriptors?: string[];
+    /** tipo do catálogo mestre (ex.: "cama_queen"); `type` continua a chave antiga para compatibilidade */
+    catalogKey?: string;
+    /** termo genérico ainda sem tipo definido ("armário") e os candidatos do catálogo */
+    kindTerm?: string;
+    kindCandidates?: string[];
+    /** respostas às perguntas específicas do catálogo (portas de correr, estofado, exposição...) */
+    attributes?: Record<string, string | number | boolean | { width?: string; depth?: string; height?: string }>;
+  };
   techniques: string[];
   client_name: string;
   condition: string;
