@@ -276,3 +276,38 @@ describe("Etapa 10 — concorrência de sessão", () => {
     expect(row!.context_json).toMatch(/segunda-mensagem/);
   });
 });
+
+describe("Regressões da integração com o catálogo mestre (23/11/2026)", () => {
+  it("'mesa de oito cadeira' continua sendo mesa no catálogo", async () => {
+    const h = await setup();
+    const r = h.allText(await h.send("Peguei uma mesa grandona de oito cadeira da dona Ana pra envernizar"));
+    expect(r).toMatch(/móvel: mesa/);
+    expect(r).not.toMatch(/móvel: cadeira/);
+  });
+
+  it("móvel sem nome não grava a frase inteira como descrição", async () => {
+    const h = await setup();
+    await h.send("Peguei um móvel antigo que não sei o nome da dona Ana pra pintar");
+    const row = await h.ctx.db.first<{ facts_json: string }>("SELECT facts_json FROM jobs LIMIT 1");
+    expect(row!.facts_json).not.toMatch(/Peguei um m/);
+  });
+
+  it("'móvel onde põe as louças' pede esclarecimento em vez de cadastrar 'móvel'", async () => {
+    const h = await setup();
+    const r = await h.send("Peguei aquele móvel onde põe as louças da dona Ana pra pintar");
+    expect(buttonsOf(r.at(-1))).toEqual(["amb:1:0", "amb:1:1", "amb:1:2"]);
+    expect(await count(h, "SELECT COUNT(*) AS n FROM jobs")).toBe(0);
+  });
+
+  it("pergunta de tipo usa o nome com acento ('sofá', não 'sofa')", async () => {
+    const h = await setup();
+    const r = h.allText(await h.send("Peguei um sofá que vira cama da dona Ana pra pintar"));
+    expect(r).not.toMatch(/\bsofa\b/);
+  });
+
+  it("'não tenho as medidas agora' segue como estimativa, sem insistir", async () => {
+    const h = await setup();
+    for (const m of ["Peguei três móveis da dona Ana: uma mesa, uma cômoda e um aparador, pra envernizar. Quanto cobro?", "Na mesa é inteira. Nos outros dois é só o tampo.", "estão bons", "certo"]) await h.send(m);
+    expect(h.allText(await h.send("Não tenho as medidas agora."))).toMatch(/sigo sem a medida/);
+  });
+});

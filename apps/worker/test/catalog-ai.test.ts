@@ -61,7 +61,7 @@ describe("reconhecimento e perguntas por tipo na conversa", () => {
   it("'armário' é ambíguo: o bot pergunta qual, e a resposta define o tipo", async () => {
     const h = await createHarness();
     const r = h.allText(await h.send("Peguei um armário da dona Rita para pintar"));
-    expect(r).toMatch(/Esse armario é qual destes:.*guarda-roupa/i);
+    expect(r).toMatch(/Esse arm[aá]rio é qual destes:.*guarda-roupa/i);
     expect((await ft(h)).kindCandidates).toContain("guarda_roupa");
     const r2 = h.allText(await h.send("é o da cozinha"));
     expect((await ft(h)).catalogKey).toBe("armario_cozinha_inferior");

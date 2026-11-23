@@ -176,7 +176,8 @@ export function extractClientName(text: string): string | undefined {
 
 const YES = /^(sim|s|isso|isso mesmo|e essa|e esse|e ela|e ele|e essa mesma|essa mesma|esse mesmo|exato|exatamente|pode|pode sim|claro|ok|okay|certo|correto|confirmo|confirma|confirmar|aham|uhum|positivo|isso ai|ta certo|beleza|sim e essa)\b/;
 const NO = /^(nao|n|negativo|nao e|nao e essa|nao e esse|errado|nada disso)\b/;
-const DONT_KNOW = /\b(nao sei|sei la|nao tenho certeza|nao lembro|nao faco ideia|talvez)\b/;
+// "não tenho as medidas agora", "não medi" também valem como "não sei" (sem pressionar)
+const DONT_KNOW = /\b(nao sei|sei la|nao tenho certeza|nao lembro|nao faco ideia|talvez|nao tenho (as |a )?medidas?|nao medi|sem (as )?medidas?|nao tenho como medir)\b/;
 
 function classify(norm: string, e: Entities): { intent: Intent; confidence: number } {
   const trimmed = norm.trim();

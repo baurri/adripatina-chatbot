@@ -173,7 +173,8 @@ export async function askCatalogStep(c: Conversation, job: Job, step: CatalogSte
   if (step.kind === "kind") {
     const cat = await ensureCatalog(c);
     const names = (fv.kindCandidates ?? []).map((k) => cat.types.find((t) => t.key === k)?.name.toLowerCase() ?? k);
-    const term = fv.kindTerm ?? fv.type;
+    // termo exibido com acento ("sofa" → "sofá"), nunca a chave interna
+    const term = furnitureLabel(fv.kindTerm ?? fv.type).replace(/_/g, " ");
     const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} ou ${names[names.length - 1]}` : names[0] ?? "";
     const question = `Esse ${term} é qual destes: ${list}?`.replace(/^Esse (mesinha|mesa|cama|estante|bancada)/, "Essa $1");
     c.session.lastQuestion = null;

@@ -145,6 +145,14 @@ export function prepForHits(text: string): string {
   return text.replace(/[:(]/g, ",");
 }
 
+/**
+ * Texto sem as menções de móvel que são só DESCRIÇÃO de outro ("mesa de oito cadeiras",
+ * "sofá que vira cama"). Usado por qualquer reconhecedor (vocabulário ou catálogo mestre).
+ */
+export function withoutDescriptiveFurniture(text: string): string {
+  return maskDescriptiveMentions(normalizeFurnitureText(normalizeText(prepForHits(text)))).replace(/\s+/g, " ").trim();
+}
+
 /** Encontra menções de móveis com quantidade, sem sobreposição. */
 export function findFurnitureHits(text: string): FurnitureHit[] {
   const norm = maskDescriptiveMentions(normalizeFurnitureText(normalizeText(prepForHits(text)).replace(/[.,;!?]/g, " ")));

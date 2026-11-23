@@ -6,6 +6,7 @@ import {
   findFurniture,
   resolveAmbiguousFurniture,
   findFurnitureMentions,
+  withoutDescriptiveFurniture,
   keyTermsOf,
   findMethods,
   furnitureHasInterior,
@@ -699,7 +700,8 @@ ${GUIDE}`);
   async catalogFurniture(m: MentionSnapshot, text: string): Promise<void> {
     if (m.catalogKey) return;
     const cat = await ensureCatalog(this);
-    const mentions = findFurnitureMentions(text, cat.types, cat.ambiguous);
+    // "mesa de oito cadeiras": a cadeira descreve a mesa, não é a peça
+    const mentions = findFurnitureMentions(withoutDescriptiveFurniture(text), cat.types, cat.ambiguous);
     const useType = (key: string) => {
       const t = cat.types.find((x) => x.key === key)!;
       m.furnitureType = t.legacyKey ?? t.key;
@@ -724,7 +726,8 @@ ${GUIDE}`);
     if (unknownPiece && (m.techniques?.length || /\b(restaurar|reformar|pintar|envernizar|lixar|consertar)\b/.test(normalizeText(text)))) {
       m.furnitureType = "movel";
       m.catalogKey = "movel_nao_identificado";
-      m.descriptors = [...new Set([...(m.descriptors ?? []), text.slice(0, 120)])];
+      // descritores curtos ("antigo", "de madeira"), nunca a frase inteira como nome do móvel
+      m.descriptors = [...new Set([...(m.descriptors ?? []), ...unknownPieceDescription(text)])];
     }
   }
 
@@ -733,9 +736,10 @@ ${GUIDE}`);
     // catálogo mestre primeiro: nome exato, contexto claro ou escolha confiante da IA dispensam a pergunta
     await this.catalogFurniture(mention, text);
     // nome que não basta ("mesinha", "o móvel das louças"): pergunta antes de cadastrar, sem assumir
-    const amb = mention.catalogKey ? -1 : ambiguousFurnitureKind(text);
-    if (amb >= 0 && !mention.photoHash && (!mention.furnitureType || mention.furnitureType === "mesa")) {
+    const amb = mention.catalogKey && mention.catalogKey !== "movel_nao_identificado" ? -1 : ambiguousFurnitureKind(text);
+    if (amb >= 0 && !mention.photoHash && (!mention.furnitureType || mention.furnitureType === "mesa" || mention.furnitureType === "movel")) {
       delete mention.furnitureType;
+      delete mention.catalogKey;
       this.session.flow = "intake";
       this.session.context.mention = mention;
       (this.session.context as { ambiguousKind?: number }).ambiguousKind = amb;
@@ -2425,3 +2429,13 @@ export async function handleConversation(ctx: Ctx, input: EngineInput): Promise<
 }
 
 export { techniquesLabel };
+
+/**
+ * Descrição curta de um móvel sem nome: o trecho "peça diferente", "móvel antigo" (até 3 palavras
+ * depois do substantivo, parando em "que/da/do/pra..."), nunca a frase inteira.
+ */
+function unknownPieceDescription(text: string): string[] {
+  const m = /\b(m[oó]vel|pe[cç]a|neg[oó]cio|treco)((?:\s+(?!(?:que|da|do|de|das|dos|pra|para|pro|com|e|na|no|aqui|ai|ali)\b)[a-zà-ú-]+){0,3})/i.exec(text);
+  const phrase = m ? `${m[1]}${m[2]}`.trim().toLowerCase() : "";
+  return phrase.split(/\s+/).length > 1 ? [phrase] : findDescriptors(text);
+}
