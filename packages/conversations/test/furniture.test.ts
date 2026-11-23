@@ -136,3 +136,14 @@ describe("respostas guiadas pelo catálogo", () => {
     expect(dimensionQuestion(findType("mesa_redonda")!)).toMatch(/diâmetro/);
   });
 });
+
+import { extractQuoteRequest } from "../src/multi.js";
+
+describe("referência de lugar não é peça", () => {
+  it("'fica na frente do sofá' / 'ao lado da cama' não somam móveis ao serviço", () => {
+    const now = new Date("2026-11-23T12:00:00Z");
+    expect(extractQuoteRequest("Peguei uma mesinha da dona Gal para envernizar, fica na frente do sofá", now).items).toHaveLength(1);
+    expect(extractQuoteRequest("vou pintar o criado-mudo que fica ao lado da cama", now).items).toHaveLength(1);
+    expect(extractQuoteRequest("uma mesa e um sofá para restaurar", now).items).toHaveLength(2);
+  });
+});

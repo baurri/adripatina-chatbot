@@ -129,7 +129,12 @@ interface FurnitureHit {
 function maskDescriptiveMentions(norm: string): string {
   return norm.replace(new RegExp(`\\b(mes(?:a|inha)s?\\b(?:\\s+[a-z]+){0,3}?\\s+)((?:de|pra|para|com)\\s+${COUNT}\\s+(?:cadeiras?|lugares|pessoas|assentos))\\b`, "g"), (_m, head: string, tail: string) => head + " ".repeat(tail.length))
     // "sofá que vira cama", "banco que abre em mesa": função do móvel, não outra peça
-    .replace(/\b(?:que\s+)?(?:vira|virar|abre em|transforma em|serve de|serve como)\s+(?:uma?\s+)?(?:cama|mesa|banco|bau)\b/g, (m) => " ".repeat(m.length));
+    .replace(/\b(?:que\s+)?(?:vira|virar|abre em|transforma em|serve de|serve como)\s+(?:uma?\s+)?(?:cama|mesa|banco|bau)\b/g, (m) => " ".repeat(m.length))
+    // referência de LUGAR ("fica na frente do sofá", "ao lado da cama"): o outro móvel não é peça do serviço
+    .replace(
+      /\b(?:fica\s+|que\s+fica\s+)?(?:na\s+frente\s+d[oa]s?|em\s+frente\s+(?:a|ao|d[oa]s?)|ao\s+lado\s+d[oa]s?|do\s+lado\s+d[oa]s?|perto\s+d[oa]s?|em\s+cima\s+d[oa]s?|embaixo\s+d[oa]s?|debaixo\s+d[oa]s?|atras\s+d[oa]s?|junto\s+(?:a|ao|d[oa]s?))\s+(?:[a-z]+\s+){0,2}?(?:sofas?|camas?|mesas?|janelas?|tv|televisao|parede|escada|porta)\b/g,
+      (m) => " ".repeat(m.length),
+    );
 }
 
 /**

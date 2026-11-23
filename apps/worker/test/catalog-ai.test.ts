@@ -141,7 +141,7 @@ describe("reconhecimento e perguntas por tipo na conversa", () => {
 
   it("móvel desconhecido fica registrado provisoriamente com a descrição", async () => {
     const h = await createHarness();
-    await h.send("Peguei uma peça diferente da dona Ivone para restaurar, parece um móvel de igreja");
+    await h.send("Peguei uma peça diferente da dona Ivone para restaurar");
     const f = await ft(h);
     expect(f).toMatchObject({ type: "movel", catalogKey: "movel_nao_identificado" });
     expect(JSON.stringify(f)).toMatch(/peça diferente/);
@@ -288,8 +288,9 @@ describe("IA: composição, interpretação e fallback", () => {
     h2.ctx.ai.extraction = h2.extraction;
     h2.extraction.generateHandler = (req) => (req.purpose === "choose:furniture" ? { chosenKey: "mesa_centro", confidence: 0.4, needsClarification: true } : null);
     const r = h2.allText(await h2.send("Peguei uma mesinha da dona Gal para envernizar"));
-    expect((await ft(h2)).catalogKey).toBeUndefined();
-    expect(r).toMatch(/qual destes/);
+    // confiança baixa: nada é decidido nem cadastrado; o bot pergunta qual é
+    expect(await count(h2, "SELECT COUNT(*) AS n FROM jobs")).toBe(0);
+    expect(r).toMatch(/de centro, lateral, de cabeceira ou de apoio\?/);
   });
 
   it("Workers AI indisponível: conversa segue só com regras", async () => {

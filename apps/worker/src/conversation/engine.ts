@@ -31,7 +31,7 @@ import { nextQuestion, QUESTION_ORDER, type FactValueMap, type JobStatus, type P
 import { extractCount, formatBRL, formatDateBR, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { aiInterpretAnswer, interpret } from "../ai/service.js";
-import { composeMessage } from "../ai/orchestrator.js";
+import { chooseAmong, composeMessage } from "../ai/orchestrator.js";
 import type { LoadedCatalog } from "../repos/furniture.js";
 import { askCatalogStep, catalogAnswer, catalogTypeSync, classifyFurniture, ensureCatalog, nextCatalogStep, nominalSettled } from "./catalog-flow.js";
 import type { OutgoingMessage } from "../ports.js";
@@ -686,23 +686,29 @@ ${GUIDE}`);
    * móvel não identificado quando há serviço descrito ("uma peça diferente para restaurar").
    */
   async catalogFurniture(m: MentionSnapshot, text: string): Promise<void> {
-    if (m.furnitureType) return;
+    if (m.catalogKey) return;
     const cat = await ensureCatalog(this);
     const mentions = findFurnitureMentions(text, cat.types, cat.ambiguous);
-    const hit = mentions.find((x) => x.best && x.best.key !== "movel_nao_identificado");
-    if (hit?.best) {
-      const t = cat.types.find((x) => x.key === hit.best!.key)!;
+    const useType = (key: string) => {
+      const t = cat.types.find((x) => x.key === key)!;
       m.furnitureType = t.legacyKey ?? t.key;
       m.catalogKey = t.key;
-      return;
-    }
+    };
+    const hit = mentions.find((x) => x.best && x.best.key !== "movel_nao_identificado");
+    if (hit?.best) return useType(hit.best.key);
     const generic = mentions.find((x) => x.candidates.length > 1 && !x.candidates.some((c) => c.key === "movel_nao_identificado"));
     if (generic) {
-      // termo genérico ("armário"): cadastra pelo tipo antigo mais próximo e pergunta qual é depois
-      const t = cat.types.find((x) => x.key === generic.candidates[0]!.key);
-      m.furnitureType = t?.legacyKey ?? "movel";
+      // termo genérico ("mesinha", "armário"): a IA pode escolher entre os candidatos se o contexto deixar claro
+      const choice = await chooseAmong(this.ctx, "tipo de móvel", text, generic.candidates.slice(0, 4).map((c) => ({ key: c.key, name: c.name })));
+      if (choice?.chosenKey) return useType(choice.chosenKey);
+      if (!m.furnitureType) {
+        // cadastra pelo tipo antigo mais próximo e pergunta qual é depois
+        const t = cat.types.find((x) => x.key === generic.candidates[0]!.key);
+        m.furnitureType = t?.legacyKey ?? "movel";
+      }
       return;
     }
+    if (m.furnitureType) return;
     const unknownPiece = mentions.some((x) => x.candidates.some((c) => c.key === "movel_nao_identificado"));
     if (unknownPiece && (m.techniques?.length || /\b(restaurar|reformar|pintar|envernizar|lixar|consertar)\b/.test(normalizeText(text)))) {
       m.furnitureType = "movel";
@@ -713,8 +719,10 @@ ${GUIDE}`);
 
   async newJobMention(text: string, nlu: NluResult, extra: Partial<MentionSnapshot> = {}): Promise<void> {
     const mention = this.mention(text, nlu, extra);
+    // catálogo mestre primeiro: nome exato, contexto claro ou escolha confiante da IA dispensam a pergunta
+    await this.catalogFurniture(mention, text);
     // nome que não basta ("mesinha", "o móvel das louças"): pergunta antes de cadastrar, sem assumir
-    const amb = ambiguousFurnitureKind(text);
+    const amb = mention.catalogKey ? -1 : ambiguousFurnitureKind(text);
     if (amb >= 0 && !mention.photoHash && (!mention.furnitureType || mention.furnitureType === "mesa")) {
       delete mention.furnitureType;
       this.session.flow = "intake";
@@ -724,7 +732,6 @@ ${GUIDE}`);
       this.say(q.question, [q.options.map((o, i) => ({ text: o.label, data: `amb:${amb}:${i}` }))]);
       return;
     }
-    await this.catalogFurniture(mention, text);
     if (!mention.furnitureType && !mention.photoHash) {
       // ainda não sabemos o móvel: perguntar antes de cadastrar
       this.session.flow = "intake";

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isRealMeasurement } from "@adripatina/domain";
 import { buttonsOf, count, createHarness, type Harness } from "./harness.js";
 import { createJob, getJob, setFact } from "../src/repos/jobs.js";
 import { buildPricingInput } from "../src/services/quotes.js";
@@ -112,19 +113,23 @@ describe("Cenário 6 — serviço parcial", () => {
 describe("Cenário 4 — cama queen (medida nominal)", () => {
   it("158×198 é só referência: a estrutura não recebe a medida, o escopo é perguntado e o orçamento fica preliminar", async () => {
     const h = await setup();
+    // "cama" sozinha não diz o tamanho: o catálogo pergunta qual é
     const t = h.allText(await h.send("Peguei uma cama da Dona Licele pra envernizar"));
-    expect(t).toMatch(/como ela está/i);
+    expect(t).toMatch(/Essa cama é qual destes/i);
     const r = h.allText(await h.send("É uma cama queen."));
-    expect(r).toMatch(/medida do colchão/);
+    expect(r).toMatch(/colchão de 158 × 198 cm, mas a estrutura da cama costuma ser um pouco maior/);
     const job = (await getJob(h.ctx, (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs"))!.id))!;
-    expect(job.facts.dimensions).toBeUndefined();
-    for (const m of ["está boa", "a cama toda", "não sei", "não", "não", "já tenho tudo", "pincel", "não precisa", "sem prazo", "à vista"]) await h.send(m);
+    // a medida do colchão fica só como HIPÓTESE (nunca medida real da estrutura)
+    expect(job.facts.dimensions?.value).toMatchObject({ source: "nominal", kind: "mattress" });
+    expect(isRealMeasurement(job.facts.dimensions?.value as never)).toBe(false);
+    expect(h.allText(await h.send("a cama toda"))).toMatch(/estrutura, por fora/);
+    for (const m of ["não sei", "está boa", "não", "não", "já tenho tudo", "pincel", "não precisa", "sem prazo", "à vista"]) await h.send(m);
     await h.send("pode calcular");
     const quote = await h.ctx.db.first<{ definitive_allowed: number; result_json: string }>("SELECT definitive_allowed, result_json FROM quotes ORDER BY created_at DESC LIMIT 1");
     expect(quote).not.toBeNull();
     expect(quote!.definitive_allowed).toBe(0);
-    expect(quote!.result_json).toMatch(/BED_NOMINAL_SIZE/);
-    expect(quote!.result_json).toMatch(/referencia_colchao_queen/);
+    expect(quote!.result_json).toMatch(/DIMENSIONS_NOMINAL/);
+    expect(quote!.result_json).toMatch(/nominal_queen_158/);
   });
 });
 
