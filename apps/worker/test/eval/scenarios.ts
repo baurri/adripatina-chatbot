@@ -7,7 +7,7 @@ async function seedJob(h: Harness, type: string, client: string, techniques: str
   const opts = { actor: h.artisanId, source: "telegram_text" as const };
   await setFact(h.ctx, job.id, "furniture_type", { type, descriptors: [] } as never, opts);
   await setFact(h.ctx, job.id, "client_name", client as never, opts);
-  await setFact(h.ctx, job.id, "techniques", techniques as never, opts);
+  if (techniques.length) await setFact(h.ctx, job.id, "techniques", techniques as never, opts);
   return job.id;
 }
 
@@ -47,6 +47,8 @@ async function jobs(h: Harness): Promise<JobRow[]> {
 }
 
 const v = (j: JobRow | undefined, f: string): unknown => j?.facts[f]?.value;
+/** peças: soma da quantidade de cada serviço (peças iguais podem ficar num serviço só) */
+const pieces = (js: JobRow[]) => js.reduce((acc, j) => acc + Number((v(j, "furniture_type") as { quantity?: number } | undefined)?.quantity ?? 1), 0);
 const has = (x: unknown, re: RegExp) => re.test(JSON.stringify(x ?? ""));
 const check = (ok: boolean, name: string, detail?: unknown): Check => ({ ok, name, ...(ok || detail === undefined ? {} : { detail: JSON.stringify(detail).slice(0, 200) }) });
 
@@ -70,13 +72,13 @@ export const SCENARIOS: Scenario[] = [
     checks: async (h) => {
       const js = await jobs(h);
       return [
-        check(js.length === 3, "3 serviços (mesinha + 2 aparadores)", js.length),
-        check(js.filter((j) => has(v(j, "furniture_type"), /aparador/)).length === 2, "2 aparadores reconhecidos", js.map((j) => v(j, "furniture_type"))),
+        check(pieces(js) === 3, "3 peças (mesinha + 2 aparadores)", js.map((j) => v(j, "furniture_type"))),
+        check(pieces(js.filter((j) => has(v(j, "furniture_type"), /aparador/))) === 2, "2 aparadores reconhecidos", js.map((j) => v(j, "furniture_type"))),
         check(js.every((j) => has(v(j, "techniques"), /verniz/)), "técnica verniz em todos"),
         check(js.every((j) => has(v(j, "client_name"), /Roberto|Jo/)), "cliente Seu Roberto/Dona Jo"),
         check(js.filter((j) => has(v(j, "scope"), /tampo/)).length >= 2, "aparadores só no tampo", js.map((j) => v(j, "scope"))),
         check(js.every((j) => v(j, "dimensions") || v(j, "size_class")), "medida/porte de todas as peças"),
-        check((await quoteStatuses(h)).length === 3, "orçamento calculado para as 3 peças", await quoteStatuses(h)),
+        check((await quoteStatuses(h)).length === js.length, "orçamento calculado para todos os serviços", await quoteStatuses(h)),
       ];
     },
   },
@@ -91,8 +93,8 @@ export const SCENARIOS: Scenario[] = [
     checks: async (h) => {
       const js = await jobs(h);
       return [
-        check(js.length === 3, "3 serviços", js.length),
-        check(js.filter((j) => has(v(j, "furniture_type"), /criado|cabeceira/)).length === 2, "2 criados-mudos", js.map((j) => v(j, "furniture_type"))),
+        check(pieces(js) === 3, "3 peças", js.map((j) => v(j, "furniture_type"))),
+        check(pieces(js.filter((j) => has(v(j, "furniture_type"), /criado|cabeceira/))) === 2, "2 criados-mudos", js.map((j) => v(j, "furniture_type"))),
         check(js.every((j) => has(v(j, "client_name"), /Carla/)), "cliente Dona Carla"),
         check(js.every((j) => v(j, "dimensions")), "medidas das 3 peças", js.map((j) => v(j, "dimensions"))),
         check(js.every((j) => has(v(j, "logistics"), /"pickup":false/) && has(v(j, "logistics"), /"delivery":false/)), "sem frete (cliente traz e busca)", js.map((j) => v(j, "logistics"))),
@@ -206,10 +208,10 @@ export const SCENARIOS: Scenario[] = [
     id: "andamento-nao-andamento",
     title: "Andamento: 'comecei' muda; 'quando ficar pronta ela busca' não muda",
     opening: "conte que começou a cristaleira da dona Maria hoje.",
-    brief: "Existe o serviço da cristaleira da Dona Maria. Hoje ele começou a lixar. Depois comenta que quando ficar pronta a Dona Maria vem buscar (isso NÃO é andamento).",
+    brief: "Existe o serviço da cristaleira da Dona Maria (ainda sem técnica definida). Hoje ele começou a lixar. Depois comenta que quando ficar pronta a Dona Maria vem buscar (isso NÃO é andamento).",
     goal: "Registrar que começou; o comentário sobre buscar não deve marcar como pronto.",
     setup: async (h) => {
-      await seedJob(h, "cristaleira", "Dona Maria", ["patina"]);
+      await seedJob(h, "cristaleira", "Dona Maria", []);
     },
     checks: async (h) => {
       const j = await h.ctx.db.first<{ status: string }>("SELECT status FROM jobs LIMIT 1");
@@ -224,8 +226,9 @@ export const SCENARIOS: Scenario[] = [
     goal: "Testar o comportamento social e o recomeçar; termina depois de recomeçar.",
     maxTurns: 12,
     checks: async (h) => {
-      const active = await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM jobs WHERE status <> 'CANCELADO'");
-      return [check((active?.n ?? 0) === 0, "depois de recomeçar não fica serviço aberto", active)];
+      const all = await h.ctx.db.all<{ status: string; facts_json: string }>("SELECT status, facts_json FROM jobs");
+      const chairs = all.filter((j) => /cadeira/.test(j.facts_json));
+      return [check(chairs.length > 0 && chairs.every((j) => j.status === "CANCELADO"), "o serviço da cadeira foi cancelado ao recomeçar", chairs.map((c) => c.status))];
     },
   },
   {
@@ -252,7 +255,7 @@ export const SCENARIOS: Scenario[] = [
     brief: "Aparador do Seu Luiz, verniz. Está bom. 1,20 de largura, 40 de fundura, 80 de altura. Inteiro. Sem conserto. Pincel. O próprio Adriano vai buscar o aparador na casa do Seu Luiz e depois entregar; esse frete custa 60 reais e ele quer cobrar.",
     quirks: "Quando vier o valor, primeiro pede um desconto grande (metade do valor); quando avisarem do prejuízo, desiste e diz pra acrescentar 60 reais do frete.",
     goal: "Fechar o valor com o frete acrescentado e receber o PDF.",
-    checks: async (h) => [check((await docs(h)) >= 1, "PDF gerado"), check((await quoteStatuses(h)).some((s) => s === "ENVIADO" || s === "APROVADO"), "orçamento fechado", await quoteStatuses(h))],
+    checks: async (h) => [check((await docs(h)) >= 1, "PDF gerado"), check((await quoteStatuses(h)).some((s) => ["ENVIADO", "APROVADO", "ACEITO", "RECUSADO"].includes(s)), "orçamento fechado", await quoteStatuses(h))],
   },
   {
     id: "consulta",

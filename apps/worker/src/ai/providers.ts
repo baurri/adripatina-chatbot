@@ -2,6 +2,7 @@ import { EXTRACTION_JSON_SCHEMA, EXTRACTION_SYSTEM_PROMPT, QUOTE_REQUEST_SYSTEM_
 import type { ProjectField } from "@adripatina/domain";
 import type { Config } from "../env.js";
 import { ClaudeExtraction, FallbackExtraction } from "./claude.js";
+import { ClaudeAgentModel } from "./claude-agent.js";
 import type { AiProviders, ExtractionProvider, GenerateRequest, SpeechToText, SttResult, VisionProvider } from "../ports.js";
 
 /**
@@ -178,6 +179,8 @@ export function createAiProviders(config: Config, ai: Ai | undefined, anthropicA
     stt: ai && config.sttModel ? new WorkersAiStt(ai, config.sttModel) : null,
     extraction,
     vision: ai && config.visionModel ? new WorkersAiVision(ai, config.visionModel) : null,
+    // D-075: o Claude conduz a conversa com ferramentas (sem a chave, motor antigo)
+    agent: anthropicApiKey && config.agentEngine ? new ClaudeAgentModel(anthropicApiKey, config.agentModel) : null,
   };
 }
 

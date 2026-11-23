@@ -62,10 +62,39 @@ export interface VisionProvider {
   describe(image: Uint8Array, mime: string): Promise<{ furnitureType?: string; description: string }>;
 }
 
+/** Ferramenta oferecida ao agente de conversa (D-075). */
+export interface AgentTool {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+export type AgentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown };
+
+/** Mensagem no formato da API de mensagens (usuário/assistente; conteúdo texto ou blocos). */
+export interface AgentMessage {
+  role: "user" | "assistant";
+  content: string | Record<string, unknown>[];
+}
+
+export interface AgentStep {
+  stopReason: string;
+  content: AgentBlock[];
+  usage?: { inputTokens: number; outputTokens: number };
+}
+
+/** O modelo que conduz a conversa com ferramentas (Claude). Um passo = uma chamada. */
+export interface AgentModel {
+  readonly name: string;
+  step(system: string, messages: AgentMessage[], tools: AgentTool[], maxTokens: number): Promise<AgentStep>;
+}
+
 export interface AiProviders {
   stt: SpeechToText | null;
   extraction: ExtractionProvider | null;
   vision: VisionProvider | null;
+  /** D-075: agente de conversa (Claude com ferramentas); null → motor antigo */
+  agent?: AgentModel | null;
 }
 
 export type Clock = () => Date;

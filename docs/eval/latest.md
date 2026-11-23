@@ -1,255 +1,264 @@
-# Avaliação com Claude real — 2026-11-23T18:55
+# Avaliação com Claude real — 2026-11-23T21:23
 
-Bot: claude-haiku-5-5 · Adriano simulado: claude-haiku-5-5 · Avaliador: claude-sonnet-5-5
+Motor: agente (D-075) · Bot: claude-haiku-5-5 · Adriano simulado: claude-haiku-5-5 · Avaliador: claude-sonnet-5-5
 
-Conferências objetivas: **39/46**
+Conferências objetivas: **45/46**
 
 | Critério | Média (1–5) |
 |---|---|
-| entendimento | 1.83 |
-| naturalidade | 2.17 |
-| acessibilidade | 2.92 |
-| uma_pergunta_por_vez | 3.00 |
-| sem_invencao | 2.00 |
-| eficiencia | 1.50 |
-| conclusao | 2.67 |
+| entendimento | 3.92 |
+| naturalidade | 3.50 |
+| acessibilidade | 3.25 |
+| uma_pergunta_por_vez | 3.50 |
+| sem_invencao | 3.42 |
+| eficiencia | 3.42 |
+| conclusao | 4.33 |
 
 ## Problemas por classe
 
-- alta:inventou: 19
-- media:pergunta_repetida: 14
-- alta:pergunta_repetida: 13
-- alta:nao_entendeu: 8
-- media:perdeu_informacao: 7
-- alta:travou: 6
-- baixa:jargao: 6
-- media:jargao: 5
-- media:fluxo_confuso: 5
-- alta:perdeu_informacao: 5
-- media:nao_entendeu: 5
-- baixa:fluxo_confuso: 4
-- baixa:tom: 4
-- media:texto_longo: 3
-- media:pergunta_desnecessaria: 2
-- media:suposicao_errada: 1
-- baixa:insistencia: 1
+- baixa:tom: 11
+- media:pergunta_repetida: 9
+- media:jargao: 7
+- media:inventou: 4
+- baixa:texto_longo: 4
+- media:fluxo_confuso: 4
+- alta:inventou: 3
+- baixa:nao_entendeu: 3
+- baixa:perdeu_informacao: 2
+- alta:nao_entendeu: 2
+- alta:fluxo_confuso: 2
+- media:tom: 2
+- media:uma_pergunta_por_vez: 2
+- baixa:inventou: 2
+- baixa:jargao: 2
+- media:nao_entendeu: 1
+- media:pergunta_desnecessaria: 1
 - alta:jargao: 1
-- baixa:travou: 1
-- media:tom: 1
-- baixa:confirmacao_redundante: 1
-- baixa:perda_de_clareza: 1
-- baixa:decisao_dinheiro: 1
-- alta:nao_respondeu: 1
+- media:loop: 1
+- media:promessa: 1
+- baixa:texto_cortado: 1
+- media:pergunta_redundante: 1
+- media:perguntou_o_que_ja_foi_dito: 1
+- baixa:repeticao: 1
+- baixa:pergunta_multipla: 1
+- media:promessa_falsa: 1
+- baixa:pergunta_desnecessaria: 1
+- baixa:fluxo_confuso: 1
+- media:texto_longo: 1
+- media:perdeu_informacao: 1
+- baixa:eficiencia: 1
+- baixa:pergunta_redundante: 1
+- alta:inconsistencia: 1
+- alta:texto_longo: 1
 
 ## real-adriano-roberto-jo — Conversa real do Adriano: mesinha + 2 móveis do Seu Roberto e da Dona Jo
 
-Notas: entendimento 3 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 4 · sem_invencao 3 · eficiencia 2 · conclusao 4 · 103s
+Notas: entendimento 2 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 2 · eficiencia 2 · conclusao 3 · 143s
 
-- ✅ 3 serviços (mesinha + 2 aparadores)
+- ✅ 3 peças (mesinha + 2 aparadores)
 - ✅ 2 aparadores reconhecidos
 - ✅ técnica verniz em todos
 - ✅ cliente Seu Roberto/Dona Jo
-- ✅ aparadores só no tampo
+- ❌ aparadores só no tampo — [{"part":"inteiro"},{"part":"tampo"}]
 - ✅ medida/porte de todas as peças
-- ✅ orçamento calculado para as 3 peças
+- ✅ orçamento calculado para todos os serviços
 
-> Chegou ao fechamento e o cliente aceitou, mas a conversa foi ineficiente: o bot repetiu perguntas sobre dados já ditos (aparadores, tamanho, busca e entrega) e irritou o Adriano. O orçamento final mostra material de R$ 360 contra os 70 que ele disse, e a mensagem de contas é longa e pouco acessível. Os 3 PDFs contradizem o orçamento único.
+> Os aparadores fecham em R$ 130 e o PDF sai, mas há falhas sérias: troca quem busca e entrega, inventa '2 horas', usa piso e prejuízo, repete a confirmação e a pergunta do tempo do conserto mesmo ele dizendo que ainda não sabe. A parte final vira um loop de quatro confirmações iguais e a última mensagem sai cortada.
 
-- [media] (suposicao_errada) turno 4: Perguntou se a mesinha era do Seu Roberto e os outros da Dona Jo, sendo que ele falou 'do seu Roberto e da Dona Jo' como casal; chutou em vez de tratar como um cliente só.
-- [media] (pergunta_repetida) turno 8: Perguntou quais eram os outros dois móveis, que ele já tinha dito no turno 5 (duas aparadoras, só o tampo).
-- [alta] (pergunta_repetida) turno 16: Perguntou o tamanho do tampo do 1º aparador depois de ele já ter dado 1,20 por 40 duas vezes; ele precisou reclamar 'já falei'.
-- [media] (pergunta_repetida) turno 22: Perguntou sobre buscar e entregar, que ele já tinha dito no turno 5; também ignorou o tempo de 3 a 5 dias e o material de 70 reais ditos várias vezes.
-- [baixa] (insistencia) turno 25: Perguntou o custo do transporte, sem que ele tivesse falado de valor; depois de 'não sei' seguiu corretamente.
-- [alta] (inventou) turno 28: Disse que precisa comprar R$ 360 de material, contradizendo os 70 reais que ele informou e já ter o verniz; valor não explicado nem reconhecido.
-- [media] (jargao) turno 28: Mensagem de orçamento longa e cheia de números e avisos (prejuízo, horas, frete), pesada para quem prefere conversa simples; sem explicar de onde vem o 378 da mesinha.
-- [baixa] (fluxo_confuso) turno 33: Gerou 3 PDFs separados (um por peça) para um cliente só com orçamento único, após ter dito que seria um orçamento só.
-- [baixa] (tom) turno 33: Perdeu a nota da terça e o 'reparo da mesinha 3 horas / depende do que aparecer' não aparece no resumo final.
+- [alta] (inventou) turno 6: Diz que 'Vocês dois, Seu Roberto e Dona Jo, buscam e entregam', mas quem busca e entrega é o Adriano. Troca o sujeito e distorce o fato.
+- [media] (nao_entendeu) turno 3: Interpreta 'os outros dois móveis' sem pedir o tipo. Depois ele corrige para aparadores. Pedir as medidas da mesinha antes de saber o que eram os outros móveis desorganiza o fluxo.
+- [media] (pergunta_desnecessaria) turno 9: Pergunta se é 'por fora ou por dentro' num tampo de aparador, o que não faz sentido. Ele já tinha dito que é só o tampo.
+- [alta] (jargao) turno 12: Fala de 'prejuízo' com piso de R$ 104,00 e mostra preço calculado. Mensagem longa e carregada de informação, mistura aparadores, frete e mesinha. Não pergunta o tempo do conserto de forma simples.
+- [media] (inventou) turno 12: Fala em 'umas 2 horas' de trabalho para os aparadores, sem ele ter dito. Ele estimou 3 a 5 dias para o serviço todo. Também ignora o material de R$ 70 que ele informou.
+- [media] (pergunta_repetida) turno 14: Pede confirmação de novo depois do 'Concordo'. Pressiona o fechamento e repete o piso de R$ 104,00.
+- [media] (pergunta_repetida) turno 17: Pergunta o tempo do conserto, que ele já tinha dito que não sabia, e depois repete nos turnos 20, 23 e 26. Ele já havia dito 'não sei', e o assistente insiste.
+- [media] (loop) turno 20: Os turnos 20 a 29 repetem a mesma confirmação 'aparadores fechados em 130 e mesinha em aberto' quatro vezes, sem avançar. Ele já tinha explicado que ia olhar a peça.
+- [media] (promessa) turno 17: Diz 'Mandei o PDF' e pede para avisar quando o cliente responder. É um envio real pelo sistema, mas faltou deixar claro que ainda não houve resposta do cliente.
+- [baixa] (texto_cortado) turno 29: Última mensagem cortada ('abe') e repete mais uma vez o mesmo conteúdo.
+- [baixa] (perdeu_informacao) turno 12: Não aproveita o material de R$ 70 nem os 3 a 5 dias dados por ele ao calcular o valor. Também não explica a conta.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): E aí, beleza? Terça eu vou buscar um trabalho do seu Roberto e da Dona Jo. Uma mesinha de centro pra lixar inteira e passar verniz, e mais outros dois móveis que é só o tampo. Queria saber quanto cobrar nisso aí.
-   {entendido: (igual) · rota: global/new_job}
-2. BOT: 🎧 Ouvi: "E aí, beleza? Terça eu vou buscar um trabalho do…"
-3. BOT: Entendi: são 3 móveis para lixar e envernizar, sendo uma mesinha de centro e mais dois móveis para o Seu Roberto e a Dona Jo. Você quer saber quanto cobrar. 📅 Anotei o dia que você falou: terça (01/12/2026), só como lembrete. Se for outro dia, me avisa.
-4. BOT: Só falta organizar de quem é cada peça. A mesinha de centro é do Seu Roberto, e os outros dois móveis são da Dona Jo?
-   [botões: Isso | Não]
-5. ADRIANO (áudio): Não, os dois são do casal, é um cliente só. Os outros dois são duas aparadoras, só o tampo de cada uma pra lixar e envernizar. Mede 1,20 por 40 cada. A mesinha é redonda, 80 de diâmetro e 45 de altura. Já tenho o verniz, vou de pincel. Acho que leva uns 3 a 5 dias e o material deve dar uns 70 reais. Eu mesmo busco e entrego. Me fala aí quanto ficaria.
-   {entendido: Não: a mesinha de centro é do Seu Roberto, e os outros dois móveis são do casal, que é um cliente só (Seu Roberto e Dona Jo). Os outros dois são duas aparadoras, só o tampo de cada uma para lixar e envernizar, medindo 1,20 por 40 cada. A mesinha é redonda, 80 de diâmetro e 45 de altura, para lixar inteira e envernizar. Já tenho o verniz; vou usar pincel. Acho que leva de 3 a 5 dias. O material deve dar uns 70 reais. Eu mesmo busco e entrego. Quero saber quanto ficaria. · rota: pending_answer/item_owner_answer}
-6. BOT: 🎧 Ouvi: "Não, os dois são do casal, é um cliente só.…"
-7. BOT: Combinado! Seu Roberto e Dona Jo ficam como um cliente só, com um orçamento só. 😄
-8. BOT: Quais são os outros dois móveis? Por exemplo: "uma cômoda e um aparador".
-9. ADRIANO (áudio): Duas aparadoras, só o tampo de cada uma, pra lixar e envernizar. Cada tampo mede 1,20 por 40. A mesinha é redonda, 80 de diâmetro e 45 de altura. Tudo de pincel, que o verniz eu já tenho.
-   {entendido: duas aparadoras; só o tampo de cada uma para lixar e envernizar; cada tampo mede 1,20 por 40; a mesinha de centro é redonda, 80 de diâmetro e 45 de altura; tudo com pincel; o verniz eu já tenho. · rota: pending_answer/item_identity_answer}
-10. BOT: 🎧 Ouvi: "Duas aparadoras, só o tampo de cada uma, pra lixar…"
-11. BOT: Beleza, anotado! 😄 Agora me conta: como estão a mesinha de centro, o 1º aparador e o 2º aparador? Alguma peça precisa de reparo?
-12. ADRIANO (áudio): Então a mesinha tá meio danificada no tampo, precisa acertar uns detalhes antes de lixar e passar o verniz. Os dois aparadores tão melhores, só precisam de lixar e envernizar mesmo. Mas o tampo da mesinha é redondo, então tem que ter cuidado com o acabamento ali.
-   {entendido: Mesinha de centro: tampo meio danificado, precisa acertar uns detalhes antes de lixar e envernizar. Tampo redondo, então tem que ter cuidado com o acabamento ali. 1º aparador e 2º aparador: estão melhores, só precisam de lixar e envernizar. · rota: pending_answer/item_condition_answer}
-13. BOT: 🎧 Ouvi: "Então a mesinha tá meio danificada no tampo, precisa acertar…"
-14. BOT: Entendi! 😄 A mesinha de centro: lixar e envernizar inteira, com reparos no tampo. O 1º aparador: lixar e envernizar só o tampo, sem reparos grandes. O 2º aparador: lixar e envernizar só o tampo, sem reparos grandes.
+1. ADRIANO (áudio): E aí, tudo bem? Terça eu vou buscar um trabalho do seu Roberto e da Dona Jo. É uma mesinha de centro, que é pra lixar inteira e passar verniz. Tem mais outros dois móveis que é só o tampo. Queria saber quanto cobrar por isso tudo.
+2. BOT: 🎧 Ouvi: "E aí, tudo bem? Terça eu vou buscar um trabalho…"
+3. BOT: Anotado: mesinha de centro do Seu Roberto e da Dona Jo, lixar inteira e passar verniz, você busca na terça. 🪵
 
-Está certo assim?
-   [botões: Certo | Corrigir]
-15. ADRIANO: [tocou: Certo]
-16. BOT: Beleza, vamos em frente! 🪵 Qual é o tamanho do tampo do 1º aparador? Pode me dizer largura e profundidade, tipo "1,20 por 50", ou só se ele é pequeno, médio ou grande.
-17. ADRIANO (áudio): Já falei, os dois aparadores têm o tampo 1,20 por 40, cada um. Os dois iguais.
-   {entendido: 1º e 2º aparador: tampo de 1,20 por 40 cada um (os dois iguais). · rota: pending_answer/item_dimensions_answer}
-18. BOT: 🎧 Ouvi: "Já falei, os dois aparadores têm o tampo 1,20 por…"
-19. BOT: Anotado! 🪵 Quanto tempo você acha que leva o reparo da mesinha de centro? Por exemplo: "2 horas". Se não souber, tudo bem.
-20. ADRIANO (áudio): Ah, o reparo da mesinha eu não sei dizer ao certo ainda, depende do que aparecer quando eu abrir o tampo. Mas chuto umas 3 horas pra acertar tudo. Depois vejo melhor. O resto já falei: cada aparador é 1,20 por 40, e a mesinha é redonda, 80 de diâmetro e 45 de altura.
-   {entendido: Tempo do reparo da mesinha de centro: chuto umas 3 horas para acertar tudo, mas depende do que aparecer quando eu abrir o tampo; depois vejo melhor. Reafirmando: cada aparador tem tampo de 1,20 por 40; a mesinha é redonda, diâmetro 80 e altura 45. · rota: pending_answer/repair_hours_answer}
-21. BOT: 🎧 Ouvi: "Ah, o reparo da mesinha eu não sei dizer ao…"
-22. BOT: Beleza, anotado! 🚚 Você vai buscar os móveis na terça (01/12/2026)? E a entrega, também fica por sua conta? Por exemplo: "buscar e entregar" ou "não precisa".
-23. ADRIANO (áudio): Isso, eu busco na terça e entrego também, eu mesmo levo. Acho que leva uns 3 a 5 dias pra terminar tudo, e o material deve dar uns 70 reais. Pode seguir com o orçamento aí.
-   {entendido: buscar na terça (01/12/2026) e entregar também, eu mesmo levo; prazo de 3 a 5 dias para terminar tudo; material deve dar uns R$ 70; pode seguir com o orçamento · rota: pending_answer/logistics_answer}
-24. BOT: 🎧 Ouvi: "Isso, eu busco na terça e entrego também, eu mesmo…"
-25. BOT: Quanto você costuma gastar com esse transporte (ida e volta)? Por exemplo: "60 reais". Se não souber, tudo bem.
-26. ADRIANO (áudio): Ah, não sei de cabeça o valor do transporte, depende da gasolina e do caminho. Pode deixar sem esse valor por enquanto, depois eu vejo. Mas pode seguir com o orçamento aí, tá?
-   {entendido: Não sei o valor do transporte agora, depende da gasolina e do caminho. Deixar sem esse valor por enquanto; depois ele vê. Pode seguir com o orçamento. · rota: pending_answer/transport_cost_answer}
-27. BOT: 🎧 Ouvi: "Ah, não sei de cabeça o valor do transporte, depende…"
-28. BOT: 🧮 Prontinho, fiz as contas dos 3 móveis!
+Pra eu fechar o valor dela, me diz as medidas (comprimento, largura e altura em cm), ou se ela é pequena, média ou grande.
 
-• Mesinha de centro: R$ 378,00
-• 1º aparador: R$ 130,00
-• 2º aparador: R$ 130,00
+Depois me fala quais são os outros dois móveis que são só tampo.
+4. ADRIANO (áudio): Mesinha é redonda, 80 cm de diâmetro por 45 de altura. Os outros dois são duas aparadoras, cada tampo 1,20 por 40. Lixar e envernizar só o tampo. Tem o detalhe que o tampo da mesinha tá meio danificado, precisa acertar uns detalhes antes. Vou de pincel, já tenho o verniz. Eu mesmo busco e entrego. Acho que leva uns 3 a 5 dias e o material deve dar uns 70 reais.
+5. BOT: 🎧 Ouvi: "Mesinha é redonda, 80 cm de diâmetro por 45 de…"
+6. BOT: Anotado: mesinha redonda de 80 cm de diâmetro por 45 de altura, lixar e envernizar, com um ajuste no tampo antes. Os dois aparadores ficaram como 2 tampos de 1,20 m por 40 cm, lixar e envernizar só o tampo. Vocês dois, Seu Roberto e Dona Jo, buscam e entregam.
 
-💰 Total sugerido: R$ 638,00
+Pros aparadores ainda falta saber o estado deles: estão bons (só riscos), precisam de reparos (colar, massa) ou estão bem danificados?
+7. ADRIANO (áudio): Os aparadores tão melhores, só com risco mesmo. Lixa e passa verniz, sem colar nem massa. Me diz aí quanto fica o valor.
+8. BOT: 🎧 Ouvi: "Os aparadores tão melhores, só com risco mesmo. Lixa e…"
+9. BOT: Anotado: os dois aparadores estão bons, só com riscos, sem conserto. Vai lixar e envernizar só o tampo, com pincel.
 
-⚠️ Menos que R$ 509,00 no total você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 360,00 de material.
-⏱️ Dá umas 11 horas de trabalho.
-🚚 O frete não está na conta. Se for cobrar, é só acrescentar.
+Antes de fechar o valor, preciso saber uma coisa: é só por fora ou tem que lixar e envernizar por dentro também?
+10. ADRIANO (áudio): Só por fora, não precisa lixar nem envernizar por dentro. Pode fechar o valor assim.
+11. BOT: 🎧 Ouvi: "Só por fora, não precisa lixar nem envernizar por dentro.…"
+12. BOT: Pelas contas, os dois aparadores (lixar e envernizar só o tampo, por fora, com pincel) ficam em **R$ 130,00** no total. Abaixo de R$ 104,00 você fica no prejuízo. O trabalho é de umas 2 horas.
 
-E aí, você concorda com esse valor? 🤝
+Como você mesmo busca e entrega, não entrou frete no cálculo. Se tiver algum custo de transporte, me fala.
+
+A mesinha ainda não dá pra fechar: falta saber quanto tempo você acha que leva o conserto do tampo. Assim que me disser, eu refaço a conta dela.
+
+Fecho os aparadores em R$ 130,00?
    [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-29. ADRIANO: [tocou: 👍 Concordo]
-30. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
-31. BOT: [PDF enviado: Proposta-AP-2026-0002-v1.pdf]
-32. BOT: [PDF enviado: Proposta-AP-2026-0003-v1.pdf]
-33. BOT: Fechado! ✅
+13. ADRIANO: [tocou: 👍 Concordo]
+14. BOT: Pelo que você falou, os dois aparadores ficam em **R$ 130,00**. Antes de travar, preciso que você confirme de novo: pode mandar o PDF com esse valor?
 
-💰 Valor final: R$ 638,00
+Abaixo de R$ 104,00 você fica no prejuízo. A mesinha continua em aberto, esperando o tempo do conserto do tampo. 🪵
+   [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
+15. ADRIANO: [tocou: 👍 Concordo]
+16. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+17. BOT: Fechado! Mandei o PDF dos dois aparadores do Seu Roberto e da Dona Jo por **R$ 130,00**. 📄
 
-📄 Os 3 PDFs (um por peça) já estão prontos. Pode encaminhar pro Seu Roberto e Dona Jo.
-34. BOT: Quando o cliente responder, me chama aqui: 👇
-   [botões: 👍 Cliente aceitou | 👎 Cliente recusou]
-35. ADRIANO: [tocou: 👍 Cliente aceitou]
-36. BOT: Boa! 🎉 Anotei que o cliente aceitou os 3 orçamentos, R$ 638,00 no total.
+Assim que o cliente responder, me avisa que eu registro. A mesinha redonda continua em aberto. Quanto tempo você acha que leva o conserto do tampo dela?
+18. ADRIANO (áudio): Beleza, valeu! Então os aparadores tão fechados em 130. A mesinha eu ainda não sei quanto tempo leva o conserto do tampo, tá meio judiado ali embaixo do verniz velho. Deixa eu olhar direito antes de chutar, depois eu te falo.
+19. BOT: 🎧 Ouvi: "Beleza, valeu! Então os aparadores tão fechados em 130. A…"
+20. BOT: Beleza, os aparadores ficam fechados em R$ 130,00. ✅
+
+Anotei que o tampo da mesinha precisa de conserto por baixo do verniz velho. Sem pressa: dá uma olhada com calma e, quando souber quanto tempo o conserto leva, me fala que eu refaço a conta. 🪵
+21. ADRIANO (áudio): Isso, valeu! Pode deixar, depois eu te falo quanto tempo leva a mesinha. Só mais uma coisa: o tampo dela tá com dano por baixo do verniz velho, então ainda não sei se é só lixar ou se tem que colar. Quando eu olhar direito eu passo pra você.
+22. BOT: 🎧 Ouvi: "Isso, valeu! Pode deixar, depois eu te falo quanto tempo…"
+23. BOT: Anotado. Quando você olhar o tampo e souber se é só lixar ou se precisa colar, me fala o tempo estimado que eu refaço a conta da mesinha. 🛠️
+24. ADRIANO (áudio): Beleza, valeu! Então fica combinado: aparadores fechados em 130, e a mesinha fica pra depois, quando eu olhar o tampo direito. Assim que eu souber se é só lixar ou se tem que colar, eu te falo o tempo.
+25. BOT: 🎧 Ouvi: "Beleza, valeu! Então fica combinado: aparadores fechados em 130, e…"
+26. BOT: Combinado: os aparadores ficam em R$ 130,00 e a mesinha fica em aberto. ✅
+
+Quando você olhar o tampo e souber se é só lixar ou se precisa colar, me passa o tempo estimado que eu refaço a conta. 🪵
+27. ADRIANO (áudio): Isso mesmo, aparadores fechados em 130. A mesinha eu deixo pra depois, quando eu olhar o tampo direito e souber se é só lixar ou se tem que colar. Aí eu te falo o tempo.
+28. BOT: 🎧 Ouvi: "Isso mesmo, aparadores fechados em 130. A mesinha eu deixo…"
+29. BOT: Combinado: os aparadores ficam fechados em R$ 130,00 e a mesinha fica em aberto. ✅
+
+Quando você olhar o tampo e me disser se é só lixar ou se precisa colar, eu refaço a conta. 🪵
+30. ADRIANO (áudio): Isso, valeu! Tô esperando eu olhar a mesinha direito. Quando eu souber se é só lixar ou se tem que colar, eu te falo o tempo. Os aparadores tão fechados em 130, pode mandar o PDF pro cliente que eu aviso quando ele responder.
+31. BOT: 🎧 Ouvi: "Isso, valeu! Tô esperando eu olhar a mesinha direito. Quando…"
+32. BOT: Isso, os aparadores estão fechados em **R$ 130,00**. O PDF já foi enviado para o Seu Roberto e a Dona Jo, então não precisa mandar de novo.
+
+Quando o cliente responder, me avisa que eu registro. A mesinha fica em aberto até você olhar o tampo. 🪵
+33. ADRIANO (áudio): Beleza, valeu! Então os aparadores ficam em 130 e a mesinha fica pra depois. Assim que eu olhar o tampo direito e souber se é só lixar ou se tem que colar, eu te falo o tempo. Quando o Seu Roberto e a Dona Jo responderem eu te aviso pra registrar.
+34. BOT: 🎧 Ouvi: "Beleza, valeu! Então os aparadores ficam em 130 e a…"
+35. BOT: Combinado! Quando o Seu Roberto e a Dona Jo responderem, me avisa que eu registro. Quando olhar o tampo da mesinha, me fala o tempo que eu refaço a conta. 🪵
+36. ADRIANO (áudio): Beleza, valeu! Aparadores fechados em 130 e a mesinha fica pra depois. Quando eu olhar o tampo direito e souber se é só lixar ou se tem que colar, eu te falo o tempo. Aí você refaz a conta.
+37. BOT: 🎧 Ouvi: "Beleza, valeu! Aparadores fechados em 130 e a mesinha fica…"
+38. BOT: Combinado: os aparadores ficam em **R$ 130,00** e a mesinha fica em aberto. ✅
+
+Quando você olhar o tampo e me disser se é só lixar ou se precisa colar, me passa o tempo e eu refaço a conta. 🪵
+39. ADRIANO (áudio): Beleza, então é isso: aparadores fechados em 130 e a mesinha fica em aberto. Quando eu olhar o tampo e souber se é só lixar ou se tem que colar, eu te passo o tempo. Aí você refaz a conta. Valeu!
+40. BOT: 🎧 Ouvi: "Beleza, então é isso: aparadores fechados em 130 e a…"
+41. BOT: Combinado! Quando olhar o tampo da mesinha, me passa o tempo que eu refaço a conta. 🪵
+42. ADRIANO (áudio): Beleza, então é isso mesmo. Aparadores fechados em 130 e a mesinha fica em aberto até eu olhar o tampo. Quando eu souber se é só lixar ou se tem que colar, eu te passo o tempo e você refaz a conta. Valeu!
+43. BOT: 🎧 Ouvi: "Beleza, então é isso mesmo. Aparadores fechados em 130 e…"
+44. BOT: Combinado! Aparadores fechados em R$ 130,00 e a mesinha segue em aberto. Quando olhar o tampo e souber se é só lixar ou se precisa colar, me passa o tempo. 🪵
+45. ADRIANO (áudio): Beleza, então tá fechado. Aparadores em 130 e a mesinha fica em aberto até eu olhar o tampo. Assim que eu ver se é só lixar ou se tem que colar, eu te falo o tempo e você refaz a conta. Valeu!
+46. BOT: 🎧 Ouvi: "Beleza, então tá fechado. Aparadores em 130 e a mesinha…"
+47. BOT: Combinado! Quando você olhar o tampo, me fala o tempo que eu refaço a conta. 🪵
+48. ADRIANO (áudio): Beleza, então tá fechado mesmo. Aparadores em 130, mesinha em aberto. Quando eu olhar o tampo e ver se é só lixar ou se tem que colar, eu te passo o tempo.
+49. BOT: 🎧 Ouvi: "Beleza, então tá fechado mesmo. Aparadores em 130, mesinha em…"
+50. BOT: Combinado! Aparadores em R$ 130,00 e a mesinha em aberto. Quando olhar o tampo e souber se é só lixar ou se precisa colar, me passa o tempo que eu refaço a conta. 🪵
+51. ADRIANO (áudio): Beleza, é isso mesmo. Aparadores em 130 e a mesinha fica em aberto. Quando eu olhar o tampo e ver se é só lixar ou se tem que colar, eu te falo o tempo e você refaz a conta. Valeu!
+52. BOT: 🎧 Ouvi: "Beleza, é isso mesmo. Aparadores em 130 e a mesinha…"
+53. BOT: Anotado: aparadores em R$ 130,00 e a mesinha em aberto até você olhar o tampo. Quando souber se é só lixar ou se precisa colar, é só me passar o tempo. 🪵
 ```
 
 </details>
 
 ## admin-mesinha-criados — Administrador: mesinha + 2 criados-mudos, medidas todas de uma vez
 
-Notas: entendimento 2 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 2 · eficiencia 2 · conclusao 3 · 90s
+Notas: entendimento 3 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 4 · sem_invencao 2 · eficiencia 2 · conclusao 3 · 122s
 
-- ❌ 3 serviços — 2
-- ❌ 2 criados-mudos — [{"type":"mesa","descriptors":["de centro"]},{"type":"mesa_cabeceira","descriptors":[],"quantity":2}]
+- ✅ 3 peças
+- ✅ 2 criados-mudos
 - ✅ cliente Dona Carla
 - ✅ medidas das 3 peças
 - ✅ sem frete (cliente traz e busca)
 - ✅ PDF gerado após o desconto
 
-> O bot chegou ao valor e aplicou os 10% de desconto, mas com muito atrito. Repetiu perguntas sobre dados que o usuário já tinha dado, inventou 'reparo' no resumo e mostrou uma mensagem de orçamento longa e técnica. Gerou 2 PDFs em vez de 3 peças e falhou nas conferências de serviços. As 22 horas calculadas contradizem as 6 horas informadas.
+> O bot chegou ao valor e aplicou o desconto de 10%, mas perdeu tempo com perguntas já respondidas, ignorou duas vezes o pedido de valor e desconto, e inventou 'pé' na mesa. Gerou dois PDFs sem deixar claro como ficou o valor de cada um e repetiu o mesmo aviso várias vezes no final.
 
-- [media] (perdeu_informacao) turno 3: Resumo diz 'lixar e envernizar' para os 3 móveis e chama de '2 criados' sem 'mudos'. Também ignora que o tampo da mesinha está 'meio judiado' e o prazo de 3 a 5 dias.
-- [media] (pergunta_desnecessaria) turno 4: Pergunta se é só o tampo ou a mesinha inteira, mas ele já tinha dito que a mesinha é inteira e os criados só o tampo. Isso mostra que o bot não entendeu a primeira fala.
-- [media] (pergunta_repetida) turno 10: Pergunta o estado de peças que ele já tinha descrito (lixar e acertar detalhes). Depois pergunta de quem são os móveis, o que é aceitável, mas o fluxo repete informação já dada.
-- [alta] (inventou) turno 13: Resumo de confirmação inventa 'reparo no tampo' e 'reparos' nos criados, contra o que ele disse (só lixar e acertar detalhes). Obrigou o usuário a corrigir.
-- [media] (pergunta_repetida) turno 18: Pede as medidas da mesinha, que ele já tinha dado no primeiro áudio (redonda, 2 metros). O exemplo de resposta também é técnico demais.
-- [media] (pergunta_repetida) turno 21: Pergunta o tempo dos detalhes depois que ele já tinha dito o prazo de 3 a 5 dias. Mesmo assim é razoável pedir horas de trabalho. Ele já tinha dado as medidas dos criados no turno 19, e o bot ignorou isso.
-- [media] (fluxo_confuso) turno 24: Diz 'Já já te pergunto de qual peça é', mas nunca pergunta. Ignora o desconto de 10% e o detalhamento de horas por peça que ele já tinha dado no turno 22.
-- [alta] (jargao) turno 25: Mensagem de orçamento é longa, com prejuízo, material a comprar, divergência de R$ 70 e R$ 239, 'medida aproximada'. Contradiz o que ele disse (já tem o material) e confunde. O total de 22 horas também destoa das 6 horas que ele informou.
-- [media] (pergunta_repetida) turno 28: Pergunta o valor do desconto, que ele já tinha dito no turno 22 (10%, cliente antiga). Ele teve que repetir.
-- [alta] (perdeu_informacao) turno 30: Gera 2 PDFs (um por peça) quando eram 3 peças em 2 serviços (mesinha + 2 criados). O banco confirma que o resultado falhou: apenas 2 serviços, sem os 3 móveis. Os criados aparecem sem 'só o tampo'.
-- [baixa] (tom) turno 34: Registra que o cliente aceitou e fala em '2 orçamentos'. Isso reforça a estrutura errada dos serviços.
+- [media] (pergunta_redundante) turno 3: Pede o tamanho da mesa em comprimento, largura e altura mesmo sendo redonda; depois ainda volta a perguntar a altura (turno 18) e por dentro/fora (turno 12).
+- [alta] (nao_entendeu) turno 12: Ele já disse que não há conserto nem pé quebrado, mas o bot anota 'a mesa não tem conserto' (ambíguo) e 'o pé está bom', inventando uma mesa com pé. Ignora o pedido de valor e desconto de 10%, e pergunta de novo sobre o acabamento por dentro.
+- [media] (pergunta_repetida) turno 15: Ele pediu valor e desconto duas vezes (turnos 10 e 13) e o bot seguiu perguntando detalhes sem reconhecer o pedido. Ele precisou repetir.
+- [media] (perguntou_o_que_ja_foi_dito) turno 18: Tinha dito que os criados-mudos eram só tampo, lixar e envernizar; o bot pergunta de novo o estado. Também anota 'a Dona Carla já deixou você ver a mesa' como se fosse algo novo, uma fala de passagem.
+- [alta] (inventou) turno 21: Mostra valores e o mínimo (R$ 415,57) sem explicar, o que soa como jargão. Também aplica o desconto na soma dos dois, mas 'fechado em R$ 459,00' mistura mesa e criados-mudos. Ele só pediu para ver o valor; a pergunta 'quer que eu feche' puxa para o fechamento.
+- [alta] (fluxo_confuso) turno 23: Gerou dois PDFs separados (mesa e criados-mudos), embora o orçamento seja um só. A frase 'Fechado em R$ 459,00' deixa confuso quanto ao valor de cada PDF.
+- [baixa] (repeticao) turno 27: Repete a mesma frase 'quando ela responder me avisa' três vezes seguidas (turnos 25, 27, 29, 31), com eco sem acrescentar nada.
+- [media] (tom) turno 31: Responde 'O de 10% foi ideia sua', tom seco e corretivo para uma pergunta simples. Diz que está 'fechado' e 'fico aguardando', soando como confirmação do que depende da cliente.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): Oi, tudo bem? Preciso de um orçamento. Trnho uma mesinha de centro redonda, com 2 metros de largura, o tampo meio judiado. Ela é pra lixar, acertar uns detalhes e envernizar. Também são dois criados-mudos, 80 cm de largura e 40 de altura, os dois iguais, só o tampo de cada um, pra lixar e envernizar. Já tenho o material, uns 70 reais. Eu falei pra cliente que demora uns 3 a 5 dias. Dá pra fazer a conta pra mim?
-   {entendido: (igual) · rota: global/new_job}
-2. BOT: 🎧 Ouvi: "Oi, tudo bem? Preciso de um orçamento. Trnho uma mesinha…"
-3. BOT: Entendi! São 3 móveis para lixar e envernizar: uma mesinha de centro e 2 criados. Você quer saber quanto cobrar.
-4. BOT: Perfeito 😄 Na mesinha de centro, você vai trabalhar só no tampo ou na mesinha inteira?
-5. ADRIANO (áudio): Na mesinha é ela inteira, pés e tampo. Os criados-mudos é só o tampo de cada um. Pode fazer a conta com isso. A cliente deixa tudo em casa e busca depois de pronto.
-   {entendido: Na mesinha de centro, trabalhar na mesinha inteira, pés e tampo. Nos 2 criados-mudos, só o tampo de cada um. Pode fazer a conta com isso. A cliente deixa tudo em casa e busca depois de pronto. · rota: pending_answer/service_scope_answer}
-6. BOT: 🎧 Ouvi: "Na mesinha é ela inteira, pés e tampo. Os criados-mudos…"
-7. BOT: Anotado: mesinha inteira, com pés e tampo, e só o tampo dos 2 criados. Assim eu consigo fechar a conta. 🛠️
+1. ADRIANO (áudio): Fala, tudo bem? Preciso de um orçamento. Uma mesinha de centro, inteira, que é pra lixar, acertar uns detalhes e envernizar. E mais dois criados-mudos, só o tampo, pra lixar e envernizar também. Os dois são iguais. Já trnho o pincel e a faca pra raspar, então é só mão de obra. A cliente deixa em casa e busca depois de pronto. Consegue me passar o valor pra eu ver aqui?
+2. BOT: 🎧 Ouvi: "Fala, tudo bem? Preciso de um orçamento. Uma mesinha de…"
+3. BOT: Anotado: duas peças, a mesa de centro inteira (lixar, acertar detalhes e envernizar) e 2 criados-mudo iguais, só o tampo (lixar e envernizar). Você tem pincel e faca, então é só mão de obra, e a cliente leva e busca.
 
-E os criados, como estão hoje? Algum precisa de reparo além do lixamento?
-8. ADRIANO (áudio): Os dois criados tão bons, só precisam de lixa e acertar uns detalhezinhos. Nada de reparo grande. E a mesinha também só precisa lixar e acertar uns detalhes. Já trnho o material, então é só fazer a conta mesmo.
-   {entendido: Os 2 criados-mudos estão bons; só precisam de lixa e acertar uns detalhes, sem reparo grande. A mesinha de centro também só precisa de lixa e acertar uns detalhes. O material já está comprado (cerca de 70 reais), então é só fazer a conta. · rota: active_goal/quote_request_continue}
-9. BOT: 🎧 Ouvi: "Os dois criados tão bons, só precisam de lixa e…"
-10. BOT: Beleza, anotado: os dois criados estão bons, só precisam de lixa e uns detalhes, sem reparo grande. 📏 A mesinha também só precisa de lixa e acertos, e o material você já tem.
+Pra eu calcular a mesa, qual o tamanho dela? Pode ser em cm (comprimento, largura e altura) ou pequena, média ou grande.
+4. ADRIANO (áudio): A mesinha é redonda, tem 2 metros de largura. Os criados-mudos têm 80 cm de largura e 40 de altura, os dois iguais.
+5. BOT: 🎧 Ouvi: "A mesinha é redonda, tem 2 metros de largura. Os…"
+6. BOT: Anotado: a mesa é redonda, 2 m de diâmetro, e os dois criados-mudo são 80 cm de largura por 40 de altura. Os dois têm só tampo, e a cliente deixa e busca em casa.
 
-Esses móveis são de quem? Pode me passar só o nome do cliente, tipo "da dona Maria". 🙂
-11. ADRIANO (áudio): Dona Carla. Os móveis são da dona Carla. Ela deixa tudo em casa e busca depois de pronto.
-   {entendido: Os móveis são da dona Carla. Ela deixa tudo em casa e busca depois de pronto. · rota: pending_answer/client_identity_answer}
-12. BOT: 🎧 Ouvi: "Dona Carla. Os móveis são da dona Carla. Ela deixa…"
-13. BOT: Entendi 😄 Então fica assim:
+Qual o nome da cliente, com tratamento (Dona Fulana ou Seu Fulano)?
+7. ADRIANO (áudio): Dona Carla, a cliente é a dona Carla.
+8. BOT: 🎧 Ouvi: "Dona Carla, a cliente é a dona Carla."
+9. BOT: Anotado: a mesa de centro e os dois criados-mudo são da Dona Carla. Ela deixa em casa e busca depois de pronto.
 
-• Mesinha de centro: lixar e envernizar inteira, com reparo no tampo.
-• 2 criados: lixar e envernizar só o tampo, com reparos.
+A mesa precisa de algum conserto, ou é só lixar, acertar os detalhes e envernizar?
+10. ADRIANO (áudio): Isso mesmo, só lixar, acertar uns detalhes e envernizar. Não tem conserto de madeira, nem pé quebrado, nada. Tá tudo bem firme, só precisa da mão de obra mesmo. Aí eu queria ver o valor, e se der pra fazer um desconto de 10% pra ela, melhor ainda.
+11. BOT: 🎧 Ouvi: "Isso mesmo, só lixar, acertar uns detalhes e envernizar. Não…"
+12. BOT: Anotado: a mesa não tem conserto, a madeira está firme e o pé está bom.
 
-Está certo?
-   [botões: Certo | Corrigir]
-14. ADRIANO (áudio): Não, não é bem isso. A mesinha só precisa lixar e acertar uns detalhes, não tem reparo no tampo. E os criados também, só lixa e acerto, nada de reparo grande. Pode fazer a conta assim.
-   {entendido: corrigir: a mesinha de centro (inteira, com pés e tampo) só precisa de lixa e acertos de detalhes, sem reparo no tampo; os 2 criados-mudos (só o tampo de cada um) também só precisam de lixa e acertos de detalhes, sem reparo grande. Pode fazer a conta assim. · rota: active_goal/quote_request_continue}
-15. BOT: 🎧 Ouvi: "Não, não é bem isso. A mesinha só precisa lixar…"
-16. BOT: Ah, entendi, errei na leitura 😄 Então fica assim: a mesinha de centro é só lixar e acertar uns detalhes, sem reparo no tampo, e os 2 criados também só lixa e acerto, sem reparo grande. Está certo agora?
-   [botões: Certo | Corrigir]
-17. ADRIANO: [tocou: Certo]
-18. BOT: Beleza, então agora as medidas, que fazem diferença no preço. 📏 Quais são as medidas da mesinha de centro? Por exemplo: "45 de altura, 1 metro de largura e 60 de fundura". Se não tiver certeza, pode dizer só pequena, média ou grande.
-19. ADRIANO (áudio): A mesinha é redonda, tem 2 metros de largura. Os dois criados têm 80 cm de largura e 40 de altura, iguais. Pincel e uma faca pra raspar, já trnho tudo. Pode fazer a conta.
-   {entendido: A mesinha de centro é redonda, com 2 metros de largura. Os 2 criados têm 80 cm de largura e 40 cm de altura, iguais entre si. Método: pincel; também vou usar faca pra raspar. Já tem todo o material. Pode fazer a conta. · rota: pending_answer/item_dimensions_answer}
-20. BOT: 🎧 Ouvi: "A mesinha é redonda, tem 2 metros de largura. Os…"
-21. BOT: Quanto tempo você acha que leva pra acertar os detalhes de todas as peças, somando tudo? 🛠️ Por exemplo: "3 horas". Se não souber, tudo bem.
-22. ADRIANO (áudio): Uns 6 horas no total, contando lixa e os acertos das três peças. A mesinha é uma parte maior, uns 3 horas, e cada criado umas 1h30. Se quiser fechar a conta com 10% de desconto, pode fazer, dona Carla é cliente antiga.
-   {entendido: Total de 6 horas somando as três peças (lixar e acertar os detalhes). Mesinha de centro: 3 horas. Cada criado: 1h30. Desconto de 10% para a dona Carla (cliente antiga), para o sistema aplicar na conta. · rota: pending_answer/repair_hours_answer}
-23. BOT: 🎧 Ouvi: "Uns 6 horas no total, contando lixa e os acertos…"
-24. BOT: Anotei o que você falou do estado 👍 Já já te pergunto de qual peça é.
-25. BOT: 🧮 Prontinho, fiz as contas dos 2 móveis!
+Antes de fechar o valor, falta saber uma coisa: a mesa é só por fora ou você lixa e enverniza por dentro também? Sendo mesa de centro, geralmente é só por fora, mas me confirma.
+13. ADRIANO (áudio): Por fora mesmo, só o tampo e as partes que aparecem. Por dentro não precisa, ela não usa isso. Pode seguir o valor, e se der pra fazer 10% de desconto pra dona Carla eu queria ver também.
+14. BOT: 🎧 Ouvi: "Por fora mesmo, só o tampo e as partes que…"
+15. BOT: Anotado: a mesa é só por fora, incluindo tampo e partes que aparecem, e o diâmetro está em 2 m (200 cm).
 
-• Mesinha de centro: R$ 1.043,00
-• Os 2 criados: R$ 331,00
+Pra fechar o valor dos dois criados-mudo, preciso saber o estado deles: estão bons, só com riscos, ou têm algum reparo (colar, massa, algo mais firme)?
+16. ADRIANO (áudio): Os dois criados-mudos estão bons, só com riscos leves e uma marca ou outra na superfície. Nada de colar, nem massa. Só lixar e envernizar mesmo, igual à mesa. Ah, e a mesa a dona Carla já deixou eu olhar, então pode seguir.
+17. BOT: 🎧 Ouvi: "Os dois criados-mudos estão bons, só com riscos leves e…"
+18. BOT: Anotado: os dois criados-mudo estão bons, só riscos leves e marcas, então é lixar e envernizar, sem massa nem colar. Também anotei que a Dona Carla já deixou você ver a mesa.
 
-💰 Total sugerido: R$ 1.374,00
+Para fechar o valor da mesa, falta a altura dela. Quantos centímetros tem do chão até o topo?
+19. ADRIANO (áudio): A mesa é baixa, de centro, uns 45 cm do chão até o topo. Os criados-mudos são os 40 de altura que eu falei. Pode seguir o valor e vê o desconto de 10% pra dona Carla.
+20. BOT: 🎧 Ouvi: "A mesa é baixa, de centro, uns 45 cm do…"
+21. BOT: Pronto, Dona Carla, mesa e criados-mudo:
 
-⚠️ Menos que R$ 1.116,00 no total você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 377,00 de material.
-⏱️ Dá umas 22 horas de trabalho.
-📏 Fiz com a medida aproximada, então pode variar um pouco.
-🧾 Você comentou uns R$ 70,00 de material; pela minha conta o material usado dá uns R$ 239,00.
+🪵 **Mesa de centro** (redonda, 2 m, 45 cm de altura): R$ 335,00
+🛠️ **2 criados-mudo** (80 x 40 cm, só tampo): R$ 175,00 cada
 
-E aí, você concorda com esse valor? 🤝
+Total sugerido: **R$ 510,00**, com umas 8 horas de trabalho.
+
+Com 10% de desconto pra Dona Carla, fica **R$ 459,00**. Esse valor não fica abaixo do mínimo (R$ 415,57).
+
+Quer que eu feche assim, com R$ 459,00?
    [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-26. ADRIANO: [tocou: ➖ Dar desconto]
-27. BOT: Beleza! Quanto de desconto você quer dar? 🙂
+22. ADRIANO: [tocou: 👍 Concordo]
+23. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+24. BOT: [PDF enviado: Proposta-AP-2026-0002-v1.pdf]
+25. BOT: Fechado em R$ 459,00 pra Dona Carla, com o desconto de 10%. Mandei os 2 PDFs (mesa e criados-mudo).
 
-Pode falar em reais, tipo "50 reais", ou em porcentagem, tipo "10%".
-28. ADRIANO: 10%, a dona Carla é cliente antiga, pode fazer assim.
-   {entendido: desconto de 10%; a cliente é antiga · rota: active_goal/quote_decision_continue}
-29. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
-30. BOT: [PDF enviado: Proposta-AP-2026-0002-v1.pdf]
-31. BOT: Fechado! ✅
+Quando ela responder se aceita, me avisa que eu anoto aqui.
+26. ADRIANO: Valeu, chefe! Já recebi os dois PDFs aqui. Quando a dona Carla responder, eu te aviso e anoto. Obrigado.
+27. BOT: De nada, Adriano! Quando a Dona Carla responder, me manda aqui que eu anoto como aceito ou recusado. 🎨
+28. ADRIANO: Beleza, valeu! Assim que a dona Carla responder eu te aviso e anoto aqui. Qualquer coisa me chama.
+29. BOT: Beleza, Adriano! Fico aguardando o retorno da Dona Carla. Quando ela responder, é só me mandar aqui que eu anoto. 🪵
+30. ADRIANO: Beleza, valeu! Assim que a dona Carla responder eu te aviso e anoto aqui. Só uma coisa: ela ainda não pediu desconto, né? Quando ela responder, me fala se aceitou o valor ou se quer negociar.
+31. BOT: Isso, a Dona Carla ainda não pediu desconto. O de 10% foi ideia sua, e o orçamento da mesa e dos criados-mudo já está fechado com esse desconto.
 
-Valor final: R$ 1.236,60 (R$ 1.374,00 com R$ 137,40 de desconto)
-
-📄 Os 2 PDFs (um por peça) já estão prontos pra você encaminhar pra Carla.
-32. BOT: Quando a cliente responder, me avisa aqui: 👇
-   [botões: 👍 Cliente aceitou | 👎 Cliente recusou]
-33. ADRIANO: [tocou: 👍 Cliente aceitou]
-34. BOT: Boa! 🎉 Anotei que a Carla aceitou os 2 orçamentos, R$ 1.236,60 no total.
-
-Quando você quiser, pode me mandar o próximo serviço ou registrar algum gasto ou pagamento. 🛠️
+Quando ela responder, me fala se aceitou o valor ou se quer negociar. Se ela quiser ajustar, a gente refaz a conta antes de mandar qualquer coisa. 🪵
+32. ADRIANO (áudio): Isso mesmo, chefe. Ela ainda não pediu nada. O desconto de 10% fui eu que pedi pra fechar. Quando ela responder eu te falo se aceitou ou se quer negociar. Valeu!
+33. BOT: 🎧 Ouvi: "Isso mesmo, chefe. Ela ainda não pediu nada. O desconto…"
+34. BOT: Combinado, Adriano. Quando a Dona Carla responder, me fala se aceitou ou se quer negociar que eu anoto. 🪵
 ```
 
 </details>
 
 ## admin-comoda-carla — Cômoda da Dona Carla (pátina), gavetão, correção e logística do cliente
 
-Notas: entendimento 1 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 1 · eficiencia 1 · conclusao 1 · 115s
+Notas: entendimento 5 · naturalidade 4 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 4 · eficiencia 5 · conclusao 5 · 36s
 
 - ✅ 1 serviço
 - ✅ cômoda
@@ -259,367 +268,45 @@ Notas: entendimento 1 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_
 - ✅ estilete nas observações
 - ✅ pincel
 - ✅ sem frete
-- ❌ medidas 1 m × 0,8 m — {"height":"1","width":"1"}
+- ✅ medidas 1 m × 0,8 m
 
-> Falha total. O bot inverteu as medidas no começo (80 cm largura e 1 m altura virou 0,8 m de altura) e nunca conseguiu corrigir. Quatro correções claras do Adriano geraram resultados errados, falsas confirmações e um resumo repetido, depois silêncio. Nunca calculou o orçamento, e o faixa de preço inicial estava baseada em medidas erradas.
+> Conversa eficiente: o bot entendeu a correção das medidas, registrou tudo corretamente (conferências OK) e fechou o orçamento de R$ 539,00 com o PDF. Pontos fracos: duas perguntas juntas no turno 3, uma pergunta redundante sobre as gavetas e uma mensagem de preço densa, com números e termos como 'prejuízo'.
 
-- [alta] (inventou) turno 3: Inverteu as medidas logo de início: Adriano disse 80 por 1 metro (largura 80, altura 1 m) e o bot anotou altura 0,8 m, largura 1 m. Também pôs 'raspagem com estilete' como tipo de móvel e 'sem frete' sem ele ter dito assim.
-- [media] (jargao) turno 4: Deu faixa de preço (R$ 393 a 520) calculada com medidas erradas, e chamou de 'última coisinha' uma pergunta que já tinha sido respondida no áudio inicial (só por fora).
-- [media] (perdeu_informacao) turno 7: Anotou só 'só por fora'. Ignorou a confirmação das medidas (largura por altura) e a repetição de que a cliente traz e busca.
-- [alta] (inventou) turno 11: Disse que ajustou para altura 1 m e largura 1 m, mudando a largura de 80 cm para 1 m. Valor errado inventado, ao contrário do que o usuário pediu.
-- [alta] (nao_entendeu) turno 15: Voltou para altura 0,8 m e largura 1 m, repetindo o erro original e alegando 'corrigido'. Falsa confirmação de correção.
-- [alta] (nao_entendeu) turno 19: Voltou a 1 m por 1 m e disse 'troquei', mas a largura 0,8 m nunca foi gravada. Loop de erro.
-- [alta] (travou) turno 23: Ignorou o pedido, sem avisar da correção, e repetiu o mesmo resumo errado (1 m por 1 m). Texto longo repetido pela quarta vez.
-- [alta] (travou) turno 26: Quarta correção pedida e nenhuma resposta; o orçamento nunca é calculado nem ele consegue concordar com o valor. Ele repete a mesma correção cinco vezes e o bot não muda.
-- [media] (texto_longo) turno 12: Repete o resumão inteiro a cada correção em vez de resposta curta. Pergunta 'tá tudo certo?' mesmo depois de ele já ter dito 'pode calcular depois de corrigir'.
+- [media] (uma_pergunta_por_vez) turno 3: Fez duas perguntas na mesma mensagem (ordem das medidas e confirmação das 5 gavetas); o Adriano já tinha dito 4 gavetas e 1 gavetão.
+- [media] (jargao) turno 6: Usa expressões como 'abaixo de R$ 436,14 você fica no prejuízo' e 'material novo', com muitos números juntos, o que é pesado para quem prefere conversa simples. Texto um pouco longo.
+- [baixa] (tom) turno 9: Fala 'O PDF já foi enviado' e pede para avisar quando a cliente responder, o que é correto, mas o tom é um pouco formal. Também não repassa o tempo estimado de 9 horas.
+- [baixa] (inventou) turno 6: Os R$ 165,00 de material novo aparecem sem contexto, mesmo sem ele ter falado em comprar material.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): Ô, chegou uma cômoda aqui da dona Carla pra patinar. Ela tem uns 80 por 1 metro, mais ou menos. Ela tem 4 gavetas e um gavetão. Tá boazinha, só precisa de pátina por fora, não tem conserto nenhum. Vou fazer com pincel e vou usar o estilete pra raspar. Ela que traz e busca quando tiver pronta.
-   {entendido: (igual) · rota: global/new_job}
-2. BOT: 🎧 Ouvi: "Ô, chegou uma cômoda aqui da dona Carla pra patinar.…"
-3. BOT: Anotei um serviço novo:
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 0,8 m, largura 1 m
-• inclui 1 gavetão
-• também vai usar: estilete pra raspar
+1. ADRIANO (áudio): Oi, tudo bem? Então, chegou uma cômoda da dona Carla pra eu fazer a pátina. Ela tem uns 80 por 1 metro, mais ou menos. Tem 4 gavetas e um gavetão embaixo. Tá boazinha, só precisa por fora, sem conserto nenhum. Ela traz e busca quando tiver pronta. Queria saber quanto eu cobro nessa.
+2. BOT: 🎧 Ouvi: "Oi, tudo bem? Então, chegou uma cômoda da dona Carla…"
+3. BOT: Anotado: cômoda da Dona Carla, pátina por fora, estado bom, sem conserto, ela traz e busca.
 
-Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.
-4. BOT: 💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 393,00 e R$ 520,00. Com o resto das respostas eu fecho o valor.
+Só falta confirmar o tamanho. Você falou "80 por 1 metro": são 80 cm de altura e 1 metro (100 cm) de largura? E as 5 gavetas (4 + o gavetão) estão certas?
+4. ADRIANO (áudio): Não, errei a ordem. É 1 metro de altura por 80 cm de largura. E as gavetas estão certas: 4 gavetas e 1 gavetão embaixo, total 5. Pode seguir com a pátina por fora, pincel e estilete pra raspar.
+5. BOT: 🎧 Ouvi: "Não, errei a ordem. É 1 metro de altura por…"
+6. BOT: Anotado: cômoda de 1 m de altura por 80 cm de largura, 5 gavetas, pátina por fora com pincel e estilete pra raspar. Ela traz e busca.
 
-Última coisinha: a cômoda vai ser trabalhada só por fora, ou a parte de dentro (prateleiras, gavetas) também?
-5. ADRIANO (áudio): Só por fora mesmo. As gavetas por dentro não precisa mexer, tá limpinha. Ah, e as medidas que eu falei, 80 por 1 metro, era a largura por a altura, tá certo assim. Ela busca quando tiver pronta, ela mesma traz e busca.
-   {entendido: (igual) · rota: pending_answer/service_scope_answer}
-6. BOT: 🎧 Ouvi: "Só por fora mesmo. As gavetas por dentro não precisa…"
-7. BOT: Anotado: só por fora.
-8. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
+Minha sugestão é **R$ 539,00**, em umas 9 horas de trabalho.
 
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 0,8 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
+Abaixo de **R$ 436,14** você fica no prejuízo. Se for preciso comprar material novo, são uns R$ 165,00.
 
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-9. ADRIANO (áudio): Opa, ta quase! So uma correcao: a altura e 1 metro e a largura 80 cm, que e o contrario do que ta ai. Fora isso ta certo. Pode calcular depois que corrigir.
-   {entendido: corrigir: a altura é 1 metro e a largura é 80 cm (o contrário do que está anotado: altura 0,8 m, largura 1 m). Fora isso, está certo. Pode calcular depois de corrigir. · rota: active_goal/confirm_calc_continue}
-10. BOT: 🎧 Ouvi: "Opa, ta quase! So uma correcao: a altura e 1…"
-11. BOT: Anotado, Adriano! Ajustei as medidas pra altura 1 m e largura 1 m (antes estava altura 0,8 m, largura 1 m). Guardei a correção. 🪵
-12. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
+Você concorda com R$ 539,00 ou quer dar um desconto ou acrescentar algo?
+   [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
+7. ADRIANO: Concordo sim, pode fechar em R$ 539,00. Só uma coisa: ela traz e busca quando estiver pronta, ok? Obrigado.
+8. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+9. BOT: Fechado: cômoda da Dona Carla por **R$ 539,00**. Ela traz e busca, então não entra frete. O PDF do orçamento já foi enviado.
 
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-13. ADRIANO (áudio): Ô, ficou errado a largura. A largura é 80 cm, a altura é 1 metro. Agora tá certo. Pode calcular.
-   {entendido: (igual) · rota: active_goal/confirm_calc_continue}
-14. BOT: 🎧 Ouvi: "Ô, ficou errado a largura. A largura é 80 cm,…"
-15. BOT: Corrigido, Adriano! Ficou assim: medidas: altura 0,8 m, largura 1 m (antes: medidas: altura 1 m, largura 1 m). Guardei o histórico. 🪵
-16. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 0,8 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-17. ADRIANO (áudio): Não, ficou trocado de novo! A altura é 1 metro e a largura é 80 cm. Não é 0,8 de altura, é 0,8 de largura. Corrige aí, por favor, e depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-18. BOT: 🎧 Ouvi: "Não, ficou trocado de novo! A altura é 1 metro…"
-19. BOT: Beleza, troquei aqui: medidas: altura 1 m, largura 1 m (antes: medidas: altura 0,8 m, largura 1 m). Guardei o histórico. 🪵
-20. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-21. ADRIANO (áudio): Não, de novo não! Altura é 1 metro e largura é 80 cm. Tá errado de novo aí. Por favor, arruma pra altura 1 m e largura 0,8 m, aí pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-22. BOT: 🎧 Ouvi: "Não, de novo não! Altura é 1 metro e largura…"
-23. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-24. ADRIANO (áudio): Ô, de novo errado! A altura é 1 metro e a largura é 80 cm. Não é 1 por 1, é 1 de altura e 0,8 de largura. Arruma isso aí, por favor, e depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-25. BOT: 🎧 Ouvi: "Ô, de novo errado! A altura é 1 metro e…"
-26. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-27. ADRIANO (áudio): Ô, de novo errado! A largura é 80 cm, não 1 metro. Altura 1 metro, largura 0,8. Arruma aí, por favor, e depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-28. BOT: 🎧 Ouvi: "Ô, de novo errado! A largura é 80 cm, não…"
-29. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-30. ADRIANO (áudio): Ô, de novo errado! A largura é 80 cm, não 1 metro. Altura 1 metro, largura 0,8. Por favor, arruma isso aí e depois eu pode calcular. Tá dando confusão no bot hoje, viu.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (a largura é 80 cm, não 1 m). Depois pode calcular. Comentário dele: tá dando confusão no bot hoje. · rota: active_goal/confirm_calc_continue}
-31. BOT: 🎧 Ouvi: "Ô, de novo errado! A largura é 80 cm, não…"
-32. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-33. ADRIANO (áudio): Ô, de novo errado! A largura é 0,8 m, não 1 metro. Altura 1 metro, largura 0,8 metro. Arruma isso aí, por favor. Ele não tá trocando, só não tá pegando a largura. Depois pode calcular.
-   {entendido: (igual) · rota: active_goal/confirm_calc_continue}
-34. BOT: 🎧 Ouvi: "Ô, de novo errado! A largura é 0,8 m, não…"
-35. BOT: Corrigido: medidas: altura 0,8 m, largura 1 m (antes: medidas: altura 1 m, largura 1 m). Guardei o histórico.
-36. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 0,8 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-37. ADRIANO (áudio): Ô, de novo errado! Não é altura 0,8, é altura 1 metro e largura 0,8. Eu falei duas vezes, a altura é 1 metro e a largura é 80 centímetros. Arruma isso aí, por favor, e depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-38. BOT: 🎧 Ouvi: "Ô, de novo errado! Não é altura 0,8, é altura…"
-39. BOT: Feito, Adriano! ✅ Corrigi as medidas: altura 1 m, largura 1 m (antes estava altura 0,8 m, largura 1 m).
-
-O histórico já ficou guardado. 📏
-40. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-41. ADRIANO (áudio): Ainda tá errado, viu. A largura é 80 centímetros, não 1 metro. Altura 1 metro, largura 0,8. Arruma isso aí, por favor, que depois eu pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm) · rota: active_goal/confirm_calc_continue}
-42. BOT: 🎧 Ouvi: "Ainda tá errado, viu. A largura é 80 centímetros, não…"
-43. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-44. ADRIANO (áudio): Ô, de novo! A largura tá 1 metro e tem que ser 80 centímetros, 0,8. Altura é 1 metro. Arruma isso aí, por favor. O bot tá pegando errado a largura, eu já falei três vezes. Depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 cm). Antes estava largura 1 m. · rota: active_goal/confirm_calc_continue}
-45. BOT: 🎧 Ouvi: "Ô, de novo! A largura tá 1 metro e tem…"
-46. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-47. ADRIANO (áudio): Ô, de novo errado! A largura é 80 centímetros, 0,8 metro. Altura é 1 metro. Arruma isso aí, por favor. Ele não tá trocando a largura, o bot tá pegando 1 metro no lugar de 0,8. Depois pode calcular.
-   {entendido: corrigir: a largura é 0,8 m (80 centímetros) e a altura é 1 m. O bot pegou 1 m de largura no lugar de 0,8 m. Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-48. BOT: 🎧 Ouvi: "Ô, de novo errado! A largura é 80 centímetros, 0,8…"
-49. BOT: Beleza, corrigido! ✅ Medidas: altura 1,6 m, largura 1 m (antes estava altura 1 m, largura 1 m). Guardei o histórico. 📏
-50. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1,6 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-51. ADRIANO (áudio): Ô, de novo errado! Não é altura 1,6, é altura 1 metro. Largura é 80 centímetros, 0,8. Arruma isso aí, por favor, e depois pode calcular.
-   {entendido: (igual) · rota: active_goal/confirm_calc_continue}
-52. BOT: 🎧 Ouvi: "Ô, de novo errado! Não é altura 1,6, é altura…"
-53. BOT: Entendi, Adriano, foi mal de novo! 😅 Agora ficou assim: altura 1 m, largura 1 m (antes estava altura 1,6 m, largura 1 m). Guardei o histórico. 📏
-54. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-55. ADRIANO (áudio): Ô, de novo errado! A largura é 80 centímetros, 0,8 metro. Altura é 1 metro, isso tá certo. Você não tá trocando a largura, o bot tá pegando 1 metro no lugar de 0,8. Arruma isso aí, por favor, e depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (80 centímetros). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-56. BOT: 🎧 Ouvi: "Ô, de novo errado! A largura é 80 centímetros, 0,8…"
-57. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-58. ADRIANO (áudio): Ô, de novo errado! A largura é 80 centímetros, 0,8 metro. Altura é 1 metro. Já falei três vezes, o bot não tá pegando a largura. Arruma isso aí, por favor, e depois pode calcular.
-   {entendido: (igual) · rota: active_goal/confirm_calc_continue}
-59. BOT: 🎧 Ouvi: "Ô, de novo errado! A largura é 80 centímetros, 0,8…"
-60. BOT: Corrigido: medidas: altura 0,8 m, largura 1 m (antes: medidas: altura 1 m, largura 1 m). Guardei o histórico.
-61. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 0,8 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-62. ADRIANO (áudio): Ô, de novo errado! Agora trocou a altura. A altura é 1 metro, a largura é 80 centímetros, 0,8. Arruma isso aí, por favor. Depois pode calcular.
-   {entendido: corrigir: medidas: altura 1 m, largura 0,8 m (antes estava altura 0,8 m, largura 1 m). Depois pode calcular. · rota: active_goal/confirm_calc_continue}
-63. BOT: 🎧 Ouvi: "Ô, de novo errado! Agora trocou a altura. A altura…"
-64. BOT: Corrigido, Adriano! 📏 Agora ficou: medidas: altura 1 m, largura 1 m (antes estava altura 0,8 m, largura 1 m). Guardei o histórico.
-65. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Carla. Dá uma conferida:
-
-• móvel: cômoda (raspagem com estilete)
-• trabalho: pátina
-• cliente: Dona Carla
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• sem frete
-• medidas: altura 1 m, largura 1 m
-• observações: inclui 1 gavetão; também vai usar: estilete pra raspar
-• só por fora
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
+Quando a Dona Carla responder, me avisa se ela aceitou. ✅
 ```
 
 </details>
 
 ## abreu-isa-casal — Mesa de cabeceira do Seu Abreu e da Dona Isa (casal), cor e tempo estimado
 
-Notas: entendimento 1 · naturalidade 1 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 1 · eficiencia 1 · conclusao 1 · 103s
+Notas: entendimento 4 · naturalidade 4 · acessibilidade 4 · uma_pergunta_por_vez 5 · sem_invencao 3 · eficiencia 5 · conclusao 5 · 37s
 
 - ✅ 1 serviço (casal = 1 cliente)
 - ✅ cor azul marinho anotada
@@ -627,1128 +314,554 @@ Notas: entendimento 1 · naturalidade 1 · acessibilidade 3 · uma_pergunta_por_
 - ✅ segundo dono não se perdeu
 - ✅ porte médio usado
 
-> O bot entrou em loop perguntando a mesma coisa sobre busca e entrega mais de sete vezes, apesar de Adriano responder e pedir para fechar. Inventou conflitos de cliente duas vezes e acabou trocando Seu Abreu por 'Cliente'. Nunca apresentou o valor final nem pediu a concordância, então o objetivo não foi cumprido.
+> Chegou ao valor com poucas trocas e o Adriano concordou. Anotou tudo: cliente casal como um só, cor, tempo e porte médio. Pontos fracos: trocou 'mesa de cabeceira' por 'criado-mudo', chamou de 'fechado' o que ainda aguarda o cliente, usou termos como 'material novo' sem explicar e repetiu o aviso final três vezes.
 
-- [alta] (inventou) turno 7: Inventou conflito de cliente ('Próprio Adriano') que ele não disse, e pediu confirmação desnecessária.
-- [media] (pergunta_repetida) turno 10: Perguntou como a peça chega e volta, sendo que ele já disse no turno 5 que não precisa buscar nem entregar e que ele leva.
-- [alta] (pergunta_repetida) turno 13: Confirmou a informação de busca e entrega e logo perguntou de novo a mesma coisa.
-- [alta] (pergunta_repetida) turno 16: Repetiu a pergunta sobre busca e entrega com outra frase (turnos 16, 19, 22, 25, 28, 31, 34), mesmo ele reclamando várias vezes.
-- [alta] (travou) turno 16: Ignorou os pedidos repetidos de fechar o orçamento e ficou preso num loop sem avançar.
-- [media] (nao_entendeu) turno 34: Tratou a pergunta social 'vc tá bem?' como dúvida sobre o transporte, sem responder ao cumprimento, e repetiu a mesma pergunta.
-- [alta] (inventou) turno 37: Inventou de novo uma troca de cliente ('Cliente') a partir de nada.
-- [alta] (perdeu_informacao) turno 39: Trocou o cliente Seu Abreu por 'Cliente' após um botão induzido, perdendo um dado correto.
-- [alta] (travou) turno 40: Terminou com 'Pronto' sem mostrar o valor final nem pedir concordância, objetivo não atingido.
-- [baixa] (jargao) turno 4: Tom correto, mas ele já tinha dito tudo e o bot ficou repetindo 'Só falta' em vez de fechar.
+- [media] (inventou) turno 6: Trocou 'mesa de cabeceira' por 'criado-mudo', nome de peça que o Adriano não usou.
+- [media] (jargao) turno 6: Usa 'Material novo' e 'Abaixo de ... você fica no prejuízo' sem explicar. Não confirma que usou o porte médio nem os 3 a 5 dias, e o valor aparece sem mostrar de onde veio.
+- [baixa] (inventou) turno 9: Diz que o orçamento está 'fechado', mas o cliente ainda não aceitou; é só a proposta do Adriano. Pode confundir.
+- [baixa] (tom) turno 11: Repete quase igual o pedido de avisar quando responderem nos turnos 9, 11 e 13; fica um pouco insistente.
+- [baixa] (nao_entendeu) turno 10: A fala do Adriano no turno 10 está invertida, como se ele fosse o assistente, mas o bot respondeu bem sem apontar a confusão.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): E aí, tudo bem? Queria saber se dá pra fazer um orçamento novo. É a mesa de cabeceira do seu Abreu e da dona Isa, eles querem lixar e pintar de azul marinho. Tá boa, só por fora, sem conserto nenhum.
-   {entendido: (igual) · rota: global/new_job}
-2. BOT: 🎧 Ouvi: "E aí, tudo bem? Queria saber se dá pra fazer…"
-3. BOT: Anotei um serviço novo:
-• móvel: criado-mudo (novo, azul)
-• trabalho: pintura
-• cliente: Seu Abreu
-• só por fora
-• estado: bom
-• sem consertos
-• cor: azul marinho
-• também citado: Dona Isa
+1. ADRIANO (áudio): e aí, dá pra fazer um orçamento novo? é a mesa de cabeceira do seu Abreu e da dona Isa, vou lixar e pintar de azul marinho. tá boa, só por fora, sem conserto nenhum
+2. BOT: 🎧 Ouvi: "e aí, dá pra fazer um orçamento novo? é a…"
+3. BOT: Anotado: mesa de cabeceira do Seu Abreu e Dona Isa, pintura lisa por fora, azul marinho, peça boa e sem conserto.
 
-Vou te perguntando o resto aos pouquinhos, tá? Pode responder do jeito que for mais fácil, áudio ou texto.
-4. BOT: Quase lá! Agora falta o tamanho, que mexe bastante no preço. Se tiver as medidas, manda assim: "1,80 de altura, 1 metro de largura e 40 de fundura". Se não tiver, só pequeno, médio ou grande já serve. 📏
-5. ADRIANO (áudio): Médio, não sei a medida exata. Tá boa, só lixar e pintar mesmo, sem conserto. Pincel. Acho que leva uns 3 a 5 dias, e ela não precisa buscar nem entregar, eu que levo pra eles depois.
-   {entendido: tamanho: médio (não sabe a medida exata); pintura só por fora, lixar e pintar, sem conserto; ferramenta: pincel; prazo estimado: 3 a 5 dias; sem busca nem entrega pelo cliente, o próprio Adriano leva depois · rota: pending_answer/item_dimensions_answer}
-6. BOT: 🎧 Ouvi: "Médio, não sei a medida exata. Tá boa, só lixar…"
-7. BOT: Ops, entendi errado aqui 😅 Antes eu anotei cliente: Seu Abreu, mas agora apareceu cliente: Próprio Adriano. Qual está certo?
-   [botões: Vale o novo | Fica como estava]
-8. ADRIANO: [tocou: Fica como estava]
-9. BOT: Beleza, mantive o cliente como Seu Abreu. 👍
-10. BOT: 💰 Pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 270,00 e R$ 484,00 (sem contar frete). Com o resto das respostas eu fecho o valor.
+Pra eu calcular, qual o tamanho da mesa? Pode mandar as medidas em cm (altura, largura e fundura) ou dizer se é pequena, média ou grande. 📏
+4. ADRIANO (áudio): Ah, é tamanho médio, não sei medir de cabeça não. Pode ser médio mesmo. Ela tá boa, só vou lixar e pintar, sem conserto. Acho que levo uns 3 a 5 dias de passagem, pincel mesmo. Não precisa buscar nem entregar, eles trazem e levam.
+5. BOT: 🎧 Ouvi: "Ah, é tamanho médio, não sei medir de cabeça não.…"
+6. BOT: Fiz as contas do criado-mudo do Seu Abreu e Dona Isa.
 
-E pra fechar: como o criado-mudo chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz? 🚚
-11. ADRIANO (áudio): Ela não precisa buscar nem entregar, eu que busco e levo pra eles depois. Acho que fica entre 3 e 5 dias, a cor é azul marinho. Ah, e aquele negócio do cliente ali, pode deixar o Seu Abreu mesmo.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-12. BOT: 🎧 Ouvi: "Ela não precisa buscar nem entregar, eu que busco e…"
-13. BOT: Beleza, anotei o prazo: 3 a 5 dias, ela não precisa buscar nem entregar, e você busca e leva pra eles depois. A cor é azul marinho e o cliente continua sendo o Seu Abreu. 🙌
+A sugestão é R$ 484,00.
+Abaixo de R$ 389,78 você fica no prejuízo.
+Material novo: cerca de R$ 211,00.
+Umas 8 horas de trabalho.
 
-Só falta saber: como o criado-mudo chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz? 🚚
-14. ADRIANO (áudio): Já falei, não precisa buscar nem entregar. Eu busco e levo pra eles depois. Pode fechar aí que tá bom.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-15. BOT: 🎧 Ouvi: "Já falei, não precisa buscar nem entregar. Eu busco e…"
-16. BOT: Entendi, você busca e leva pra eles depois, então não precisa perguntar isso de novo. 😄
-
-Só confirmando a última coisa: na volta, você entrega ou o cliente vem pegar? 🚚
-17. ADRIANO (áudio): Já entendi, Adriano. Eu busco e levo pra eles depois, pode fechar. Sem pressa, pode fechar aí mesmo.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-18. BOT: 🎧 Ouvi: "Já entendi, Adriano. Eu busco e levo pra eles depois,…"
-19. BOT: Certo, você busca e leva pra eles depois. Mas ainda falta uma coisa: na volta, você entrega ou o cliente vem pegar? 🚚
-20. ADRIANO (áudio): Já entendi, pode fechar sim. Eu busco e levo pra eles depois. Valor a gente vê aí, você que manda nas contas.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-21. BOT: 🎧 Ouvi: "Já entendi, pode fechar sim. Eu busco e levo pra…"
-22. BOT: Entendi, você busca e leva. Só falta uma coisa: na volta, você entrega ou o cliente vem pegar? 🚚
-23. ADRIANO (áudio): Já entendi, pode deixar assim. Eu busco e levo pra eles. Pode seguir aí com o valor que o sistema calcular.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-24. BOT: 🎧 Ouvi: "Já entendi, pode deixar assim. Eu busco e levo pra…"
-25. BOT: Beleza, você busca e leva, então o cliente não precisa vir até aqui. 🚚
-
-Só falta uma coisa: na volta, você entrega ou o cliente vem pegar?
-26. ADRIANO (áudio): Já falei duas vezes: eu busco e levo pra eles. Não precisa perguntar de novo. Pode seguir com o valor.
-   {entendido: Eu busco e levo o móvel pro cliente depois; não precisa perguntar de novo. Pode seguir com o valor. · rota: active_goal/collecting_continue}
-27. BOT: 🎧 Ouvi: "Já falei duas vezes: eu busco e levo pra eles.…"
-28. BOT: Entendi, você busca e leva, pode deixar. 😄
-
-Só pra eu fechar certinho: depois que você levar, o cliente fica com a peça ou vem pegar aqui?
-29. ADRIANO (áudio): Já falei duas vezes, pode ignorar isso. Eu busco e levo pra eles, o cliente fica com a mesa. Pode seguir com o valor que o sistema calcular. Ah, a mesa tá boa, só vou lixar e pintar de azul marinho, tamanho médio, sem conserto nenhum, só por fora. Pincel. Acho que leva uns 3 a 5 dias.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-30. BOT: 🎧 Ouvi: "Já falei duas vezes, pode ignorar isso. Eu busco e…"
-31. BOT: Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?
-32. ADRIANO (áudio): Já falei duas vezes, mano, você tá perguntando de novo. Eu busco e levo, o cliente fica com a mesa. Pode seguir com o valor, por favor. E aí, vc tá bem?
-   {entendido: Eu busco e levo a peça depois; o cliente não precisa vir buscar nem entregar. Pode seguir com o valor. Também pergunta: tudo bem com você? · rota: active_goal/collecting_continue}
-33. BOT: 🎧 Ouvi: "Já falei duas vezes, mano, você tá perguntando de novo.…"
-34. BOT: Faz sentido perguntar 🙂 Se você precisar buscar ou entregar, o transporte é um custo que entra no orçamento. Se o cliente traz e busca, não entra.
-
-Como o criado-mudo chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz?
-35. ADRIANO (áudio): Já falei umas três vezes: eu busco e levo pra eles, o cliente fica com a mesa. Não precisa mais perguntar isso. Pode seguir com o valor, por favor. E aí, vc tá bem? Ah, a cor vai ser azul marinho, a mesa tá boa, só lixar e pintar, tamanho médio, sem conserto. Pincel. Acho que leva de 3 a 5 dias.
-   {entendido: Ele busca e leva o móvel (criado-mudo) de volta ao cliente; o cliente não vem buscar nem entregar. Não perguntar mais sobre transporte; seguir com o valor. Mensagem social: "E aí, vc tá bem?". Dados: a cor é azul marinho; a peça está boa, só lixar e pintar, tamanho médio, sem conserto; aplicação com pincel; prazo estimado de 3 a 5 dias. · rota: active_goal/collecting_continue}
-36. BOT: 🎧 Ouvi: "Já falei umas três vezes: eu busco e levo pra…"
-37. BOT: Entendi, Adriano. 🙂 Antes eu tinha anotado o cliente como Seu Abreu, mas agora apareceu Cliente. Qual dos dois está certo?
-   [botões: Vale o novo | Fica como estava]
-38. ADRIANO: [tocou: Vale o novo]
-39. BOT: Atualizado: cliente: Cliente. O valor anterior ficou guardado no histórico. 📝
-40. BOT: Pronto, Adriano! Já tenho o que preciso sobre o criado-mudo de Cliente. Dá uma conferida:
-
-• móvel: criado-mudo (novo, azul)
-• trabalho: pintura
-• cliente: Cliente
-• só por fora
-• estado: bom
-• sem consertos
-• observações: cor: azul marinho; também citado: Dona Isa; tempo que ele estima: 3 a 5 dias
-• tamanho: medio
-• aplicação: pincel
-• prazo: Ela não precisa buscar nem entregar, eu que busco e levo pra eles depois. Acho que fica entre 3 e 5 dias, a cor é azul marinho. Ah, e aquele negócio do cliente ali, pode deixar o Seu Abreu mesmo
-• buscar
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-41. ADRIANO: [tocou: Quero corrigir]
-42. BOT: Beleza, o que você quer corrigir? Pode falar do jeito que preferir, por exemplo: "a altura é 1,90" ou "vai ser decapê". 🛠️
-43. ADRIANO (áudio): Corrige o seguinte: o cliente é Seu Abreu e Dona Isa, não só Cliente. E no prazo tira essa parte da entrega, eu busco e levo, o cliente fica com a mesa. O resto tá certo: criado-mudo, pintura, só por fora, estado bom, sem conserto, azul marinho, tamanho médio, pincel, uns 3 a 5 dias.
-   {entendido: corrigir: o cliente é Seu Abreu e Dona Isa (não só Cliente). Corrigir o prazo: remover a parte sobre entrega; ele busca e leva o criado-mudo, o cliente fica com a mesa. O resto está certo: criado-mudo (novo, azul), pintura, só por fora, estado bom, sem consertos, cor azul marinho, tamanho médio, aplicação pincel, prazo de 3 a 5 dias. · rota: active_goal/collecting_continue}
-44. BOT: 🎧 Ouvi: "Corrige o seguinte: o cliente é Seu Abreu e Dona…"
-45. BOT: Corrigido: cliente é Seu Abreu (antes estava Cliente). Guardei o histórico. ✅
-46. BOT: Corrigido: móvel criado-mudo (novo, azul), do jeito que estava. Guardei o histórico. 🪵
-47. BOT: Pronto, Adriano! Já tenho o que preciso sobre o criado-mudo do Seu Abreu. Dá uma conferida:
-
-• móvel: criado-mudo (novo, azul)
-• trabalho: pintura
-• cliente: Seu Abreu
-• só por fora
-• estado: bom
-• sem consertos
-• observações: cor: azul, azul marinho; também citado: Dona Isa, Seu Abreu; tempo que ele estima: 3 a 5 dias
-• tamanho: medio
-• aplicação: pincel
-• prazo: Ela não precisa buscar nem entregar, eu que busco e levo pra eles depois. Acho que fica entre 3 e 5 dias, a cor é azul marinho. Ah, e aquele negócio do cliente ali, pode deixar o Seu Abreu mesmo
-• buscar
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-48. ADRIANO: [tocou: Pode calcular]
-49. BOT: 🧮 Prontinho, fiz as contas do criado-mudo do Seu Abreu!
-
-💰 Minha sugestão é cobrar R$ 484,00.
-
-⚠️ Menos que R$ 390,00 você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 211,00 de material.
-⏱️ Dá umas 8 horas de trabalho.
-🚚 O frete não está na conta. Se for cobrar, é só acrescentar.
-📏 Fiz com a medida aproximada, então pode variar um pouco.
-
-E aí, você concorda com esse valor? 🤝
+Você concorda com esse valor ou quer dar um desconto ou acrescentar algo?
    [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-50. ADRIANO: [tocou: 👍 Concordo]
-51. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
-52. BOT: Fechado! ✅ Valor final: R$ 484,00 📄 Te mandei o PDF do orçamento pra você encaminhar pro Seu Abreu.
-53. BOT: Quando o cliente responder, me avisa aqui: 👇
-   [botões: 👍 Cliente aceitou | 👎 Cliente recusou]
-54. ADRIANO: [tocou: 👍 Cliente aceitou]
-55. BOT: Boa! ✅ Anotei que o orçamento do criado-mudo do Seu Abreu foi aceito por R$ 484,00.
+7. ADRIANO: [tocou: 👍 Concordo]
+8. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+9. BOT: Fechado em R$ 484,00 pro criado-mudo do Seu Abreu e Dona Isa. ✅
 
-Entrada recomendada: R$ 211,00. 💰
+Mandei o PDF do orçamento. Quando o cliente responder, me avisa que eu anoto.
+10. ADRIANO: Valeu, Adriano! Só uma coisa rápida: o cliente já confirmou o valor de vocês ou ainda vai falar com eles? Se ainda não, sem problema, fica como está.
+11. BOT: Ainda não tenho resposta do Seu Abreu e da Dona Isa registrada. O orçamento já está fechado e o PDF já foi enviado, então fica aguardando.
+
+Quando eles responderem, me fala se aceitaram ou não que eu anoto. 🪵
+12. ADRIANO: Beleza, valeu. Ainda não falei com eles, vou passar o orçamento pro Seu Abreu e pra Dona Isa e depois te aviso se aceitaram. Por enquanto fica como tá.
+13. BOT: Beleza, Adriano. Fica como está, com o orçamento do criado-mudo aguardando a resposta.
+
+Quando o Seu Abreu e a Dona Isa responderem, me avisa se aceitaram que eu anoto. 🪵
 ```
 
 </details>
 
 ## licele-cama — Cama queen da Dona Licele (medida do colchão é só referência)
 
-Notas: entendimento 2 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 2 · eficiencia 2 · conclusao 4 · 82s
+Notas: entendimento 4 · naturalidade 4 · acessibilidade 3 · uma_pergunta_por_vez 2 · sem_invencao 4 · eficiencia 4 · conclusao 5 · 40s
 
 - ✅ 1 serviço
 - ✅ cama
 - ✅ Dona Licele
 - ✅ verniz
 
-> O Adriano chegou ao valor e concordou (R$ 792), mas o bot repetiu perguntas já respondidas (tamanho três vezes, frete duas), inventou 'laterais' e 'estado: bom', não entendeu a correção e tratou a medida 'acho que' como firme. O ritmo foi lento e irritou o usuário. Deve ser mais atento ao que já foi dito.
+> O objetivo foi atingido: o valor foi apresentado, o Adriano concordou e o PDF saiu, com dados corretos no banco. Os pontos fracos são a repetição do porte e do conserto, mensagens com várias perguntas/pendências juntas e o bloco de preço denso e um pouco técnico. Não houve invenção relevante.
 
-- [media] (perdeu_informacao) turno 6: Resumo inicial diz 'estado: bom' sem que ele tenha dito; não registra queen, cabeceira e peseira, riscos.
-- [alta] (inventou) turno 10: Incluiu 'laterais' que o Adriano nunca falou e ainda perguntou sobre elas no turno 7.
-- [media] (pergunta_repetida) turno 10: Perguntou o tamanho da cama (queen) que ele já tinha dito duas vezes (turnos 4 e 8).
-- [alta] (nao_entendeu) turno 13: Não entendeu a correção sobre lateral e queen; respondeu com exemplo irrelevante ('altura é 1,90').
-- [media] (nao_entendeu) turno 16: Respondeu 'tamanho grande' e 'Corrigido: móvel cama', confuso e sem mostrar que removeu laterais.
-- [alta] (pergunta_repetida) turno 21: Repetiu a pergunta do tamanho da cama pela terceira vez, mesmo já respondida.
-- [media] (texto_longo) turno 24: Mensagem longa com medidas de colchão e explicação; pergunta de medida com várias instruções.
-- [alta] (inventou) turno 27: Registrou 1,7 × 2,1 m como medida firme, mas ele disse 'acho' e preferiu usar o colchão; não deixou a referência anotada.
-- [media] (pergunta_repetida) turno 30: Perguntou transporte/frete após ele já ter dito que não precisa de frete (turnos 4 e 28), e ignorou o 'pode fechar o valor'.
-- [media] (pergunta_repetida) turno 33: Insistiu perguntando como a cama chegou, repetindo a mesma questão de frete.
-- [baixa] (jargao) turno 37: Resumo em lista seca, com 'fundura', 'estado: bom' inventado e entradas duplicadas; pouco natural.
-- [baixa] (jargao) turno 39: Valor R$ 792 fica acima da faixa estimada de R$ 376–654 sem explicação, e 'prejuízo' em tom seco.
-- [baixa] (travou) turno 41: PDF não gerado; apenas avisou o administrador, objetivo parcial.
+- [media] (uma_pergunta_por_vez) turno 9: Lista três pendências (porte, verniz por fora/dentro, conserto) e ainda faz outra pergunta ('Pode ser médio?'), com várias perguntas na mesma mensagem.
+- [media] (pergunta_repetida) turno 9: Pergunta sobre o tamanho/porte de novo logo após ele dizer que é padrão e que não sabe a medida; também pergunta sobre conserto, sendo que ele já disse que são só riscos leves.
+- [baixa] (jargao) turno 6: Pergunta por 'medidas da cama' e porte pequena/média/grande, o que pode confundir quem só sabe que é queen.
+- [media] (jargao) turno 12: Usa 'você fica no prejuízo', 'material novo' e 'sugestão' em bloco denso com vários números; a mensagem fica longa e um pouco técnica.
+- [baixa] (texto_longo) turno 12: Resumo e valores na mesma mensagem, com a pergunta final longa (concorda, desconto ou acrescentar).
+- [baixa] (tom) turno 16: Termina com duas opções ('outro serviço ou seguir por aqui?') e 'Fechado' soa como confirmação com a cliente, embora o PDF só tenha sido enviado; a menção de avisar quando ela responder está correta.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): E aí, tudo bem? Queria registrar um serviço aqui, é um móvel da dona Licele. Vou te falar por partes, tá?
-   {entendido: E aí, tudo bem? Quero registrar um serviço, é um móvel da dona Licele. Vou falar por partes. · rota: global/new_job}
+1. ADRIANO (áudio): E aí, tudo bem? Queria registrar um serviço aqui, é da dona Licele. Ainda não sei se consigo passar tudo agora, mas começo por ela.
 2. BOT: 🎧 Ouvi: "E aí, tudo bem? Queria registrar um serviço aqui, é…"
-3. BOT: Claro, bora nessa! 🪵 Qual é o móvel da Dona Licele?
-4. ADRIANO (áudio): Ah, é uma cama queen. Vou lixar e envernizar ela inteira, cabeceira e peseira. Tem uns riscos, então precisa lixar bem antes. Eu uso pincel. Não precisa de frete, eu mesmo levo.
-   {entendido: (igual) · rota: pending_answer/answer}
-5. BOT: 🎧 Ouvi: "Ah, é uma cama queen. Vou lixar e envernizar ela…"
-6. BOT: Beleza, serviço novo anotado:
-• móvel: cama
-• trabalho: verniz
-• cliente: Dona Licele
-• estado: bom
+3. BOT: Tudo bem, Adriano! Pode começar pela dona Licele, sem problema.
 
-Vou te perguntando o resto aos pouquinhos, tá? Pode responder do jeito que for mais fácil, áudio ou texto.
-7. BOT: Anotado: cama queen, lixar e envernizar inteira, com cabeceira e peseira. 🪵 Você vai trabalhar a cama toda (cabeceira, peseira e laterais) ou só a cabeceira?
-8. ADRIANO (áudio): Toda a cama, cabeceira e peseira. Os riscos são só na parte de cima mesmo, mas quero lixar bem a peça inteira pra ficar uniforme.
-   {entendido: Toda a cama (cabeceira, peseira e laterais). Os riscos são só na parte de cima, mas quer lixar a peça inteira para ficar uniforme. · rota: pending_answer/service_scope_answer}
-9. BOT: 🎧 Ouvi: "Toda a cama, cabeceira e peseira. Os riscos são só…"
-10. BOT: Beleza, então é a cama inteira, com cabeceira, peseira e laterais. Lixar tudo pra ficar uniforme faz sentido. 🪵
+Qual é o móvel dela? Já me diga o que aparecer primeiro, e o resto você completa depois.
+4. ADRIANO (áudio): Então, é uma cama queen. Vou lixar e envernizar ela inteira, cabeceira e peseira. Tem uns riscos, nada muito grave. Vai ser no pincel. Não precisa de frete.
+5. BOT: 🎧 Ouvi: "Então, é uma cama queen. Vou lixar e envernizar ela…"
+6. BOT: Anotado: cama queen da Dona Licele, lixar e envernizar inteira (cabeceira e peseira), pincel, riscos leves e sem frete.
 
-Essa cama é qual destas: cama de solteiro, cama de casal padrão, cama queen ou cama king?
-11. ADRIANO (áudio): Ah, é queen sim, eu já falei. E não tem lateral não, é só cabeceira e peseira. Lixa tudo pra ficar uniforme, mas é isso.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-12. BOT: 🎧 Ouvi: "Ah, é queen sim, eu já falei. E não tem…"
-13. BOT: Não entendi bem o que mudar. Pode me dizer de outro jeito, tipo: "a altura é 1,90" ou "a cliente é a dona Ana".
-14. ADRIANO (áudio): Ah, entendi, errei eu. É cama queen, sem lateral, só cabeceira e peseira. Lixar tudo pra ficar uniforme, e envernizar. Pode seguir.
-   {entendido: corrigir: a cama é queen, sem laterais, só cabeceira e peseira. Lixar a peça inteira pra ficar uniforme e envernizar. Pode seguir. · rota: active_goal/collecting_continue}
-15. BOT: 🎧 Ouvi: "Ah, entendi, errei eu. É cama queen, sem lateral, só…"
-16. BOT: Anotado: tamanho grande, então.
-17. BOT: Corrigido: móvel cama (do jeito que já estava). Guardei o histórico. 🪵
-18. BOT: 💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 376,00 e R$ 654,00 (sem contar frete). Com o resto das respostas eu fecho o valor.
+Você tem as medidas da cama, ou prefere me dizer se é pequena, média ou grande?
+7. ADRIANO (áudio): Não sei a medida exata da estrutura, só que é queen. Pode colocar como queen mesmo. Quanto ao tamanho, acho que é padrão, nada fora do comum.
+8. BOT: 🎧 Ouvi: "Não sei a medida exata da estrutura, só que é…"
+9. BOT: Anotado: cama queen padrão da Dona Licele, lixar e envernizar, pincel, riscos leves e sem frete.
 
-Falta pouquinho. Tem algum conserto pra fazer antes? Uma perna bamba, uma lasca, uma tábua solta. Se não tiver, só "não".
-19. ADRIANO (áudio): Não, não tem conserto nenhum. Só os riscos mesmo, que é pra lixar bem antes. A cama tá firme.
-   {entendido: não tem conserto; só os riscos, que devem ser lixados bem antes. A cama está firme. · rota: pending_answer/job_field_answer}
-20. BOT: 🎧 Ouvi: "Não, não tem conserto nenhum. Só os riscos mesmo, que…"
-21. BOT: Show! Anotei: sem consertos. 👌
-Anotei também: móvel: cama (riscos para lixar, cama firme, sem conserto).
+Ainda faltam o porte (pode ser médio mesmo?), se o verniz é só por fora ou também por dentro da estrutura, e se precisa de algum conserto.
 
-Essa cama é qual destes: cama de solteiro, cama de casal padrão, cama queen ou cama king?
-22. ADRIANO (áudio): Já falei que é queen, Dona Licele... quer dizer, é cama queen sim. Sem lateral, só cabeceira e peseira. Pode anotar e seguir.
-   {entendido: cama queen; sem lateral, só cabeceira e peseira · rota: active_goal/collecting_continue}
-23. BOT: 🎧 Ouvi: "Já falei que é queen, Dona Licele... quer dizer, é…"
-24. BOT: Anotado: cama queen, sem lateral, só cabeceira e peseira. 🛏️
+Pode ser médio?
+10. ADRIANO (áudio): Pode colocar médio, sim. Verniz só por fora, na cabeceira e na peseira. Não precisa de conserto, só lixar e envernizar, nada de estrutura. Essa é a ideia.
+11. BOT: 🎧 Ouvi: "Pode colocar médio, sim. Verniz só por fora, na cabeceira…"
+12. BOT: Cama da Dona Licele, porte médio, verniz só por fora (cabeceira e peseira), sem conserto e sem frete.
 
-Queen normalmente é o colchão de 158 × 198 cm, mas a estrutura da cama costuma ser um pouco maior.
+Minha sugestão para o orçamento é R$ 417,00. Abaixo de R$ 342,00 você fica no prejuízo. O material novo sai por uns R$ 136,00, e o trabalho dá umas 6 horas.
 
-Você consegue me passar a largura e o comprimento da estrutura, por fora? 📏
-
-Pode ser aproximado, em centímetros ou metros.
-
-Se não tiver como medir agora, tudo bem: uso a medida do colchão como referência e deixo isso anotado.
-25. ADRIANO (áudio): Não sei de cabeça não, tô na oficina e não medi. Acho que uns 170 de largura e uns 210 de comprimento, mas pode usar o colchão mesmo, tudo bem.
-   {entendido: Não sei de cabeça, não medi (estou na oficina). Acho que a estrutura tem uns 170 cm de largura e uns 210 cm de comprimento, mas pode usar a medida do colchão mesmo, tudo bem. · rota: pending_answer/item_dimensions_answer}
-26. BOT: 🎧 Ouvi: "Não sei de cabeça não, tô na oficina e não…"
-27. BOT: Anotado: 1,7 × 2,1 m. 📏
-
-Quase lá! Você vai aplicar o verniz com pincel, rolo ou pistola?
-28. ADRIANO (áudio): Pincel. Não precisa de frete, a Dona Licele vem buscar na oficina. Pode fechar o valor aí.
-   {entendido: pincel; sem frete, a cliente Dona Licele vem buscar na oficina; pode fechar o valor · rota: pending_answer/application_method_answer}
-29. BOT: 🎧 Ouvi: "Pincel. Não precisa de frete, a Dona Licele vem buscar…"
-30. BOT: Anotado: pincel. ✅
-
-Última coisinha: o transporte. Você vai precisar buscar a cama, ou o cliente traz? E depois, você entrega ou ela vem pegar?
-31. ADRIANO (áudio): Ela vem buscar na oficina, não precisa de frete nenhum. Pode fechar o valor aí.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-32. BOT: 🎧 Ouvi: "Ela vem buscar na oficina, não precisa de frete nenhum.…"
-33. BOT: Entendi: a Dona Licele vem buscar na oficina quando ficar pronto. 🚚 E pra chegar até você: ela traz a cama ou você precisa buscar?
-34. ADRIANO (áudio): Já falei, ela vem buscar na oficina, não precisa de frete. Pode fechar o valor. A cama já tá aqui comigo, ela trouxe e deixou.
-   {entendido: Ela já trouxe a cama e deixou na oficina; não precisa de frete para chegar até mim. A Dona Licele vem buscar na oficina quando ficar pronto. Pode fechar o valor. · rota: pending_answer/logistics_answer}
-35. BOT: 🎧 Ouvi: "Já falei, ela vem buscar na oficina, não precisa de…"
-36. BOT: Certo, sem frete. 👍
-37. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cama da Dona Licele. Dá uma conferida:
-
-• móvel: cama (riscos para lixar, cama firme, sem conserto)
-• trabalho: verniz
-• cliente: Dona Licele
-• estado: bom
-• trabalho na peça inteira
-• tamanho: grande
-• sem consertos
-• medidas: largura 1,7 m, fundura 2,1 m
-• aplicação: pincel
-• sem frete
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-38. ADRIANO: [tocou: Pode calcular]
-39. BOT: 🧮 Prontinho, fiz as contas da cama da Dona Licele!
-
-💰 Minha sugestão é cobrar R$ 792,00.
-
-⚠️ Menos que R$ 654,00 você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 250,00 de material.
-⏱️ Dá umas 12 horas de trabalho.
-
-E aí, você concorda com esse valor? 🤝
+Você concorda com R$ 417,00 ou quer dar um desconto ou acrescentar algo?
    [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-40. ADRIANO: [tocou: 👍 Concordo]
-41. BOT: Fechado! ✅ Valor final: R$ 792,00.
+13. ADRIANO (áudio): Ah, concordo com R$ 417,00 pra Dona Licele. Pode fechar esse valor, o pincel e sem frete mesmo.
+14. BOT: 🎧 Ouvi: "Ah, concordo com R$ 417,00 pra Dona Licele. Pode fechar…"
+15. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+16. BOT: Fechado: cama queen da Dona Licele por R$ 417,00, lixar e envernizar (cabeceira e peseira), no pincel, sem frete.
 
-Só não consegui gerar o PDF agora. 😕 Já avisei o administrador, e o valor ficou guardado.
+O PDF do orçamento já foi enviado. Quando a Dona Licele responder, me avise para eu registrar.
+
+Quer começar outro serviço ou seguir por aqui?
 ```
 
 </details>
 
 ## preco-material-solvente — Preço de material na hora do orçamento: 'duas latas por 150' e 'não uso solvente'
 
-Notas: entendimento 1 · naturalidade 1 · acessibilidade 2 · uma_pergunta_por_vez 2 · sem_invencao 1 · eficiencia 1 · conclusao 1 · 134s
+Notas: entendimento 5 · naturalidade 4 · acessibilidade 4 · uma_pergunta_por_vez 4 · sem_invencao 3 · eficiencia 4 · conclusao 5 · 39s
 
-- ❌ verniz = R$ 75 por lata (150 ÷ 2) — {"p":null,"s":"0.9"}
+- ✅ verniz = R$ 75 por lata (150 ÷ 2)
 - ✅ embalagem 900 ml
 - ✅ solvente continua sem preço (não usa)
-- ❌ solvente fora deste orçamento — "{}"
-- ❌ orçamento calculado
+- ✅ solvente fora deste orçamento
+- ✅ orçamento calculado
 
-> A conversa travou em laço: o bot repetiu a pergunta do tipo da mesa cinco vezes e ainda gravou dados errados (estado 'danificado', altura 1 m). Não registrou o preço do verniz (150 reais por duas latas) como preço, nem a informação de que não usa solvente. O orçamento não foi calculado e o Adriano acabou irritado.
+> Fluxo chegou ao orçamento e fechou com poucas trocas, entendendo bem os preços do verniz e a retirada do solvente. Falhas: afirmou ter calculado antes de ter os preços, perguntou sobre entrega que ele já tinha resolvido, o resumo do orçamento tem tom um pouco técnico e a frase do PDF pode sugerir que foi enviado à cliente.
 
-- [alta] (inventou) turno 8: Ele pediu 'está bom' e o bot registrou 'danificado', trocando o estado da peça.
-- [alta] (inventou) turno 11: Mudou a altura de 0,75 m para 1 m sem ele ter dito isso. Os 60 cm do tampo também nunca foram registrados.
-- [alta] (perdeu_informacao) turno 12: O ajuste do móvel apagou os detalhes anteriores (cozinha, retangular, sem frete) e ignorou 'tampo e pés, tudo por fora'.
-- [media] (nao_entendeu) turno 6: Ele já tinha dito 'mesa de cozinha, retangular' e o bot respondeu 'não entendi' sobre o estado, o que não faz sentido. A pergunta sobre o estado também só veio depois da pergunta sobre o tipo.
-- [alta] (pergunta_repetida) turno 16: Perguntou de novo o tipo da mesa, que ele já tinha dito no turno 5. Repetiu essa mesma pergunta nos turnos 20, 24 e 28 mesmo com ele respondendo todas as vezes.
-- [alta] (nao_entendeu) turno 19: Entendeu errado o preço do verniz: disse 'você não precisa comprar agora' e falou em 'custo de reposição', quando ele só informou que já comprou duas latas por 150 reais.
-- [media] (jargao) turno 19: Usou 'custo de reposição' e 'valor do verniz usado', jargão que confunde o Adriano.
-- [alta] (travou) turno 32: Ficou em laço, sem avançar para as contas do orçamento depois de ele dar tudo diversas vezes. Ele perdeu a paciência no turno 29.
-- [media] (tom) turno 14: Ele insiste em corrigir o estado e o bot ignora a correção. Também não reconhece a frustração dele nem pede desculpa.
+- [media] (inventou) turno 5: Disse que 'já calculou' antes de ter os preços dos materiais, e o valor só apareceu depois. Também anunciou que perguntaria 'um de cada vez' mas só perguntou o verniz, e solvente nem era necessário.
+- [media] (jargao) turno 8: Termos como 'Material novo' e 'Abaixo de R$ 190 você fica no prejuízo' são um pouco técnicos/duros; não mostra como chegou ao valor (ex.: 2 latas por 150) nem confirma que o solvente foi tirado.
+- [baixa] (pergunta_multipla) turno 8: Pergunta final oferece três opções (concordo, desconto, acrescentar); aceitável pelos botões, mas é um pouco carregada.
+- [media] (promessa_falsa) turno 11: Diz que o PDF 'já foi enviado' sem deixar claro que foi apenas gerado para ele, não ao cliente; pode induzir a achar que a Dona Ana já recebeu.
+- [baixa] (pergunta_desnecessaria) turno 3: Perguntou sobre busca e entrega, embora ele já tivesse dito 'sem frete'; o Adriano precisou repetir.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): E aí, tudo certo? Peguei uma mesa da dona Ana pra envernizar. Ela tá boa, só precisa passar verniz por fora, sem conserto nenhum. O tampo é 1 metro por 60 cm, e ela tem 75 de altura. Vou usar pincel e não tem frete. Dá pra você me ajudar a fazer o orçamento?
-   {entendido: (igual) · rota: global/new_job}
+1. ADRIANO (áudio): E aí, tudo certo? Peguei uma mesa da dona Ana pra envernizar. Ela tá boa, só precisa por fora, sem conserto nenhum. O tampo tem 1 metro por 60 cm e a altura é 75. Vou fazer com pincel, sem frete. Anota aí pra mim.
 2. BOT: 🎧 Ouvi: "E aí, tudo certo? Peguei uma mesa da dona Ana…"
-3. BOT: Beleza, serviço novo anotado:
-• móvel: mesa (sem conserto, verniz por fora, sem frete)
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 0,75 m
+3. BOT: Anotado: mesa da Dona Ana, só por fora, sem conserto, estado bom, verniz com pincel. Tampo de 1 m por 60 cm e altura de 75 cm.
 
-Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.
-4. BOT: Boa, Adriano! Anotei a mesa da dona Ana pra envernizar, por fora, sem conserto e sem frete. 🎨
+Falta saber quem leva e traz a mesa. Você busca e entrega, ou ela traz e leva? 🪵
+4. ADRIANO: Ela traz e leva, não precisa buscar. Sem frete mesmo.
+5. BOT: Anotado: ela traz e leva, sem frete. A mesa está completa, e já calculei. Faltam só os preços de dois materiais, verniz e solvente, e vou perguntar um de cada vez.
 
-Essa mesa é qual destes tipos: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha? 🪵
-5. ADRIANO: É uma mesa de cozinha, retangular, com tampo de 1 metro por 60 cm. Tem 75 de altura, como já falei.
-   {entendido: mesa de cozinha, retangular; tampo de 1 m por 60 cm; altura 75 cm (0,75 m) · rota: active_goal/collecting_continue}
-6. BOT: Anotei também: móvel: mesa (sem conserto, verniz por fora, sem frete, cozinha, retangular).
+Começando pelo verniz: quanto custou a lata e de quantos ml (ou litros) ela é? 🎨
+6. ADRIANO (áudio): Verniz, comprei duas latas de 900 ml, deu 150 reais no total. Solvente eu não uso nesse trabalho, pode tirar.
+7. BOT: 🎧 Ouvi: "Verniz, comprei duas latas de 900 ml, deu 150 reais…"
+8. BOT: 🧮 Mesa da Dona Ana
 
-Opa, essa eu não entendi bem. O estado da peça muda o tempo de preparo: uma peça bem judiada leva bem mais horas.
+Minha sugestão: R$ 236,00.
+Abaixo de R$ 190,00 você fica no prejuízo.
+Material novo: uns R$ 87,00.
+Umas 4 horas de trabalho.
 
-Por exemplo: "está bom", "precisa de reparos" ou "está bem estragado".
-7. ADRIANO: Ah, tá boa mesmo, sem nada quebrado, só o verniz gasto por fora. Pode colocar como 'está bom'.
-   {entendido: estado: está bom; sem nada quebrado, só o verniz gasto por fora · rota: active_goal/collecting_continue}
-8. BOT: Certo, estado: danificado. 👍
+Você concorda com esse valor, quer dar um desconto ou acrescentar algo?
+   [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
+9. ADRIANO: [tocou: 👍 Concordo]
+10. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+11. BOT: Fechado! ✅ Orçamento da mesa da Dona Ana em R$ 236,00, e o PDF já foi enviado.
 
-Você vai trabalhar só no tampo ou na mesa de cozinha inteira?
-9. ADRIANO (áudio): Não, é a mesa inteira, tampo e pés, tudo por fora. O tampo é 1 metro por 60, a altura 75. Só o verniz por fora mesmo, sem mexer em mais nada. Ah, e o estado tá bom, não danificado, só o verniz gasto.
-   {entendido: corrigir: o estado é "está bom", não danificado; só o verniz está gasto por fora. Resposta: é a mesa inteira, tampo e pés, tudo por fora, só verniz, sem mexer em mais nada. Tampo 1 metro por 60, altura 75. · rota: active_goal/collecting_continue}
-10. BOT: 🎧 Ouvi: "Não, é a mesa inteira, tampo e pés, tudo por…"
-11. BOT: Ajustei: medidas: altura 1 m (antes: medidas: altura 0,75 m). Histórico guardado. 📏
-12. BOT: Ajustei: móvel: mesa (antes: móvel: mesa (sem conserto, verniz por fora, sem frete, cozinha, retangular)). Histórico guardado. 🪵
-13. BOT: Falta só mais uma coisa: o transporte. O cliente traz a mesa aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar? 🚚
-14. ADRIANO (áudio): Não, não precisa buscar nem entregar, a dona Ana traz a mesa aqui e ela vem pegar depois de pronta. Sem frete mesmo. Ah, e tem mais uma coisa: o estado é bom, não danificado, só o verniz gasto. Já falei isso, mas quero deixar certo.
-   {entendido: Transporte: a cliente (dona Ana) traz a mesa até a oficina e vem buscar depois de pronta; sem frete. Estado: bom, não danificado, só o verniz gasto por fora. · rota: pending_answer/logistics_answer}
-15. BOT: 🎧 Ouvi: "Não, não precisa buscar nem entregar, a dona Ana traz…"
-16. BOT: Certo, sem frete. 👍
-
-Essa mesa é qual destas: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?
-17. ADRIANO (áudio): Isso, mesa de cozinha retangular, já falei. Tampo 1 metro por 60, altura 75. Sem frete, a dona Ana traz e pega aqui. O estado é bom, só o verniz gasto por fora, sem conserto. Verniz eu já comprei, duas latas de 900 ml, deu 150 reais no total. Solvente eu não uso nesse. Pincel, tá certo.
-   {entendido: mesa de cozinha retangular; tampo 1 metro por 60; corrigir: altura 75 (não 1 m); sem frete, a dona Ana traz a mesa e pega aqui depois de pronta; corrigir: estado bom, não danificado, só o verniz gasto por fora, sem conserto; verniz já comprado: 2 latas de 900 ml, gasto total de 150 reais; não usa solvente nesse; aplicação com pincel, confirmado. · rota: active_goal/collecting_continue}
-18. BOT: 🎧 Ouvi: "Isso, mesa de cozinha retangular, já falei. Tampo 1 metro…"
-19. BOT: Ótimo, você não precisa comprar agora. Vou incluir o valor do verniz usado no orçamento, porque ele tem custo de reposição.
-20. BOT: Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?
-21. ADRIANO (áudio): Isso, já falei: mesa de cozinha retangular. Tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz já comprei, duas latas de 900 ml, deu 150 reais. Solvente não uso nessa. Pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento.
-   {entendido: mesa de cozinha retangular; tampo 1 m por 60 cm, altura 75 cm; estado bom, só o verniz gasto por fora, sem conserto; verniz já comprado, duas latas de 900 ml, total R$ 150,00; sem solvente; aplicação com pincel; sem frete, a dona Ana traz a mesa e pega aqui depois de pronta; pode seguir com o orçamento · rota: active_goal/collecting_continue}
-22. BOT: 🎧 Ouvi: "Isso, já falei: mesa de cozinha retangular. Tampo 1 metro…"
-23. BOT: Boa! Então você não precisa comprar mais verniz agora. 🎨 Vou incluir no orçamento o valor das duas latas, porque ele tem custo de reposição.
-24. BOT: Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?
-25. ADRIANO (áudio): Já falei, mesa de cozinha retangular. Tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz eu já comprei, duas latas de 900 ml, deu 150 reais. Solvente não uso nessa. Pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento.
-   {entendido: mesa de cozinha retangular; tampo 1 metro por 60, altura 75; estado bom, só o verniz gasto por fora, sem conserto; verniz já comprado, duas latas de 900 ml, total 150 reais; sem solvente; aplicação com pincel; sem frete, a dona Ana traz e pega aqui depois de pronta; pode seguir com o orçamento · rota: active_goal/collecting_continue}
-26. BOT: 🎧 Ouvi: "Já falei, mesa de cozinha retangular. Tampo 1 metro por…"
-27. BOT: Boa, então você não precisa comprar verniz agora. 🎨 Vou incluir no orçamento o valor das duas latas, porque ele tem custo de reposição.
-28. BOT: Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?
-29. ADRIANO (áudio): Rapaz, eu já falei isso umas três vezes! É mesa de cozinha retangular. Tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz eu já comprei, duas latas de 900 ml, deu 150 reais no total. Solvente não uso nessa, só pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento, por favor.
-   {entendido: mesa de cozinha retangular; tampo 1 metro por 60, altura 75; estado bom, só o verniz gasto por fora, sem conserto; verniz já comprado, duas latas de 900 ml, total 150 reais; sem solvente, só pincel; sem frete, a dona Ana traz e pega aqui depois de pronta; pode seguir com o orçamento. · rota: active_goal/collecting_continue}
-30. BOT: 🎧 Ouvi: "Rapaz, eu já falei isso umas três vezes! É mesa…"
-31. BOT: Ótimo, você não precisa comprar agora. Vou incluir o valor do verniz usado no orçamento, porque ele tem custo de reposição.
-32. BOT: Anotado: mesa de cozinha retangular. Pode seguir?
-33. ADRIANO (áudio): Pô, desculpa, é isso mesmo: mesa de cozinha retangular, tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz já comprei, duas latas de 900 ml, deu 150 reais no total. Solvente não uso nessa, só pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento.
-   {entendido: Sim, confirmo: mesa de cozinha retangular, tampo 1 metro por 60, altura 75. Estado bom, só o verniz gasto por fora, sem conserto. Verniz já comprado: duas latas de 900 ml, total 150 reais. Sem solvente, só pincel. Sem frete, a dona Ana traz e pega aqui depois de pronta. Pode seguir com o orçamento. · rota: active_goal/collecting_continue}
-34. BOT: 🎧 Ouvi: "Pô, desculpa, é isso mesmo: mesa de cozinha retangular, tampo…"
-35. BOT: Ótimo, então você não precisa comprar verniz agora. 🎨 Vou incluir no orçamento o valor das duas latas, porque ele tem custo de reposição.
-36. BOT: Essa mesa é qual destes: mesa retangular, mesa de centro, mesa redonda ou mesa de cozinha?
-37. ADRIANO: mesa de cozinha
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-38. BOT: Anotado: mesa de cozinha. 🪵
-
-Você vai trabalhar só no tampo ou na mesa de cozinha inteira?
-39. ADRIANO: Na mesa inteira, por fora. Tampo e pés, só o verniz. Sem conserto nem nada.
-   {entendido: Mesa inteira, por fora: tampo e pés, só o verniz. Sem conserto. · rota: active_goal/collecting_continue}
-40. BOT: Anotado: a peça inteira.
-41. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: danificado
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-42. ADRIANO (áudio): Opa, quase! Tá errado: a altura é 75 cm, não 1 m. O tampo é 1 metro por 60 cm. E a mesa tá em bom estado, só o verniz gasto por fora. Fora isso tá certo, pode calcular.
-   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m); o tampo tem 1 metro por 60 cm; o estado da mesa é bom, só o verniz gasto por fora (não danificado); o resto está certo; pode calcular. · rota: active_goal/confirm_calc_continue}
-43. BOT: 🎧 Ouvi: "Opa, quase! Tá errado: a altura é 75 cm, não…"
-44. BOT: Corrigido: móvel: mesa (antes: móvel: mesa). Guardei o histórico.
-45. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: danificado
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-46. ADRIANO (áudio): Não, não, tá errado ainda! A altura é 75 cm, não 1 metro. O tampo é 1 metro por 60 cm. E a mesa tá em bom estado, só o verniz gasto por fora, sem conserto. Fora isso tá certo. Pode corrigir aí e me mostra de novo.
-   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m). O tampo tem 1 metro por 60 cm. A mesa está em bom estado, só o verniz gasto por fora, sem conserto. O resto está certo. Mostrar o resumo corrigido de novo. · rota: active_goal/confirm_calc_continue}
-47. BOT: 🎧 Ouvi: "Não, não, tá errado ainda! A altura é 75 cm,…"
-48. BOT: Corrigido: móvel: mesa (novo) (antes: móvel: mesa). Guardei o histórico.
-49. BOT: Corrigido: estado: bom (antes: estado: danificado). Guardei o histórico.
-50. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa (novo)
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: bom
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-51. ADRIANO (áudio): Ainda tá errado a altura, mano! Tá 1 metro, tem que ser 75 cm. O tampo é 1 metro por 60 cm, e a mesa de cozinha tá boa, só o verniz gasto por fora. Corrige a altura pra 75 cm e me mostra de novo. Pincel, sem frete, sem conserto, já tenho o verniz, duas latas de 900 ml que comprei por 150 reais.
-   {entendido: corrigir: a altura é 75 cm (não 1 m). O tampo é 1 metro por 60 cm. A mesa de cozinha está em bom estado, só o verniz gasto por fora, sem conserto. Trabalho: verniz, aplicação com pincel, sem frete, trabalho na peça inteira. Já tem o verniz: duas latas de 900 ml, compradas por R$ 150. Mostrar os dados corrigidos de novo. · rota: active_goal/confirm_calc_continue}
-52. BOT: 🎧 Ouvi: "Ainda tá errado a altura, mano! Tá 1 metro, tem…"
-53. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa (novo)
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: bom
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-54. ADRIANO (áudio): Ainda não corrigiu a altura, cara! Tá com 1 metro, tem que ser 75 cm. O tampo é 1 metro por 60 cm, a mesa de cozinha tá boa, só o verniz gasto por fora. Muda a altura pra 75 cm, aí você me mostra de novo. Pincel, sem frete, sem conserto, já tenho o verniz: duas latas de 900 ml que comprei por 150 reais no total.
-   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m). O tampo é 1 m por 60 cm. A mesa de cozinha está em bom estado, só o verniz gasto por fora, sem conserto. Aplicação: pincel. Sem frete. Já tem o verniz: duas latas de 900 ml, compradas por 150 reais no total. · rota: active_goal/confirm_calc_continue}
-55. BOT: 🎧 Ouvi: "Ainda não corrigiu a altura, cara! Tá com 1 metro,…"
-56. BOT: Corrigido: móvel: mesa (antes: móvel: mesa (novo)). Guardei o histórico.
-57. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: bom
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-58. ADRIANO (áudio): Ainda tá 1 metro, cara! A altura é 75 cm. O tampo é 1 metro por 60 cm, a mesa tá boa, só o verniz gasto por fora, sem conserto. Pincel, sem frete, já tenho o verniz, duas latas de 900 ml por 150 reais no total. Muda a altura pra 75 cm e me mostra de novo.
-   {entendido: corrigir: a altura é 75 cm (não 1 m). O tampo é 1 metro por 60 cm. A mesa está boa, só o verniz gasto por fora, sem conserto. Aplicação: pincel. Sem frete. Já tem o verniz: duas latas de 900 ml, por 150 reais no total. Mostrar o resumo de novo com a altura 75 cm. · rota: active_goal/confirm_calc_continue}
-59. BOT: 🎧 Ouvi: "Ainda tá 1 metro, cara! A altura é 75 cm.…"
-60. BOT: Corrigido: móvel: mesa (novo) (antes: móvel: mesa). Guardei o histórico. 👍
-61. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa (novo)
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: bom
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-62. ADRIANO (áudio): Cara, o sistema continua mostrando altura 1 m! Não é 1 metro, é 75 cm. O tampo é 1 metro por 60 cm, a mesa tá boa, só o verniz gasto por fora, sem conserto. Pincel, sem frete, já tenho o verniz, duas latas de 900 ml por 150 reais no total. Por favor, muda a altura pra 75 cm e me mostra de novo.
-   {entendido: corrigir: a altura da mesa é 75 cm (não 1 m). O tampo tem 1 metro por 60 cm. A mesa está boa, só o verniz está gasto por fora, sem conserto. Aplicação com pincel, sem frete. Já tem o verniz: duas latas de 900 ml, compradas por 150 reais no total. Mostrar o orçamento de novo com a altura em 75 cm. · rota: active_goal/confirm_calc_continue}
-63. BOT: 🎧 Ouvi: "Cara, o sistema continua mostrando altura 1 m! Não é…"
-64. BOT: Pronto, Adriano! Já tenho o que preciso sobre a mesa da Dona Ana. Dá uma conferida:
-
-• móvel: mesa (novo)
-• trabalho: verniz
-• cliente: Dona Ana
-• aplicação: pincel
-• sem consertos
-• medidas: altura 1 m
-• estado: bom
-• sem frete
-• já tem o material
-• trabalho na peça inteira
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
+Quando a Dona Ana responder, me avisa se ela aceitou. 📄
 ```
 
 </details>
 
 ## pagamento-gasto — Pagamento e gasto no dia a dia
 
-Notas: entendimento 4 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 4 · sem_invencao 4 · eficiencia 3 · conclusao 5 · 31s
+Notas: entendimento 5 · naturalidade 4 · acessibilidade 4 · uma_pergunta_por_vez 4 · sem_invencao 5 · eficiencia 4 · conclusao 5 · 24s
 
 - ✅ pagamento de R$ 200
 - ✅ gasto de R$ 90
 
-> Os dois registros ficaram corretos no banco e o objetivo foi atingido. A conversa teve perguntas demais para um gasto simples (embalagens, serviço, confirmações duplas) e textos com jargão contábil, o que quebra a naturalidade de um parceiro de oficina.
+> Pagamento de R$ 200 e gasto de R$ 90 foram registrados corretamente e confirmados no banco, sem invenção de fatos. O fluxo foi curto e claro, com pequenos deslizes: "Anotado" antes de confirmar, oferta de fechar o orçamento repetida mesmo após recusa e frases um pouco burocráticas.
 
-- [media] (pergunta_desnecessaria) turno 8: Perguntou quantidade e tamanho das embalagens antes de registrar o gasto; ele só queria anotar os 90 reais. Soa como interrogatório e atrasa. Também a justificativa "para eu aprender" é vaga.
-- [media] (pergunta_repetida) turno 11: Perguntou para qual serviço era o gasto só depois de várias perguntas; podia ter perguntado logo, e ele tinha acabado de falar da cristaleira, o que já sugeria o contexto.
-- [baixa] (confirmacao_redundante) turno 13: Pediu confirmação dupla (pagamento e gasto) com botão "Não, corrigir o valor" mesmo quando o erro seria de outro campo; texto "responda sim ou não" repetitivo.
-- [media] (jargao) turno 15: Mensagem longa com "preço de reposição" e explicação de contabilidade ("dinheiro que saiu", "sem contar duas vezes"), técnica demais para ele.
-- [baixa] (jargao) turno 5: "Ainda não temos o valor fechado desse serviço" é informação não pedida e meio burocrática.
-- [baixa] (tom) turno 17: Fechamento seco; não retomou que a nota ficou para depois nem resumiu o que foi registrado.
+- [baixa] (tom) turno 3: Frase "Confirma no botão aqui embaixo para eu registrar" é um pouco burocrática; o bot diz "Vou anotar" e depois pede confirmação, o que soa levemente redundante.
+- [baixa] (fluxo_confuso) turno 5: Ofereceu fechar o orçamento com pedido de medidas e estado da peça logo após registrar o pagamento, o que foi um pouco cedo; o Adriano recusou sem problema.
+- [baixa] (texto_longo) turno 10: Repetiu o convite para passar medidas e estado da peça depois de ele já ter dito que não queria agora, quase insistindo na mesma oferta.
+- [baixa] (tom) turno 8: Disse "Anotado" antes da confirmação no botão, o que sugere já registrado quando ainda não estava.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): Oi, e aí! Então, a dona Maria da cristaleira pagou a entrada hoje, duzentos reais. Quero registrar isso aí pra não esquecer.
-   {entendido: Registrar pagamento de entrada da dona Maria, referente à cristaleira: 200 reais, pago hoje. · rota: global/register_payment}
-2. BOT: 🎧 Ouvi: "Oi, e aí! Então, a dona Maria da cristaleira pagou…"
-3. BOT: Beleza, Adriano! Vou anotar: recebi R$ 200,00 da Dona Maria, referente à cristaleira da Dona Maria (S-0001). 💰
+1. ADRIANO (áudio): oi, tudo bem? então, a dona Maria pagou duzentos reais hoje da cristaleira, a entrada. anota aí pra mim
+2. BOT: 🎧 Ouvi: "oi, tudo bem? então, a dona Maria pagou duzentos reais…"
+3. BOT: Oi, tudo bem! 😄 Vou anotar o pagamento de R$ 200,00 da entrada da Dona Maria na cristaleira.
 
-Tá certo? Pode responder "sim" ou "não".
-   [botões: Sim, pode anotar | Não, corrigir o valor]
-4. ADRIANO: [tocou: Sim, pode anotar]
-5. BOT: Anotado! 💰 Recebido até agora: R$ 200,00. Ainda não temos o valor fechado desse serviço.
-6. ADRIANO (áudio): Isso, e também gastei 90 reais em verniz numa loja hoje, quero anotar esse gasto também.
-   {entendido: Registrar gasto de R$ 90,00 em verniz numa loja hoje. · rota: global/register_expense}
-7. BOT: 🎧 Ouvi: "Isso, e também gastei 90 reais em verniz numa loja…"
-8. BOT: Só para eu aprender direitinho, Adriano: foram quantas embalagens de verniz e qual era o tamanho de cada uma?
+Confirma no botão aqui embaixo para eu registrar.
+   [botões: ✅ Pode anotar | ✏️ Não]
+4. ADRIANO: [tocou: ✅ Pode anotar]
+5. BOT: Pagamento anotado: R$ 200,00 da Dona Maria, entrada da cristaleira. ✅
 
-Por exemplo: “1 lata de 900 ml” ou “2 galões de 3,6 litros”.
-9. ADRIANO (áudio): Ah, foi uma lata só de 900 ml, de verniz fosco. Não lembro a marca direito, foi a loja ali do centro, se precisar eu vejo a nota depois.
-   {entendido: 1 lata de 900 ml de verniz fosco; marca não lembrada, loja do centro; nota pode ser vista depois. · rota: pending_answer/answer}
-10. BOT: 🎧 Ouvi: "Ah, foi uma lata só de 900 ml, de verniz…"
-11. BOT: Esse gasto de R$ 90,00 é para qual serviço?
-   [botões: A cristaleira da Dona Maria | Estoque geral (sem serviço)]
-12. ADRIANO: [tocou: Estoque geral (sem serviço)]
-13. BOT: Anotado, Adriano: compra de verniz, R$ 90,00, para o estoque geral. 🎨
+O orçamento dela ainda não foi fechado. Quer que a gente feche o valor agora? Se você me disser as medidas e o estado da peça, eu calculo.
+6. ADRIANO (áudio): Não, agora não. Antes tenho outra coisa: hoje também gastei noventa reais de verniz numa loja. Anota aí essa despesa.
+7. BOT: 🎧 Ouvi: "Não, agora não. Antes tenho outra coisa: hoje também gastei…"
+8. BOT: Anotado: gasto de R$ 90,00 com verniz numa loja. Confirma no botão aqui embaixo para eu registrar.
+   [botões: ✅ Pode anotar | ✏️ Não]
+9. ADRIANO: [tocou: ✅ Pode anotar]
+10. BOT: Gasto de R$ 90,00 com verniz anotado. ✅
 
-Tá certo? Pode responder "sim" ou "não".
-   [botões: Sim, pode anotar | Não, corrigir o valor]
-14. ADRIANO: [tocou: Sim, pode anotar]
-15. BOT: Anotado: compra de verniz, R$ 90,00. 🎨
+A cristaleira da Dona Maria continua em orçamento, com os R$ 200,00 de entrada já registrados. Quando quiser retomar, me passa as medidas e o estado da peça.
+11. ADRIANO (áudio): Beleza, então tá tudo anotado: os 200 da dona Maria e os 90 de verniz. Quando for fechar a cristaleira, eu te chamo. Valeu!
+12. BOT: 🎧 Ouvi: "Beleza, então tá tudo anotado: os 200 da dona Maria…"
+13. BOT: Beleza, Adriano! Ficou anotado: R$ 200,00 da Dona Maria e R$ 90,00 de verniz. 🎨
 
-Também atualizei o preço de reposição desse material com o que você confirmou. Obrigado por me ensinar! 🙂
-
-Isso conta como dinheiro que saiu. O valor do material usado em cada serviço entra no orçamento separado, sem contar duas vezes.
-16. ADRIANO: Valeu, Adriano! Então tá: 200 da Dona Maria registrado e os 90 do verniz também. Não precisa se preocupar com a nota, pode deixar isso pra depois. Era isso que você queria anotar hoje.
-17. BOT: Por nada, Adriano! Quando precisar, é só chamar. 😊
+Quando for fechar a cristaleira, é só me chamar que a gente retoma as medidas e o estado da peça. Valeu!
 ```
 
 </details>
 
 ## andamento-nao-andamento — Andamento: 'comecei' muda; 'quando ficar pronta ela busca' não muda
 
-Notas: entendimento 1 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 1 · eficiencia 1 · conclusao 1 · 105s
+Notas: entendimento 4 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 3 · eficiencia 2 · conclusao 5 · 58s
 
 - ✅ serviço em execução (não concluído)
 
-> O bot errou o andamento: propôs 'concluído' quando ele pediu só 'começou/lixando'. Depois inverteu fatos que ele disse claramente (por fora, só pincel, estado) e repetiu perguntas já respondidas. O resumo e o orçamento saíram com dados errados e o objetivo não foi atingido.
+> O objetivo foi cumprido: o serviço ficou 'em execução' e o comentário sobre a Dona Maria buscar não marcou como pronto. Porém a conversa foi longa e repetitiva, insistiu em técnica e acabamento que ele já tinha adiado, usou texto comprido sobre botões e inventou 'sem frete' a partir de uma fala que não era sobre frete.
 
-- [alta] (nao_entendeu) turno 8: Adriano pediu para anotar só que começou, que está lixando e que a Dona Maria busca, sem marcar concluído. O bot propôs marcar como concluído, o oposto do pedido.
-- [alta] (inventou) turno 24: Ele disse 'só por fora' e o bot anotou 'por dentro e por fora', invertendo o fato. Isso afeta o orçamento e entrou no resumo final.
-- [alta] (inventou) turno 28: Mudou o estado de 'danificado' para 'reparos' sem ele pedir, tratando como correção. Ele falava de conserto de estrutura, não do estado.
-- [media] (pergunta_repetida) turno 25: Repetiu a pergunta sobre conserto e por fora/dentro, que ele já tinha respondido, e ignorou o 'só por fora'.
-- [alta] (inventou) turno 33: Ele disse 'só pincel' e o bot anotou 'pincel e rolo', contrariando o que foi dito.
-- [media] (fluxo_confuso) turno 12: Após o cancelamento, a resposta foi um cartão de serviço com 'Ainda falta saber' e o botão 'Continuar este'. Não respondeu à dúvida dele e reabriu o questionário sobre algo já em execução.
-- [media] (perdeu_informacao) turno 12: Não guardou que a Dona Maria vem buscar quando ficar pronta como observação. Também registrou o trabalho como 'pátina', sem ele ter dito isso.
-- [media] (perdeu_informacao) turno 29: Ele pediu para anotar as portinhas que rangem. O bot disse 'sem consertos' e deixou para depois, mas esse detalhe não aparece no resumo final.
-- [baixa] (jargao) turno 21: Deu faixa de preço antes de fechar as respostas, com dados errados, o que confunde. A mensagem final também ficou truncada, com 'F'.
-- [alta] (inventou) turno 37: O resumo final traz dados errados (por dentro e por fora, estado reparos, pincel) e o orçamento de R$ 1.752 sai desses dados. O andamento 'lixando' não foi registrado.
+- [alta] (inventou) turno 3: Anotou 'sem frete, ela traz e busca' sem o Adriano ter dito isso naquele ponto; o 'ela vem buscar' foi sobre quando a peça ficar pronta, não sobre frete.
+- [media] (texto_longo) turno 3: Mensagem longa que mistura explicação do botão, pedido de aviso sobre a técnica e uma pergunta. Ignora a saudação e não registra de forma natural que ele começou.
+- [media] (fluxo_confuso) turno 3: Pede para tocar no botão para marcar que começou, mas o botão rotulado 'Pode anotar' aparece junto a perguntas sobre o estado da peça, o que confunde qual confirmação vale.
+- [media] (fluxo_confuso) turno 8: Repete a instrução do botão de confirmação, com texto longo, e termina com pergunta aberta 'quer anotar mais alguma coisa' quando já havia pendências.
+- [baixa] (tom) turno 10: Dá a confirmação sem notar que a pergunta sobre o tamanho estava pendente, e emenda nova pergunta; funciona, mas é cansativo.
+- [media] (pergunta_repetida) turno 14: Pergunta a técnica de novo, apesar de ele já ter dito duas vezes que verá depois (turnos 1 e 6).
+- [media] (pergunta_repetida) turno 17: Depois de ele dizer que não sabe a técnica, pergunta o método de aplicação (pincel/rolo/pistola), insistindo no tema que ele já adiou.
+- [baixa] (tom) turno 20: 'Não vou pressionar' soa estranho e chama atenção para a pressão; repete o pedido das medidas pela terceira vez.
+- [baixa] (perdeu_informacao) turno 23: O comentário de que ela vem buscar quando ficar pronta ficou só como 'sem frete' no turno 3; nunca é tratado como observação. Porém o status não foi alterado indevidamente.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): Oi, tudo bem? Então, comecei hoje a cristaleira da dona Maria. Tirei a tinta velha e comecei a lixar, ainda tá no meio. Quando ficar pronta ela vem buscar. Anota aí pra mim.
-   {entendido: (igual) · rota: global/job_progress}
-2. BOT: 🎧 Ouvi: "Oi, tudo bem? Então, comecei hoje a cristaleira da dona…"
-3. BOT: Anotado: a cristaleira da Dona Maria está em execução. 🛠️
+1. ADRIANO (áudio): E aí, tudo bem? Hoje comecei a lixar a cristaleira da dona Maria. Ainda não sei que técnica vou usar, depois eu vejo isso. Quando ficar pronta ela vem buscar.
+2. BOT: 🎧 Ouvi: "E aí, tudo bem? Hoje comecei a lixar a cristaleira…"
+3. BOT: Anotado: cristaleira da Dona Maria, sem frete, ela traz e busca. Pra marcar que você começou a lixar, tem um botão de confirmação aqui embaixo. Toque nele pra eu registrar.
 
-Vou marcar assim, certo?
-   [botões: Confirmar | Cancelar]
-4. ADRIANO: [tocou: Confirmar]
-5. BOT: Pronto, a cristaleira da Dona Maria agora está em execução. 🛠️
-6. ADRIANO (áudio): Isso, pode deixar. Só queria ver uma coisa: a cristaleira ainda não tá pronta, né? Então anota só que começou e que tá lixando, e que a dona Maria vem buscar quando ficar pronta, sem marcar nada como concluído.
-   {entendido: (igual) · rota: global/job_progress}
-7. BOT: 🎧 Ouvi: "Isso, pode deixar. Só queria ver uma coisa: a cristaleira…"
-8. BOT: Vou marcar a cristaleira da Dona Maria como concluído. Confirma?
-   [botões: Confirmar | Cancelar]
-9. ADRIANO: [tocou: Cancelar]
-10. BOT: Beleza, cancelei. Nada foi anotado. 👍
+Quando for ver a técnica, me conta. Por enquanto, como tá a peça: está boa, só com riscos, precisa de reparo ou tá bem estragada?
+   [botões: ✅ Pode anotar | ✏️ Não]
+4. ADRIANO: Tá boa, só com uns riscos. Não tem nada quebrado nem bicho. Pode anotar aí.
+5. BOT: Anotado: cristaleira só com riscos, sem nada quebrado nem bicho.
 
-Quando quiser, é só me contar outra coisa.
-11. ADRIANO: Isso mesmo, a cristaleira ainda não tá pronta. Ela continua em execução, lixando, e a dona Maria vem buscar quando ficar pronta. Não marquei nada como concluído, só o andamento que você falou. Pode deixar assim?
-   {entendido: (igual) · rota: global/query_status}
-12. BOT: A cristaleira da Dona Maria — pátina (S-0001)
-Situação: Em execução
-Já anotado: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina
-Ainda falta saber: como o móvel está; o tamanho do móvel; se é só por fora ou por dentro também; se precisa de conserto
-   [botões: Continuar este]
-13. ADRIANO: [tocou: Continuar este]
-14. BOT: Beleza, vamos seguir! Da cristaleira da Dona Maria eu já tenho: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina. 🎨
-15. BOT: E como ela está hoje? Tá em bom estado ou precisa de reparos ou tá bem estragada?
-16. ADRIANO (áudio): Ela tá bem estragada na parte de cima, a tinta tava descascando em um monte de lugar. A estrutura tá firme, nada solto. Só tem umas duas portinhas que rangem, mas isso eu vejo depois.
-   {entendido: (igual) · rota: pending_answer/item_condition_answer}
-17. BOT: 🎧 Ouvi: "Ela tá bem estragada na parte de cima, a tinta…"
-18. BOT: Anotado: estado danificado, com a tinta descascando em vários pontos da parte de cima. 📝
+Pra eu montar o orçamento depois, me fala o tamanho dela: altura, largura e profundidade em cm, ou se é pequena, média ou grande. 📏
+   [botões: ✅ Pode anotar | ✏️ Não]
+6. ADRIANO (áudio): Ah, o tamanho eu não sei de cabeça agora, depois eu meço e te falo. Mas anota aí que começou a lixar hoje, esse registro de começou a lixar pode marcar sim.
+7. BOT: 🎧 Ouvi: "Ah, o tamanho eu não sei de cabeça agora, depois…"
+8. BOT: Beleza, sem problema. Quando medir, me manda altura, largura e profundidade que eu anoto.
 
-E de tamanho, como ela é? Pode dar uma medida aproximada ou só "pequeno, médio ou grande", o que for mais fácil pra você.
-19. ADRIANO (áudio): Ah, tem um detalhe que esqueci de falar: ela é grande, tem uns 2 metros de altura e uns 1,20 de largura. E se eu lembrar de mais alguma coisa, te falo depois. Por enquanto é isso.
-   {entendido: tamanho: grande; cerca de 2 metros de altura e 1,20 metro de largura; ele pode lembrar de mais detalhes depois · rota: pending_answer/item_dimensions_answer}
-20. BOT: 🎧 Ouvi: "Ah, tem um detalhe que esqueci de falar: ela é…"
-21. BOT: Certo, medidas: altura 2 m, largura 1,2 m. 👍
+O registro de "começou a lixar" já está preparado. Falta só você tocar no botão de confirmação que apareceu aqui em cima. Se não aparecer, me avisa que eu preparo de novo. ✅
 
-💰 Pra você já ir tendo uma ideia: pelo que eu já tenho, deve ficar entre R$ 711,00 e R$ 1.034,00 (sem contar frete). Com o resto das respostas eu fecho o valor.
+Enquanto isso, a técnica fica para depois. Quer que eu anote mais alguma coisa sobre a cristaleira?
+   [botões: ✅ Pode anotar | ✏️ Não]
+9. ADRIANO: [tocou: ✅ Pode anotar]
+10. BOT: Confirmado: a cristaleira da Dona Maria está em execução. 🛠️
 
-A cristaleira vai ser trabalhada só por fora, ou a parte de dentro (prateleiras, gavetas) também?
-22. ADRIANO (áudio): Só por fora mesmo, a parte de dentro tá em ordem. As portinhas que rangem eu vejo depois, pode anotar isso também.
-   {entendido: só por fora; a parte de dentro está em ordem. Anotar também: duas portinhas que rangem (ver depois). · rota: pending_answer/service_scope_answer}
-23. BOT: 🎧 Ouvi: "Só por fora mesmo, a parte de dentro tá em…"
-24. BOT: Beleza, então é por dentro e por fora. 🎨
-25. BOT: Quase lá! Você falou que ela está precisando de cuidado. O que vai precisar consertar antes do acabamento? Tipo colar, trocar tábua, passar massa. 🛠️
-26. ADRIANO (áudio): Não, só por fora mesmo, a parte de dentro tá em ordem. As portinhas que rangem eu vejo depois, pode anotar. Conserto de estrutura não precisa, a estrutura tá firme, nada solto. Só tem as portinhas que rangem.
-   {entendido: corrigir: o trabalho é só por fora, a parte de dentro está em ordem. Não precisa de conserto de estrutura: a estrutura está firme, nada solto. Só tem as portinhas que rangem, para ver depois (anotar). · rota: pending_answer/job_field_answer}
-27. BOT: 🎧 Ouvi: "Não, só por fora mesmo, a parte de dentro tá…"
-28. BOT: Corrigido: estado: reparos (antes era danificado). Histórico guardado. 👍
-29. BOT: Anotado: sem consertos. As portinhas que rangem ficam para depois, como você pediu. 🛠️
-30. BOT: Falta pouquinho! E pra aplicar, vai de pincel, rolo ou pistola? Se for mais de um, pode falar. 🎨
-31. ADRIANO (áudio): Pincel mesmo, só pincel. Tem umas partes com detalhe, então rolo não ia pegar direito. Já comecei a lixar hoje, ainda tá no começo. Quando ficar pronta a Dona Maria vem buscar.
-   {entendido: pincel; só pincel, porque tem partes com detalhe e o rolo não pegaria direito. Já comecei a lixar hoje, ainda está no começo. Quando ficar pronta, a Dona Maria vem buscar. · rota: active_goal/collecting_continue}
-32. BOT: 🎧 Ouvi: "Pincel mesmo, só pincel. Tem umas partes com detalhe, então…"
-33. BOT: Entendi! Vou considerar pincel e rolo. Pra conta uso o pincel, que é o mais demorado, pra você não sair no prejuízo.
+Quando você tiver as medidas, me manda. Enquanto isso, uma coisa que ajuda no orçamento: o trabalho é só por fora ou por dentro também?
+11. ADRIANO: Ah, uma coisa só: por dentro também, mas só passei o lixa por fora por enquanto. Por dentro eu vejo depois quando for lixar.
+12. BOT: Anotado: por dentro e por fora, e que por enquanto você só lixou por fora.
 
-Última coisinha 📦: o transporte: o cliente traz a cristaleira aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar?
-34. ADRIANO (áudio): Ah, e tem outra coisa: hoje eu comecei a lixar a cristaleira, ainda tá no começo. Quando ficar pronta a Dona Maria vem buscar. Quanto ao transporte, ela traz aí no meu espaço, não precisa buscar. E na entrega, ela vem pegar mesmo.
-   {entendido: Transporte: a Dona Maria traz a cristaleira até a oficina, não precisa buscar. Entrega: a Dona Maria vem pegar. Também: hoje comecei a lixar a cristaleira, ainda está no começo. · rota: active_goal/collecting_continue}
-35. BOT: 🎧 Ouvi: "Ah, e tem outra coisa: hoje eu comecei a lixar…"
-36. BOT: Beleza, anotei: a Dona Maria traz a cristaleira aqui e também vem buscar quando ficar pronta, então sem frete. 🚚
-37. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cristaleira da Dona Maria. Dá uma conferida:
+Quantas portas e quantas gavetas ela tem? 🪵
+13. ADRIANO: Tem duas portas e três gavetas, mas as gavetas eu confiro quando medir a peça, ainda não contei direito. Pode anotar isso.
+14. BOT: Anotado: 2 portas e 3 gavetas, com a observação de que você ainda vai conferir as gavetas ao medir.
 
-• móvel: cristaleira
-• cliente: Dona Maria
-• trabalho: pátina
-• estado: reparos
-• medidas: altura 2 m, largura 1,2 m
-• por dentro e por fora
-• sem consertos
-• aplicação: pincel
-• sem frete
+Quando tiver as medidas, me manda. Enquanto isso, qual técnica você pensa em usar nela: patina, verniz, pintura lisa, decape ou outra? 🎨
+15. ADRIANO (áudio): Ah, a técnica eu ainda não sei, depois eu vejo. Por enquanto só anota que ela tá em execução e que eu lixei só por fora. Quando eu medir eu te falo as medidas.
+16. BOT: 🎧 Ouvi: "Ah, a técnica eu ainda não sei, depois eu vejo.…"
+17. BOT: Anotado: cristaleira da Dona Maria em execução, lixada só por fora até agora, com o interior ainda por lixar. A técnica fica para depois.
 
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-38. ADRIANO: [tocou: Pode calcular]
-39. BOT: 🧮 Prontinho, fiz as contas da cristaleira da Dona Maria!
+Você costuma aplicar acabamento com pincel, rolo ou pistola? 🛠️
+18. ADRIANO (áudio): Ah, o acabamento eu ainda não sei dizer, depende da peça. Por enquanto deixa anotado assim mesmo, depois eu vejo. Quando medir eu te mando as medidas.
+19. BOT: 🎧 Ouvi: "Ah, o acabamento eu ainda não sei dizer, depende da…"
+20. BOT: Beleza, deixo o acabamento em aberto. Não vou pressionar.
 
-💰 Minha sugestão é cobrar R$ 1.752,00.
-
-⚠️ Menos que R$ 1.430,00 você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 445,00 de material.
-⏱️ Dá umas 27 horas de trabalho.
-📏 Fiz com a medida aproximada, então pode variar um pouco.
-
-E aí, você concorda com esse valor? 🤝
-   [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-40. ADRIANO: [tocou: 👍 Concordo]
-41. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
-42. BOT: Fechado! ✅
-
-💰 Valor final: R$ 1.752,00
-
-📄 Te mandei o PDF do orçamento pra você encaminhar pra Dona Maria.
-43. BOT: Quando a Dona Maria responder, me avisa aqui: 👇
-   [botões: 👍 Cliente aceitou | 👎 Cliente recusou]
-44. ADRIANO: Opa, valeu! Só uma coisa: a Dona Maria ainda não respondeu nada, ela só vai ver o orçamento depois que eu encaminhar. Quando ela responder eu te aviso por aqui, pode deixar.
-45. BOT: Que bom que ajudou! Quando a Dona Maria responder, é só me avisar por aqui. 😊
-46. ADRIANO (áudio): Beleza, valeu! Então fica anotado: a Dona Maria ainda não respondeu, e eu aviso aqui quando ela responder. Só mais uma coisa: hoje comecei a lixar a cristaleira, ainda tá no começo, então ela não tá pronta ainda, tá?
-   {entendido: (igual) · rota: global/job_progress}
-47. BOT: 🎧 Ouvi: "Beleza, valeu! Então fica anotado: a Dona Maria ainda não…"
-48. BOT: Qual deles? 🤔
-   [botões: A cristaleira da Dona Maria]
-49. ADRIANO (áudio): Isso mesmo, a cristaleira da Dona Maria. Hoje eu comecei a lixar, ainda tá no começo, então ela não tá pronta. Quando ficar pronta ela vem buscar. Pode anotar aí.
-   {entendido: (igual) · rota: global/job_progress}
-50. BOT: 🎧 Ouvi: "Isso mesmo, a cristaleira da Dona Maria. Hoje eu comecei…"
-51. BOT: Anotado! Vou marcar a cristaleira da Dona Maria como em andamento, já que você começou a lixar hoje. 🪵
-
-Confirma pra mim?
-   [botões: Confirmar | Cancelar]
-52. ADRIANO: [tocou: Confirmar]
-53. BOT: Hmm, agora não dá pra mudar a cristaleira da Dona Maria direto pra esse estado, porque ela já está em execução. 🪵
+Quando medir, me manda altura, largura e profundidade da cristaleira, e confere as gavetas nessa hora. 📏
+21. ADRIANO (áudio): Beleza, tá anotado tudo. Quando eu medir eu te mando, e aí eu confiro as gavetas também. Valeu!
+22. BOT: 🎧 Ouvi: "Beleza, tá anotado tudo. Quando eu medir eu te mando,…"
+23. BOT: De nada, Adriano! 😄 Fica anotado: cristaleira da Dona Maria em execução, só lixada por fora, com as medidas e a conferência das gavetas pendentes. Quando medir, é só mandar.
 ```
 
 </details>
 
 ## fora-do-roteiro — Fora do roteiro: oi, teste de áudio, conversa social e recomeçar
 
-Notas: entendimento 1 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 1 · eficiencia 1 · conclusao 2 · 88s
+Notas: entendimento 3 · naturalidade 3 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 3 · eficiencia 2 · conclusao 4 · 97s
 
-- ❌ depois de recomeçar não fica serviço aberto — {"n":1}
+- ✅ o serviço da cadeira foi cancelado ao recomeçar
 
-> O bot lidou bem com o teste de áudio, mas falhou no recomeço: tratou a cadeira como serviço já existente, inventou tamanho e 'novo', ignorou três correções de 'médio' e repetiu perguntas já respondidas. O usuário ficou frustrado e a conversa não se resolveu.
+> O bot lidou bem com oi, teste de áudio e recomeço (cancelou a cadeira, confirmado no banco) e retomou a mesinha da Dona Ana sem perder detalhes principais. Mas teve confirmação dupla do cancelamento, frase confusa no turno 5, perguntas já respondidas (estado, parte de dentro) e um orçamento que pede custo de transporte depois de ter anotado 'sem frete'.
 
-- [media] (texto_longo) turno 2: Resposta a um simples 'oi' é uma apresentação longa com lista numerada, em vez de saudação curta.
-- [media] (fluxo_confuso) turno 8: Mensagens duplicadas (anotei + anotado) e comece a perguntas antes de ele terminar de falar; repete informação.
-- [media] (perdeu_informacao) turno 12: Ele disse que quer ver a cadeira junto e pensar depois; o bot registrou 'estado: reparos' e seguiu perguntando, ignorando a hesitação e o pedido de recomeçar.
-- [alta] (nao_entendeu) turno 20: Depois do recomeço, ele repete 'cadeira do seu João, pintura'. O bot trata como serviço já anotado e pergunta se é o mesmo, apesar do recomeço.
-- [alta] (inventou) turno 22: Registrou tamanho 'grande, pequena, novo' e 'pequeno' sem ele ter dito; ele nem tinha respondido o tamanho (só perguntou).
-- [media] (fluxo_confuso) turno 23: Duas mensagens seguidas do bot, uma com perguntas de orientação e outra com nova pergunta; fluxo picotado.
-- [alta] (inventou) turno 26: Disse 'Corrigido' mantendo 'pequeno', quando ele corrigiu para médio; correção ignorada.
-- [alta] (inventou) turno 27: Deu faixa de preço R$163–340 sem dados suficientes; passa valor que ele não pediu e com base em dados errados.
-- [alta] (nao_entendeu) turno 30: Ele corrigiu pela segunda vez; o bot acrescentou 'novo' e continuou com 'pequeno'.
-- [alta] (pergunta_repetida) turno 32: Pergunta o que consertar, mesmo ele já ter dito pernas bambas e pintura descascando e que o reparo vê depois.
-- [alta] (nao_entendeu) turno 35: Na terceira correção o bot persiste em 'pequeno, nova', piorando; o usuário frustrado ('tu tá me entendendo errado') não é acolhido.
+- [media] (tom) turno 5: Frase confusa e interna: 'Não deixei a pergunta da tinta como observação, porque foi minha, não sua'. Vaza lógica do sistema e não faz sentido para o Adriano.
+- [media] (perdeu_informacao) turno 8: Ao recomeçar, ignorou a pergunta social e a informação sobre a madeira (já dada); resposta ao 'tá me ouvindo' foi ok, mas a confirmação do cancelamento foi montada sem esclarecer que ele errou a peça.
+- [alta] (fluxo_confuso) turno 10: Pediu confirmação duas vezes: Adriano disse 'Confirmar' e o bot pediu de novo no botão. Os botões 'Pode anotar' / 'Não' não combinam com cancelar.
+- [media] (fluxo_confuso) turno 8: 'Confirma no botão que aparecer' é texto burocrático e o botão só aparece depois, no turno 10.
+- [media] (pergunta_repetida) turno 30: Perguntou sobre o interior da mesinha depois de ele já ter dito que era só o tampo (turno 22), perguntando o que já foi dito.
+- [baixa] (nao_entendeu) turno 18: Perguntou o estado da mesa depois de ele já ter dito no turno 13 que o verniz estava craquelado e a madeira firme.
+- [baixa] (tom) turno 27: 'Vou guardar a marca do verniz pra quando você confirmar' é meio estranho: ele disse que passa a marca depois.
+- [media] (jargao) turno 32: Mensagem com várias linhas de números e 'Abaixo de R$ 94,14 você fica no prejuízo' soa técnico. Pergunta do frete contradiz o turno 30 ('sem frete'), pois o bot pede custo de transporte.
+- [baixa] (eficiencia) turno 32: Conversa longa, com muitas perguntas, para um caso que era só testar o recomeçar.
 
 <details><summary>Conversa</summary>
 
 ```
 1. ADRIANO: oi
-2. BOT: Oi, Adriano! Que bom ter você por aqui. 😊
+2. BOT: Oi, Adriano! Tudo certo por aqui. 🎨
 
-Eu sou o assistente da adripatina. Eu anoto seus serviços, faço as contas dos orçamentos e deixo tudo organizado pra você.
+Quando quiser começar um orçamento, me conta a peça: qual móvel é, de quem é, e o que vai ser feito nela.
 
-Como funciona:
-1. Você me conta sobre o móvel, por áudio ou escrevendo, do seu jeito.
-2. Eu faço algumas perguntas, uma de cada vez.
-3. No final, eu calculo o orçamento e preparo o PDF pra você mandar ao cliente.
+Pode mandar por áudio mesmo, que eu organizo tudo.
+3. ADRIANO (áudio): Opa, tudo bem! Tô testando esse bot aqui, vê se ele entende áudio. Bora começar um orçamento: é uma cadeira do seu João pra pintar, a cadeira de madeira da sala, ela tá com a pintura toda descascando.
+4. BOT: 🎧 Ouvi: "Opa, tudo bem! Tô testando esse bot aqui, vê se…"
+5. BOT: Anotado: cadeira de madeira do Seu João, pintura toda descascando. Não deixei a pergunta da tinta como observação, porque foi minha, não sua.
 
-Também posso anotar gastos e pagamentos que você receber.
+Pra eu montar o orçamento, me diz: a madeira está firme, só com a pintura solta, ou tem alguma parte quebrada, mole ou com cupim? 🪵
+6. ADRIANO (áudio): Firme, a madeira tá firme. Só a pintura que tá soltando, sem parte quebrada nem mole. Cupim não vi. Ah, e antes de continuar, deixa eu testar uma coisa: tá me ouvindo bem? Se der, me responde que o bot tá ok. Mas peraí, esquece, quero começar de novo esse orçamento, errei a peça.
+7. BOT: 🎧 Ouvi: "Firme, a madeira tá firme. Só a pintura que tá…"
+8. BOT: Recebi certinho, tô te ouvindo bem. 🎧
 
-Pra começar, é só me contar. Por exemplo:
-"Peguei uma cômoda da dona Ana para fazer pátina."
-3. ADRIANO (áudio): oi, tudo bem? testando aqui o áudio, cê consegue me ouvir direitinho? depois te conto da cadeira do seu João
-4. BOT: 🎧 Ouvi: "oi, tudo bem? testando aqui o áudio, cê consegue me…"
-5. BOT: Tá chegando direitinho! 🎧 Pode mandar áudio à vontade que eu transcrevo.
-6. ADRIANO (áudio): Opa, tudo bem sim! Tô por aqui. Então é isso, tá me ouvindo bem. Agora me conta da cadeira do seu João: é pra pintar, né? Quero começar essa.
-   {entendido: (igual) · rota: global/new_job}
-7. BOT: 🎧 Ouvi: "Opa, tudo bem sim! Tô por aqui. Então é isso,…"
-8. BOT: Anotei um serviço novo:
-• móvel: cadeira
-• trabalho: pintura
-• cliente: Seu Joao
+Vou preparar o cancelamento da cadeira do Seu João pra você começar de novo. Confirma no botão que aparecer.
+9. ADRIANO: Confirmar
+10. BOT: Pronto, o cancelamento da cadeira do Seu João está preparado. Confirma no botão que aparecer, e aí a gente começa o orçamento da peça certa do zero.
+   [botões: ✅ Pode anotar | ✏️ Não]
+11. ADRIANO: [tocou: ✅ Pode anotar]
+12. BOT: Cancelado, a cadeira do Seu João ficou no histórico. ✅
 
-Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.
-9. BOT: Anotado: cadeira do Seu João, pintura. Como ela está hoje? Tá em bom estado, precisa de uns reparos ou tá bem estragada? 🪑
-10. ADRIANO (áudio): Tô bem sim, obrigado! Ela tá meio judiada, com umas pernas bambas e a pintura descascando em alguns pontos. Acho que precisa de reparo nas pernas antes de pintar. Mas no começo deixa eu pensar nisso, quero que você veja a cadeira comigo. Quer que eu comece de novo, do zero, que eu me perdi um pouco.
-   {entendido: Estado da cadeira: está meio judiada, com as pernas bambas e a pintura descascando em alguns pontos. Acha que precisa de reparo nas pernas antes de pintar. Quer pensar nisso no começo e ver a cadeira junto com o assistente. Também pediu para recomeçar do zero, porque se perdeu um pouco. · rota: pending_answer/item_condition_answer}
-11. BOT: 🎧 Ouvi: "Tô bem sim, obrigado! Ela tá meio judiada, com umas…"
-12. BOT: Anotado: estado: reparos. 📝
-Também anotei: móvel: cadeira (meio judiada, pernas bambas).
+Agora é só mandar a peça certa: qual móvel é, de quem é, e o que vai ser feito nela.
+13. ADRIANO (áudio): Beleza, então é isso. A peça certa é a mesinha de centro da sala da dona Ana, pra restaurar. Tá com o verniz todo craquelado, a madeira tá firme, sem parte mole nem cupim. Quero fazer só lixar e envernizar de novo, não precisa pintar.
+14. BOT: 🎧 Ouvi: "Beleza, então é isso. A peça certa é a mesinha…"
+15. BOT: Anotado: mesinha de centro da Dona Ana, lixar e envernizar de novo, sem pintura. A madeira está firme e sem cupim.
 
-E de tamanho, como ela é? Medida aproximada ou só "pequeno, médio ou grande", o que for mais fácil pra você. 🪑
-13. ADRIANO (áudio): Ah, agora eu quero recomeçar do zero, que me perdi um pouco. Pode apagar essa cadeira e começar de novo. Mas antes, só um detalhe: a cadeira tá com as pernas bambas e a pintura descascando, então depois a gente vê o reparo. Por enquanto, recomeça aí.
-14. BOT: 🎧 Ouvi: "Ah, agora eu quero recomeçar do zero, que me perdi…"
-15. BOT: Entendi, Adriano! 😄 Quer recomeçar a cadeira do Seu Joao do zero? Eu tiro ele da lista (fica guardado no histórico) e você me conta tudo de novo. 🪑
-   [botões: Recomeçar do zero | Continuar de onde parei]
-16. ADRIANO: [tocou: Recomeçar do zero]
-17. BOT: Pronto, recomecei. 👍
+Qual o tamanho dela? Pode ser em medidas (comprimento, largura e altura em cm) ou pequena, média ou grande. 📏
+16. ADRIANO (áudio): Ela é pequena, uns 60 por 60 de tampo e uns 45 de altura. Tá bom assim pra você montar o orçamento? Se precisar de mais medida eu te passo depois.
+17. BOT: 🎧 Ouvi: "Ela é pequena, uns 60 por 60 de tampo e…"
+18. BOT: Anotado: 60 por 60 cm de tampo e 45 cm de altura. Como é uma mesa de centro, eu uso as medidas do tampo.
 
-Me conta: qual é o móvel, de quem é e o que vai fazer nele? Pode ser por áudio.
-18. ADRIANO (áudio): Beleza, recomeçou então. Pode apagar mesmo, e aquela parte das pernas bambas e da pintura descascando a gente vê depois, com calma. Agora me fala: é a cadeira do seu João de novo, pra pintar, e ela é pequena, média ou grande? Tem umas pernas bambas e tá com a pintura descascando, isso eu quero que tu anote no meio do orçamento, tá?
-   {entendido: (igual) · rota: global/new_job}
-19. BOT: 🎧 Ouvi: "Beleza, recomeçou então. Pode apagar mesmo, e aquela parte das…"
-20. BOT: Beleza, Adriano! 😄 Acho que você está falando da cadeira do Seu João que a gente já anotou. É essa mesma? 🪑
-   [botões: Sim, é essa | Não, é outro serviço | Não tenho certeza]
-21. ADRIANO: [tocou: Não, é outro serviço]
-22. BOT: Show! Anotei:
-• móvel: cadeira (grande, pequena, novo)
-• trabalho: pintura
-• cliente: Seu Joao
-• tamanho: pequeno
+Agora me diz o estado: ela está boa, só com verniz gasto e riscos? Ou precisa de reparos antes, tipo colar ou acertar algum detalhe? 🛠️
+19. ADRIANO (áudio): Ela tá boa, só o verniz craquelado e uns riscos. Sem colar nada, sem parte solta. Pode seguir assim.
+20. BOT: 🎧 Ouvi: "Ela tá boa, só o verniz craquelado e uns riscos.…"
+21. BOT: Anotado: verniz craquelado e riscos, sem colar e sem parte solta. Estado bom.
 
-Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.
-23. BOT: Entendi, Adriano! 📝 O serviço é só na madeira, só no estofado ou nos dois? 🪑
-24. ADRIANO (áudio): Ah, errei o botão, Adriano, não é outro serviço, é a mesma cadeira do Seu João. E o tamanho não é pequeno, é médio, eu nem tinha dito isso. O serviço é só na madeira, sem estofado. Pode anotar a pintura descascando e as pernas bambas no meio do orçamento, tá?
-   {entendido: corrigir: é a mesma cadeira do Seu João, não é outro serviço. O tamanho é médio, não pequeno. O serviço é só na madeira, sem estofado. Anotar no meio do orçamento: pintura descascando e pernas bambas. · rota: active_goal/collecting_continue}
-25. BOT: 🎧 Ouvi: "Ah, errei o botão, Adriano, não é outro serviço, é…"
-26. BOT: Corrigido! 📝 Ficou assim: móvel: cadeira (pequeno) (antes: móvel: cadeira (grande, pequena, novo)). Guardei o histórico. ✅
-27. BOT: 💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 163,00 e R$ 340,00 (sem contar frete). Com o resto das respostas eu fecho o valor.
+Você vai lixar e envernizar a mesinha inteira, ou só o tampo? 🪵
+22. ADRIANO (áudio): Só o tampo, o resto da mesinha tá bom. Pode ser só o tampo mesmo.
+23. BOT: 🎧 Ouvi: "Só o tampo, o resto da mesinha tá bom. Pode…"
+24. BOT: Anotado: só o tampo, lixar e envernizar de novo.
 
-Como tá o estado dela? Pode descrever do seu jeito, tipo "tá bem judiada" ou "só uns riscos".
-28. ADRIANO (áudio): Ô, errei de novo, Adriano. A cadeira é a mesma do Seu João, o tamanho é médio, não pequeno, e o serviço é só na madeira, sem estofado. Pode anotar a pintura descascando e as pernas bambas no meio do orçamento, tá? A cadeira tá bem judiada, as pernas bambas mesmo, e a pintura tá saindo em muita parte. Esse reparo das pernas a gente vê depois, com calma.
-   {entendido: (igual) · rota: pending_answer/item_condition_answer}
-29. BOT: 🎧 Ouvi: "Ô, errei de novo, Adriano. A cadeira é a mesma…"
-30. BOT: Ajustei aqui: móvel: cadeira (pequeno, novo) (antes: móvel: cadeira (pequeno)). Guardei o histórico. 📝
-31. BOT: Anotei aqui: estado: danificado. 🪑
-32. BOT: Falta pouquinho! 🛠️ E sobre os consertos: o que precisa arrumar nela? Pode contar do seu jeito.
-33. ADRIANO (áudio): Ô Bot, tu tá me entendendo errado. Não é nova, é a mesma cadeira do Seu João. Tamanho médio, não pequeno. O serviço é só na madeira, sem estofado. As pernas tão bambas e a pintura tá saindo em muita parte. Esse reparo das pernas eu vejo depois, com calma. Pode anotar isso aí.
-   {entendido: corrigir: a cadeira é a mesma do Seu João (não é nova); tamanho: médio (não pequeno); serviço: pintura só na madeira, sem estofado; defeitos: pernas bambas e pintura saindo em muita parte; reparo das pernas fica para depois, com calma. · rota: pending_answer/job_field_answer}
-34. BOT: 🎧 Ouvi: "Ô Bot, tu tá me entendendo errado. Não é nova,…"
-35. BOT: Ajeitei aqui: móvel: cadeira (pequeno, nova) (antes: móvel: cadeira (pequeno, novo)). Guardei o histórico. 📝
-36. BOT: Feito: estado: reparos (antes: estado: danificado). Guardei o histórico. ✅
-37. BOT: Estamos quase lá! 🛠️ Você falou que ela tá precisando de cuidado. O que vai ter que consertar antes do acabamento? Tipo colar, trocar tábua, passar massa.
-38. ADRIANO (áudio): Ô, de novo o bot se enrolou, viu. Não é nova nem pequena, é a mesma cadeira do Seu João, tamanho médio, e é só madeira, sem estofado. As pernas tão bambas, mas esse reparo eu vejo depois, com calma. Por enquanto só anota a pintura descascando em muita parte e as pernas bambas no meio do orçamento. Não precisa perguntar mais nada sobre conserto agora, é isso.
-   {entendido: (igual) · rota: pending_answer/job_field_answer}
-39. BOT: 🎧 Ouvi: "Ô, de novo o bot se enrolou, viu. Não é…"
-40. BOT: Corrigi aqui: móvel: cadeira (pequena, nova, novo) (antes: móvel: cadeira (pequeno, nova)). Guardei o histórico. 📝
-41. BOT: Quase lá! 🛠️ E sobre os consertos: o que precisa arrumar nela? Pode contar do seu jeito.
+Pra envernizar esse tampo, você usa pincel, rolo ou pistola? 🎨
+25. ADRIANO (áudio): Pincel, acho. Passo fino, eu gosto de fazer na mão. Tenho que ver ainda se vou usar o verniz que trnho aqui, depois eu passo a marca.
+26. BOT: 🎧 Ouvi: "Pincel, acho. Passo fino, eu gosto de fazer na mão.…"
+27. BOT: Anotado: pincel, passo fino na mão. Vou guardar a marca do verniz pra quando você confirmar.
+
+Agora, quem leva e traz a mesinha? Você busca na casa da Dona Ana e entrega, ou ela traz e leva? 🚚
+28. ADRIANO (áudio): Ah, eu busco e entrego lá na casa da dona Ana. Ela não precisa se preocupar com nada. Pode anotar aí que sou eu que levo e trago.
+29. BOT: 🎧 Ouvi: "Ah, eu busco e entrego lá na casa da dona…"
+30. BOT: Anotado: você busca e entrega na casa da Dona Ana, sem frete.
+
+Falta uma coisa: a mesinha tem parte de dentro que também precisa de verniz, ou é só por fora? 🪵
+31. ADRIANO: Só o tampo mesmo, por fora. Tá certo, pode anotar.
+32. BOT: A conta da mesinha da Dona Ana ficou assim:
+
+Sugestão: R$ 118,00
+Abaixo de R$ 94,14 você fica no prejuízo.
+Material que você usa: uns R$ 14,25.
+Umas 2 horas de trabalho.
+
+Você vai buscar e levar a mesinha, então falta o custo do transporte. Quanto você gasta com isso? Com esse valor eu refaço a conta. 🚚
+   [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
 ```
 
 </details>
 
 ## correcoes — Correções do jeito dele no meio do orçamento
 
-Notas: entendimento 3 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_vez 2 · sem_invencao 4 · eficiencia 2 · conclusao 5 · 61s
+Notas: entendimento 5 · naturalidade 4 · acessibilidade 3 · uma_pergunta_por_vez 4 · sem_invencao 4 · eficiencia 5 · conclusao 5 · 33s
 
 - ✅ 1 serviço
 - ✅ cliente corrigida para Dona Bia
 - ✅ método corrigido para rolo
 - ✅ cor branca anotada
 
-> O fluxo chegou ao fim: valor R$ 308,00, PDF enviado, cliente aceitou, e o banco confere. As correções (Dona Bia, rolo, sem frete) foram aplicadas. Mas o bot ignorou que ele já tinha dito 'tem 4 gavetas' e repetiu a mesma pergunta quatro vezes, forçando Adriano a reclamar duas vezes. Também deixou 4 gavetas fora do resumo final e fez pergunta dupla no transporte. Conclusão boa, experiência frustrante.
+> Conversa eficiente: o bot pegou todas as correções (cliente Dona Bia, rolo, medidas, sem frete), fechou em R$ 308 e atendeu o pedido de confirmação. O ponto fraco é a mensagem do valor, carregada e com duas perguntas, e a pergunta sobre frete que ele já tinha respondido. Objetivo atingido.
 
-- [alta] (pergunta_repetida) turno 10: Bot repete a pergunta das gavetas, que Adriano já respondeu no turno 5 (4 gavetas), e ignora a resposta.
-- [alta] (pergunta_repetida) turno 14: Pergunta das gavetas pela terceira vez, igual, mesmo depois de ele dizer que já respondeu.
-- [alta] (pergunta_repetida) turno 16: Quarta vez a mesma pergunta das gavetas, sem reconhecer a frustração dele; só no turno 18 anota 4 gavetas.
-- [media] (nao_entendeu) turno 7: No turno 5 ele deu gavetas, correção de cliente, rolo e sem frete de uma vez. O bot pulou para outra pergunta (por dentro ou por fora) e não confirmou nada na hora, só depois de ele reclamar.
-- [media] (fluxo_confuso) turno 12: Correções confirmadas só após insistência dele, em mensagens separadas, e logo seguidas da mesma pergunta repetida. O sem frete não foi reconhecido na hora.
-- [media] (pergunta_repetida) turno 18: Pergunta transporte com duas perguntas numa mensagem (traz? entrega?) mesmo ele já ter dito 'sem frete' duas vezes.
-- [baixa] (perda_de_clareza) turno 22: O resumo traz 'observações: cor: branco; também citado: Dona Bia', texto estranho e redundante. As 4 gavetas não aparecem no resumo final.
-- [baixa] (jargao) turno 24: 'Menos que R$ 249,00 você começa a ter prejuízo' é aceitável, mas o tom é mais de sistema do que de colega de oficina. Também não há tom de desculpa pelas repetições.
-- [baixa] (decisao_dinheiro) turno 30: Sugere 'entrada recomendada R$ 205,00' sem ele pedir, mexendo em valor por conta própria.
+- [media] (jargao) turno 9: A mensagem do valor mistura 'prejuízo', material, horas e a pergunta de desconto/acréscimo. Fica carregada para quem prefere conversa simples. Tem duas perguntas juntas: concorda e quer desconto ou acréscimo.
+- [baixa] (texto_longo) turno 9: Várias informações numéricas de uma vez (piso, material, horas), sem explicação curta.
+- [baixa] (pergunta_redundante) turno 6: Perguntou quem leva e traz a cômoda mesmo ele já ter dito 'sem frete' no turno 4. Poderia ter confirmado em vez de perguntar.
+- [baixa] (tom) turno 12: Fala que 'o PDF já foi enviado' e 'quando a Dona Bia responder, me avisa'. O PDF foi gerado, mas o envio à cliente é dúvida. Depois emenda outra pergunta sobre a compra da tinta, o que é um pouco apressado.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): Fala aí, tudo certo? Peguei uma cômoda pra pintar de branco, é da dona Ana. Vou te falar as medidas: 90 de altura, 1 metro de largura e 45 de fundura. Tá boa, sem conserto nenhum, só é pra pintar por fora. Vou usar pincel pra pintar.
-   {entendido: (igual) · rota: global/new_job}
-2. BOT: 🎧 Ouvi: "Fala aí, tudo certo? Peguei uma cômoda pra pintar de…"
-3. BOT: Anotei um serviço novo:
-• móvel: cômoda (branco)
-• trabalho: pintura
-• cliente: Dona Ana
-• aplicação: pincel
-• estado: bom
-• sem consertos
-• medidas: altura 0,9 m, largura 1 m, fundura 0,45 m
-• cor: branco
+1. ADRIANO (áudio): Fala, tudo bem? Peguei uma cômoda pra pintar de branco, é da dona Ana. Quero fazer o orçamento.
+2. BOT: 🎧 Ouvi: "Fala, tudo bem? Peguei uma cômoda pra pintar de branco,…"
+3. BOT: Anotado: cômoda da Dona Ana, pintura de branco. 🎨
 
-Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.
-4. BOT: Anotado: cômoda branca da dona Ana, pintura com pincel, estado bom e sem consertos.
+Como está o estado da peça? Ela está boa (só com riscos), precisa de reparos ou está bem danificada?
+4. ADRIANO (áudio): Tá boa, sem conserto. Só por fora. Na verdade a cliente é a dona Bia, não a Ana, foi engano meu. A cômoda tem 90 de altura, 1 metro de largura e 45 de fundura. Pintura branca mesmo, vou fazer com rolo, errei antes quando falei pincel. Sem frete.
+5. BOT: 🎧 Ouvi: "Tá boa, sem conserto. Só por fora. Na verdade a…"
+6. BOT: Anotado: cômoda da Dona Bia, pintura branca com rolo, só por fora, sem conserto, 90 x 100 x 45 cm. Corrigi o nome e o método. 🎨
 
-Quantas gavetas ela tem? 📦
-5. ADRIANO (áudio): Ah, tem 4 gaveta. Mas peraí, na verdade a cliente é a dona Bia, não a Ana. E errei no pincel, é rolo mesmo. Sem frete, tá?
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-6. BOT: 🎧 Ouvi: "Ah, tem 4 gaveta. Mas peraí, na verdade a cliente…"
-7. BOT: Boa pergunta! Em armários, cômodas e cristaleiras, às vezes a parte de dentro (prateleiras, gavetas) também é trabalhada, e isso aumenta a área.
-
-Você vai mexer só na parte de fora ou por dentro também (prateleiras, gavetas, portas por dentro)? 🎨
-8. ADRIANO: Só por fora. Por dentro não mexe, nem gaveta nem prateleira.
-   {entendido: só por fora; por dentro não mexe, nem gavetas nem prateleiras · rota: active_goal/collecting_continue}
-9. BOT: Anotado: só por fora, por dentro não mexe.
-10. BOT: Beleza, então é só a parte de fora. Quantas gavetas a cômoda tem? 📦
-11. ADRIANO: Já respondi a da gaveta lá em cima: são 4 gavetas. E anotei a correção: a cliente é a dona Bia, não a Ana, e é rolo, não pincel. Sem frete. Pode seguir.
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-12. BOT: Corrigido: cliente Dona Bia (antes era Dona Ana). Tudo certo por aqui. 🎨
-13. BOT: Corrigido: aplicação com rolo (antes estava pincel). Histórico guardado. 🛠️
-14. BOT: Quantas gavetas ela tem?
-15. ADRIANO: Já falei, são 4 gavetas. Tá tudo corrigido: dona Bia, rolo, sem frete. Pode seguir pro orçamento.
-   {entendido: São 4 gavetas. Correções já feitas: cliente Dona Bia, aplicação com rolo, sem frete. Pode seguir para o orçamento. · rota: active_goal/collecting_continue}
-16. BOT: Quantas gavetas ela tem?
-17. ADRIANO: Já falei, são 4 gavetas, tá? Pode seguir pro orçamento, por favor. Tá tudo certo: dona Bia, rolo, sem frete, só por fora.
-   {entendido: 4 gavetas. Pode seguir pro orçamento. Confirmo: cliente dona Bia, aplicação com rolo, sem frete, só por fora. · rota: active_goal/collecting_continue}
-18. BOT: Anotado: 4 gavetas. 📦
-
-Só pra você ter uma ideia: pelo que já sei, deve ficar por volta de R$ 308,00 (sem contar frete). Com o resto das respostas eu fecho o valor. 💰
-
-Última coisinha: o transporte. O cliente traz a cômoda aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar?
-19. ADRIANO (áudio): Já falei: sem frete. A cliente traz a cômoda aqui na oficina e ela mesma vem pegar depois, não precisa buscar nem entregar. Tá tudo certo: dona Bia, rolo, 4 gavetas, só por fora. Pode fechar o orçamento.
-   {entendido: sem frete; a cliente traz a cômoda na oficina e ela mesma vem pegar depois, sem buscar nem entregar. Confirmado: dona Bia, rolo, 4 gavetas, só por fora. Pode fechar o orçamento. · rota: pending_answer/logistics_answer}
-20. BOT: 🎧 Ouvi: "Já falei: sem frete. A cliente traz a cômoda aqui…"
-21. BOT: Beleza, anotado: sem frete, a cliente traz a cômoda e vem pegar depois. 🚚
-22. BOT: Pronto, Adriano! Já tenho o que preciso sobre a cômoda da Dona Bia. Dá uma conferida:
-
-• móvel: cômoda (branco)
-• trabalho: pintura
-• cliente: Dona Bia
-• aplicação: rolo
-• estado: bom
-• sem consertos
-• medidas: altura 0,9 m, largura 1 m, fundura 0,45 m
-• observações: cor: branco; também citado: Dona Bia
-• só por fora
-• sem frete
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-23. ADRIANO: [tocou: Pode calcular]
-24. BOT: 🧮 Prontinho, fiz as contas da cômoda da Dona Bia!
-
-💰 Minha sugestão é cobrar R$ 308,00.
-
-⚠️ Menos que R$ 249,00 você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 205,00 de material.
-⏱️ Dá umas 5 horas de trabalho.
-
-E aí, você concorda com esse valor? 🤝
+Falta saber quem leva e traz a cômoda. Ela vai até você ou você busca e entrega?
+7. ADRIANO (áudio): Ela que traz e leva lá na oficina, sem frete mesmo. Pode anotar que não tem busca nem entrega.
+8. BOT: 🎧 Ouvi: "Ela que traz e leva lá na oficina, sem frete…"
+9. BOT: Você concorda com R$ 308,00 para a cômoda da Dona Bia? Abaixo de R$ 248,01 você fica no prejuízo. Material novo: uns R$ 205,00. Trabalho: umas 5 horas. Quer dar um desconto ou acrescentar algo?
    [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-25. ADRIANO: [tocou: 👍 Concordo]
-26. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
-27. BOT: Fechado! ✅
+10. ADRIANO: Ah, então tá. Pode fechar esse valor aí, tá bom pra mim. Só confirma que é mesmo da Dona Bia e que ela traz e leva na oficina.
+11. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+12. BOT: Confirmo sim: a cômoda é da Dona Bia, e ela traz e leva na oficina, sem frete. ✅
 
-💰 Valor final: R$ 308,00
+Orçamento fechado em R$ 308,00 e o PDF já foi enviado. Quando a Dona Bia responder, me avisa que eu registro.
 
-📄 Te mandei o PDF do orçamento pra você encaminhar pra Dona Bia.
-28. BOT: Quando a Dona Bia responder, me avisa aqui: 👇
-   [botões: 👍 Cliente aceitou | 👎 Cliente recusou]
-29. ADRIANO: [tocou: 👍 Cliente aceitou]
-30. BOT: Que ótimo! 🎉 Anotei que a Dona Bia aceitou o orçamento da cômoda por R$ 308,00.
-
-Entrada recomendada: R$ 205,00. 💰
+Quer já anotar a compra da tinta branca ou o gasto com o material?
+13. ADRIANO: Beleza, então tá fechado. Não precisa anotar a tinta agora não, depois eu te falo quando comprar. Valeu!
+14. BOT: Beleza, Adriano! Quando comprar a tinta, me fala que eu anoto. Bom trabalho na cômoda da Dona Bia! 🎨
 ```
 
 </details>
 
 ## decisao-valor — Decisão do valor: desconto abaixo do mínimo e depois acréscimo de frete
 
-Notas: entendimento 2 · naturalidade 3 · acessibilidade 4 · uma_pergunta_por_vez 3 · sem_invencao 3 · eficiencia 1 · conclusao 4 · 77s
+Notas: entendimento 4 · naturalidade 4 · acessibilidade 3 · uma_pergunta_por_vez 4 · sem_invencao 5 · eficiencia 4 · conclusao 5 · 55s
 
 - ✅ PDF gerado
 - ✅ orçamento fechado
 
-> O orçamento fechou certo, com valor cheio de R$ 282 mais R$ 60 de frete, R$ 342, e PDF gerado. O caminho foi ruim: o bot perdeu a largura, repetiu perguntas sobre transporte e medidas até o Adriano se irritar, e não anotou o frete no resumo. A parte do desconto abaixo do mínimo foi bem tratada, com aviso claro de prejuízo.
+> Conversa chegou ao objetivo: orçamento fechado em R$ 560 (500 + 60 de frete) com PDF enviado, sem inventar nada. Pontos fracos: confirmou de novo o frete que o Adriano já tinha dito que entrava na conta, e a mensagem de valores é um pouco técnica. No geral, bom atendimento e eficiente.
 
-- [alta] (perdeu_informacao) turno 9: Anotou só 0,4 × 0,8 m, perdendo a largura de 1,20 que o Adriano já tinha dito no áudio. Ainda deu faixa de preço com base em medidas incompletas.
-- [media] (pergunta_repetida) turno 9: Pediu as medidas de novo depois que ele já tinha dado tudo no áudio (turno 5). Também já tinha perguntado como o aparador chega e volta, e depois voltou a perguntar a mesma coisa.
-- [alta] (pergunta_repetida) turno 13: Perguntou de novo sobre o transporte, que ele já tinha respondido no turno 10, e juntou duas perguntas numa mensagem.
-- [alta] (pergunta_repetida) turno 16: Só registrou que ele busca e voltou a perguntar sobre a entrega, que ele já tinha dito. Repetiu igual no turno 19, e ele ficou irritado.
-- [alta] (pergunta_repetida) turno 19: Repetiu exatamente a mesma pergunta do turno 16, ignorando que ele dissera que busca e entrega. Ele precisou falar quatro vezes.
-- [media] (perdeu_informacao) turno 22: Os 60 reais de frete, que ele disse que quer cobrar, nunca foram anotados no resumo. Só apareceu 'buscar e entregar'.
-- [baixa] (tom) turno 28: O 'Assim fica R$ 141,00 😬' soa meio estranho. O aviso de prejuízo em si foi correto.
-- [baixa] (fluxo_confuso) turno 32: Fechou direto sem confirmar o acréscimo do frete nem mostrar o valor antes do PDF. Deu certo, mas foi sem checagem.
-- [baixa] (fluxo_confuso) turno 35: Respondeu 'Qualquer coisa é só chamar' como se fosse despedida, sem reforçar que ficará aguardando a resposta do cliente.
+- [baixa] (nao_entendeu) turno 14: O Adriano disse 'desconto de metade' e '250', e o bot só avisou que ficava abaixo do mínimo sem esclarecer que metade de 500 dá 250; funcionou, mas faltou confirmar a leitura.
+- [media] (jargao) turno 9: Usa 'Sugestão', 'prejuízo' e 'material novo' em bloco denso de números com negrito markdown; um pouco técnico e longo para quem fala por áudio.
+- [media] (pergunta_repetida) turno 17: Perguntou se o frete estava incluso, sendo que o Adriano já tinha dito que o frete era de 60 reais e 'pode botar na conta' (turno 7); era perguntar o que ele já falou. Além disso, ele já havia dito 'por cima'.
+- [baixa] (tom) turno 14: Fala de 'prejuízo' e 'mínimo' de forma seca; poderia ser mais de parceiro de oficina.
+- [baixa] (texto_longo) turno 3: Os resumos 'Anotado' e as mensagens 'Ouvi' extras criam muitas mensagens por turno, enchendo o chat.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): e aí, tudo bem? to precisando de um orçamento pra um aparador do seu Luiz, é pra envernizar. ele ta bom, só precisa do verniz mesmo. dá pra fazer?
-   {entendido: (igual) · rota: global/new_job}
-2. BOT: 🎧 Ouvi: "e aí, tudo bem? to precisando de um orçamento pra…"
-3. BOT: Beleza, serviço novo anotado:
-• móvel: aparador (só precisa de verniz, peça em bom estado)
-• trabalho: verniz
-• cliente: Seu Luiz
+1. ADRIANO (áudio): e aí, tudo bem? Tenho um aparador do Seu Luiz pra envernizar. Ele tá bom, só precisa de verniz mesmo. Tem 1,20 de largura, 40 de fundura e 80 de altura. Inteiro, sem conserto nenhum. Aplico com pincel. Quero ver quanto fica pra fazer o orçamento.
+2. BOT: 🎧 Ouvi: "e aí, tudo bem? Tenho um aparador do Seu Luiz…"
+3. BOT: Anotado: aparador do Seu Luiz, 120 × 40 × 80 cm, só verniz, peça boa, sem conserto, com pincel.
 
-Agora vou te fazer umas perguntinhas, uma de cada vez, pra montar o orçamento. Pode responder por áudio ou escrevendo.
-4. BOT: Anotado: aparador do Seu Luiz, só verniz, peça em bom estado. 🪵
+Antes de calcular, me diz: é só por fora ou tem que envernizar por dentro também (portas, gavetas, interior)?
+4. ADRIANO (áudio): Por dentro também, é tudo verniz: as portas e o interior. Não tem gaveta. Pode contar tudo como interior mesmo.
+5. BOT: 🎧 Ouvi: "Por dentro também, é tudo verniz: as portas e o…"
+6. BOT: Anotado: verniz por dentro e por fora, sem gavetas.
 
-Como tá o estado dele? Pode descrever do seu jeito, tipo "tá bem judiado" ou "só uns riscos".
-5. ADRIANO (áudio): Tá bom, tá inteiro. Não tem conserto nenhum, só precisa do verniz mesmo. Ele tem 1,20 de largura, 40 de fundura e 80 de altura. Pincel, que é o jeito que eu gosto de fazer.
-   {entendido: Estado: tá inteiro, sem conserto nenhum, só precisa do verniz. Medidas: 1,20 de largura, 40 de profundidade e 80 de altura. Método: pincel. · rota: pending_answer/item_condition_answer}
-6. BOT: 🎧 Ouvi: "Tá bom, tá inteiro. Não tem conserto nenhum, só precisa…"
-7. BOT: Beleza, estado bom anotado. 👍
+Falta só saber o transporte: você busca a peça na casa do Seu Luiz e entrega depois, ou ele traz para a oficina?
+7. ADRIANO (áudio): Eu que busco na casa do Seu Luiz e depois entrego pra ele. Esse frete é 60 reais, pode botar na conta.
+8. BOT: 🎧 Ouvi: "Eu que busco na casa do Seu Luiz e depois…"
+9. BOT: Pronto, fiz as contas do aparador do Seu Luiz:
 
-Também anotei: pincel e sem consertos.
+💰 Sugestão: **R$ 500,00**
+⚠️ Abaixo de **R$ 421,18** você fica no prejuízo.
+🛒 Material novo: uns R$ 139,00.
+⏱️ Umas 7 horas de trabalho.
 
-Agora as medidas: quanto ele tem de largura, fundura e altura? 📏
-
-Pode falar em centímetros, mais ou menos mesmo.
-8. ADRIANO: Já falei as medidas ali no áudio, tá: 1,20 de largura, 40 de fundura e 80 de altura. Pincel também. Dá pra seguir daí.
-   {entendido: medidas: 1,20 m de largura, 40 cm de fundura e 80 cm de altura; pincel; pode seguir. · rota: pending_answer/item_dimensions_answer}
-9. BOT: Anotei: 0,4 × 0,8 m. 📏
-
-💰 Só pra você ter uma ideia: pelo que já sei, deve ficar entre R$ 183,00 e R$ 317,00 (sem contar frete). Com o resto das respostas eu fecho o valor.
-
-Falta uma coisa: como o aparador chega até você e volta pro cliente? Você busca e entrega, ou o cliente leva e traz?
-10. ADRIANO (áudio): Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. Esse frete é 60 reais, viu, quero cobrar isso. Ah, e a largura é 1,20, não 0,4, o 0,4 é a fundura. Dá pra conferir aí?
-   {entendido: (igual) · rota: active_goal/collecting_continue}
-11. BOT: 🎧 Ouvi: "Eu busco na casa do Seu Luiz e entrego depois,…"
-12. BOT: Corrigido: medidas: altura 0,8 m, largura 1,2 m, fundura 0,4 m (antes: medidas: altura 0,8 m, fundura 0,4 m). Guardei o histórico.
-13. BOT: Última coisinha: E o transporte: o cliente traz o aparador aí, ou você vai precisar buscar? E depois, você entrega ou o cliente vem pegar?
-14. ADRIANO (áudio): Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. Esse frete é 60 reais, viu, quero cobrar isso. As medidas tão certas agora: 1,20 de largura, 40 de fundura e 80 de altura. Pincel, sem conserto, só verniz.
-   {entendido: Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. Frete: R$ 60,00, quero cobrar isso. Medidas confirmadas: altura 0,8 m, largura 1,2 m, fundura 0,4 m. Aplicação: pincel. Sem consertos. Trabalho: verniz. · rota: active_goal/collecting_continue}
-15. BOT: 🎧 Ouvi: "Eu busco na casa do Seu Luiz e entrego depois,…"
-16. BOT: Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?
-17. ADRIANO (áudio): Já falei isso, tá? Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. O frete é 60 reais, quero cobrar isso. O resto tá certo.
-   {entendido: Eu busco na casa do Seu Luiz e entrego depois, eu mesmo. O frete é R$ 60,00, quero cobrar isso. O resto está certo. · rota: active_goal/collecting_continue}
-18. BOT: 🎧 Ouvi: "Já falei isso, tá? Eu busco na casa do Seu…"
-19. BOT: Certo, você vai buscar. E na volta, você entrega ou o cliente vem pegar?
-20. ADRIANO (áudio): Já falei, tá? Eu busco e entrego eu mesmo. O frete é 60 reais, quero cobrar isso. O resto tá certo, pode seguir pro valor.
-   {entendido: (igual) · rota: pending_answer/logistics_answer}
-21. BOT: 🎧 Ouvi: "Já falei, tá? Eu busco e entrego eu mesmo. O…"
-22. BOT: Show! Anotei: buscar e entregar. 👌
-23. BOT: Pronto, Adriano! Já tenho o que preciso sobre o aparador do Seu Luiz. Dá uma conferida:
-
-• móvel: aparador (só precisa de verniz, peça em bom estado)
-• trabalho: verniz
-• cliente: Seu Luiz
-• estado: bom
-• aplicação: pincel
-• sem consertos
-• medidas: altura 0,8 m, largura 1,2 m, fundura 0,4 m
-• buscar e entregar
-
-Tá tudo certo? Se sim, me diz "pode calcular" que eu faço as contas. Se quiser mudar algo, é só falar, tipo "a altura é 1,90".
-   [botões: Pode calcular | Quero corrigir]
-24. ADRIANO: [tocou: Pode calcular]
-25. BOT: 🧮 Prontinho, fiz as contas do aparador do Seu Luiz!
-
-💰 Minha sugestão é cobrar R$ 282,00.
-
-⚠️ Menos que R$ 230,00 você começa a ter prejuízo.
-🛒 Vai precisar comprar uns R$ 130,00 de material.
-⏱️ Dá umas 4 horas de trabalho.
-🚚 O frete não está na conta. Se for cobrar, é só acrescentar.
-
-E aí, você concorda com esse valor? 🤝
+Você concorda com esse valor, ou quer dar um desconto ou acrescentar algo?
    [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
-26. ADRIANO (áudio): Ah, valeu! Cara, 282 tá alto demais pra mim. Faz metade disso, 141 reais, que o Seu Luiz é conhecido meu.
-   {entendido: Não concordo com R$ 282,00, está alto demais. Quero cobrar R$ 141,00 porque o Seu Luiz é conhecido meu. · rota: active_goal/quote_decision_continue}
-27. BOT: 🎧 Ouvi: "Ah, valeu! Cara, 282 tá alto demais pra mim. Faz…"
-28. BOT: Assim fica R$ 141,00. 😬
+10. ADRIANO: [tocou: ➖ Dar desconto]
+11. BOT: Beleza, desconto no aparador do Seu Luiz. Quanto você quer dar: uma porcentagem, um valor em reais, ou um valor final pro total?
+12. ADRIANO (áudio): Quero dar um desconto de metade. Fica em 250 reais então, né?
+13. BOT: 🎧 Ouvi: "Quero dar um desconto de metade. Fica em 250 reais…"
+14. BOT: Esse valor de R$ 250 fica abaixo do mínimo, então você teria prejuízo nesse aparador.
 
-Só que abaixo de R$ 230,00 você fica no prejuízo. Quer fechar assim mesmo?
-   [botões: Sim, fechar assim | Mudar o valor]
-29. ADRIANO (áudio): Cara, então não dá pra fechar em 141 não, o prejuízo come tudo. Esquece o desconto, fica no valor cheio de 282 e acrescenta os 60 do frete. Pode fazer assim pra mim?
-   {entendido: não fecho em R$ 141,00, o prejuízo come tudo. Cancelo o desconto, fica o valor cheio de R$ 282,00 e acrescenta R$ 60,00 de frete. Pode fazer assim? · rota: active_goal/quote_decision_continue}
-30. BOT: 🎧 Ouvi: "Cara, então não dá pra fechar em 141 não, o…"
-31. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
-32. BOT: Fechado! ✅
+Quer fechar em outro valor mais perto do mínimo, ou prefere manter R$ 250 mesmo sabendo disso?
+15. ADRIANO (áudio): Ah, rapaz, então não dá pra cair tanto. Deixa o valor onde tá, com o frete de 60 reais por cima. Pode botar pra fechar assim, eu aceito o que der de mínimo, não quero ficar no prejuízo.
+16. BOT: 🎧 Ouvi: "Ah, rapaz, então não dá pra cair tanto. Deixa o…"
+17. BOT: Entendi que você quer voltar ao valor da sugestão, e não ao de R$ 250. Antes de fechar, me confirma: o valor da sugestão já inclui o frete, ou o frete de 60 reais vai por cima dele?
 
-💰 Valor final: R$ 342,00 (R$ 282,00 + R$ 60,00 de frete)
+Assim que você responder, eu fecho o orçamento do aparador do Seu Luiz.
+18. ADRIANO (áudio): Por cima, o frete de 60 reais vai por cima dos 500. Pode fechar assim: 560 no total, eu aceito.
+19. BOT: 🎧 Ouvi: "Por cima, o frete de 60 reais vai por cima…"
+20. BOT: Conta feita: R$ 500,00 da sugestão + R$ 60,00 de frete = **R$ 560,00**, acima do mínimo de R$ 421,18.
 
-📄 Te mandei o PDF do orçamento pra você encaminhar pro Seu Luiz.
-33. BOT: Quando o cliente responder, me avisa aqui: 👇
-   [botões: 👍 Cliente aceitou | 👎 Cliente recusou]
-34. ADRIANO: Valeu, tá fechado! Pode mandar o PDF que eu encaminho pro Seu Luiz. Quando ele responder eu te aviso por aqui.
-35. BOT: Por nada, Adriano! Qualquer coisa é só chamar. 😊
+Posso fechar o orçamento do aparador do Seu Luiz em R$ 560,00 e mandar o PDF?
+21. ADRIANO: 👍 Concordo
+22. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+23. BOT: Fechado: aparador do Seu Luiz por **R$ 560,00** (R$ 500,00 + R$ 60,00 de frete). ✅
+
+O PDF do orçamento já foi enviado. Quando o Seu Luiz responder, me avisa que eu anoto se ele aceitou.
 ```
 
 </details>
 
 ## consulta — Consultas: quais serviços eu tenho e quanto falta receber
 
-Notas: entendimento 1 · naturalidade 2 · acessibilidade 2 · uma_pergunta_por_vez 3 · sem_invencao 1 · eficiencia 1 · conclusao 1 · 78s
+Notas: entendimento 3 · naturalidade 2 · acessibilidade 3 · uma_pergunta_por_vez 3 · sem_invencao 3 · eficiencia 2 · conclusao 2 · 74s
 
 
-> Conversa falhou: o Adriano só queria ver os serviços e saber quanto a Dona Maria deve. A lista inicial foi ok, mas depois o bot inventou uma 2ª cristaleira e um estado 'bem danificado', repetiu a mesma confirmação errada várias vezes, pediu de novo detalhes já dados e nunca respondeu sobre o valor devido. Ele ficou irritado e o objetivo não foi atingido.
+> O bot listou os serviços logo, mas falhou no pedido principal: dizer quanto a Dona Maria deve. Ficou repetindo que o sistema não mostra o valor, contradizendo-se, e a última mensagem saiu cortada. Misturou a consulta com perguntas do orçamento da mesa e não respondeu ao pedido final de tempo e situação de cada serviço. Objetivo não atingido de forma clara.
 
-- [alta] (inventou) turno 8: Inventou uma segunda cristaleira ('uma cristaleira e outra cristaleira') quando o Adriano falou de uma só, duplicando o móvel.
-- [alta] (inventou) turno 9: Disse que a 1ª cristaleira está 'bem danificada', contrariando o que ele disse (bom estado, sem nada quebrado), e criou uma 2ª cristaleira.
-- [media] (nao_entendeu) turno 14: Perguntou 'Qual deles, então?' com um só botão, sem sentido diante da correção clara dele.
-- [alta] (pergunta_repetida) turno 15: Repetiu a mesma confirmação errada (duas cristaleiras) nos turnos 15, 18 e 24, ignorando as correções repetidas dele.
-- [alta] (perdeu_informacao) turno 21: Depois de ele ter dado todos os detalhes (bom estado, 1,80 m, só por fora, sem conserto), pediu de novo esses mesmos detalhes como se faltassem.
-- [alta] (nao_respondeu) turno 3: Em nenhum momento respondeu quanto a Dona Maria ainda deve, pedido feito em quase todas as mensagens; também não houve resposta sobre o valor ou a situação do pagamento.
-- [alta] (travou) turno 24: Fluxo em loop: a conversa terminou voltando ao erro das duas cristaleiras, frustrando o usuário ('Não, para!') sem saída.
-- [baixa] (fluxo_confuso) turno 11: Exemplo de correção ('a cômoda também precisa de reparo') não tem relação com o caso e as perguntas de detalhe interromperam a consulta que ele queria.
-- [media] (jargao) turno 5: Mostra código S-0001 e a lista 'Ainda falta saber' em formato de ficha, pouco natural para ele.
+- [media] (fluxo_confuso) turno 3: Respondeu a lista mas puxou pergunta sobre o estado da cristaleira, misturando consulta com orçamento. Disse que não há valor total para ela dever.
+- [alta] (nao_entendeu) turno 15: Adriano perguntou duas vezes quanto Dona Maria deve (R$ 799 fechado, nada pago). O bot não deu a resposta direta, disse que o acompanhamento não mostra o valor.
+- [alta] (inconsistencia) turno 18: Disse que ela deve R$ 799 mas que o sistema não mostra, confuso e contraditório. Repetiu a mesma explicação em vários turnos.
+- [media] (pergunta_repetida) turno 21: Continuou fazendo perguntas da mesa (por fora/dentro, pincel) sem que ele tivesse pedido, e ignorou a sua pergunta de fundo.
+- [media] (inventou) turno 21: Anotou 'não precisa de conserto' e 'dentro fica como está' sem ter sido dito exatamente assim (ele só disse que dentro não precisa de verniz).
+- [alta] (texto_longo) turno 24: Mensagem final cortada no meio da frase e ainda dizendo que o total aparece como zero, sem resolver o pedido. Não respondeu o tempo que leva a mesa nem a situação de cada serviço.
+- [baixa] (tom) turno 12: Chamou a mesa de 'dela' e perguntou se ele já tinha as informações sendo que a mesa é do Seu João.
+- [baixa] (jargao) turno 6: Usou termos como 'em orçamento' e 'acompanhamento' que soam burocráticos.
 
 <details><summary>Conversa</summary>
 
 ```
-1. ADRIANO (áudio): Oi, tudo bem? Me fala aí, quais serviços eu tenho anotados? Acho que são dois, a cristaleira da Dona Maria e a mesa do Seu João. E quanto a Dona Maria ainda deve, ela não pagou nada ainda, né?
-   {entendido: (igual) · rota: global/list_jobs}
-2. BOT: 🎧 Ouvi: "Oi, tudo bem? Me fala aí, quais serviços eu tenho…"
-3. BOT: Aqui estão seus serviços:
+1. ADRIANO (áudio): Fala, tudo bem? Me diz aí quais serviços eu tenho anotados agora. Tô com a cabeça meio cheia, então quero ver a lista certinha. E me fala também quanto a dona Maria ainda deve, porque ela não pagou nada até agora.
+2. BOT: 🎧 Ouvi: "Fala, tudo bem? Me diz aí quais serviços eu tenho…"
+3. BOT: Você tem 2 serviços anotados, os dois ainda em orçamento:
 
-• A cristaleira da Dona Maria — em orçamento
-• A mesa do Seu João — em orçamento
+1. **S-0001: Cristaleira da Dona Maria**, com pátina
+2. **S-0002: Mesa do Seu João**, com verniz
 
-Toca em um deles pra ver os detalhes. 👇
-   [botões: A cristaleira da Dona Maria — Em orçamento | A mesa do Seu João — Em orçamento]
-4. ADRIANO: [tocou: A cristaleira da Dona Maria — Em orçamento]
-5. BOT: A cristaleira da Dona Maria — pátina (S-0001)
-Situação: Em orçamento
-Já anotado: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina
-Ainda falta saber: como o móvel está; o tamanho do móvel; se é só por fora ou por dentro também; se precisa de conserto
-   [botões: Continuar este]
-6. ADRIANO (áudio): Então, a cristaleira da Dona Maria é pátina, ela ainda não pagou nada. Agora eu vou te falar do móvel: ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. É uma cristaleira média, mais ou menos 1,80 de altura. A pátina é só por fora mesmo. Não precisa de conserto. Quando tiver o valor, eu te falo.
-   {entendido: (igual) · rota: global/new_job}
-7. BOT: 🎧 Ouvi: "Então, a cristaleira da Dona Maria é pátina, ela ainda…"
-8. BOT: Entendi: são 2 móveis para pátina 🎨: uma cristaleira e outra cristaleira, para a Dona Maria.
-9. BOT: Entendi: a 1ª cristaleira leva pátina inteira e está bem danificada. A 2ª cristaleira também leva pátina inteira, sem reparos grandes. Certo? ✅
-   [botões: Certo | Corrigir]
-10. ADRIANO: [tocou: Corrigir]
-11. BOT: Beleza, então vamos ajustar. O que ficou diferente? Pode me falar do seu jeito, por exemplo: "a cômoda também precisa de reparo".
-12. ADRIANO (áudio): Não, não é isso não. É uma cristaleira só, da Dona Maria. Ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tem uns 1,80 de altura, tamanho médio. A pátina é só por fora, não precisa de conserto. Esse é o único móvel dela. E o Seu João é a mesa, em orçamento também. Me diz aí quanto a Dona Maria ainda deve, ela não pagou nada.
-   {entendido: corrigir: é uma cristaleira só, da Dona Maria (não são duas). Estado: em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tamanho médio, cerca de 1,80 de altura. Serviço: pátina só por fora, sem conserto. Esse é o único móvel dela. Outro cliente: Seu João, com a mesa, também em orçamento. Pergunta: quanto a Dona Maria ainda deve? Ela não pagou nada. · rota: pending_answer/item_condition_answer}
-13. BOT: 🎧 Ouvi: "Não, não é isso não. É uma cristaleira só, da…"
-14. BOT: Qual deles, então?
-   [botões: A cristaleira da Dona Maria]
-15. BOT: Entendi: a 1ª cristaleira: fazer pátina inteira, sem reparos grandes; a 2ª cristaleira: fazer pátina inteira, sem reparos grandes. Certo?
-   [botões: Certo | Corrigir]
-16. ADRIANO (áudio): Não, é uma cristaleira só, da Dona Maria. Ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tem uns 1,80 de altura, tamanho médio. A pátina é só por fora, não precisa de conserto. Esse é o único móvel dela. Pode corrigir aí, e me diz quanto a Dona Maria ainda deve, ela não pagou nada.
-   {entendido: corrigir: é uma cristaleira só, da Dona Maria. Ela está em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Tem cerca de 1,80 de altura, tamanho médio. A pátina é só por fora, sem conserto. Esse é o único móvel dela. Também quer saber quanto a Dona Maria ainda deve; ela não pagou nada. · rota: active_goal/quote_request_continue}
-17. BOT: 🎧 Ouvi: "Não, é uma cristaleira só, da Dona Maria. Ela tá…"
-18. BOT: Entendi: a 1ª cristaleira: fazer pátina inteira, sem reparos grandes; a 2ª cristaleira: fazer pátina inteira, sem reparos grandes. Certo?
-   [botões: Certo | Corrigir]
-19. ADRIANO (áudio): Não, para! Só tem uma cristaleira, da Dona Maria. Ela tá em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Uns 1,80 de altura, tamanho médio. Pátina só por fora, sem conserto. O Seu João é a mesa, em orçamento também. Agora me diz quanto a Dona Maria ainda deve, ela não pagou nada.
-20. BOT: 🎧 Ouvi: "Não, para! Só tem uma cristaleira, da Dona Maria. Ela…"
-21. BOT: Anotei: a cristaleira da Dona Maria leva pátina (S-0001) 🎨
+Sobre a Dona Maria: ela ainda não pagou nada (R$ 0,00), mas o orçamento da cristaleira não foi fechado, então ainda não existe um valor total para ela dever.
 
-Situação: em orçamento
-Já anotado: móvel: cristaleira; cliente: Dona Maria; trabalho: pátina
-Ainda falta saber: como o móvel está; o tamanho do móvel; se é só por fora ou por dentro também; se precisa de conserto
+Para fechar o orçamento da cristaleira, falta saber em que estado ela está (boa, com reparos ou danificada).
+4. ADRIANO (áudio): Beleza, valeu. Então tá certo, são essas duas. A cristaleira da dona Maria tá em bom estado, só precisa de pátina, não tem reparo nenhum. A mesa do seu João é só o verniz mesmo. Pode fechar o orçamento da cristaleira com isso aí.
+5. BOT: 🎧 Ouvi: "Beleza, valeu. Então tá certo, são essas duas. A cristaleira…"
+6. BOT: Anotado: a cristaleira da Dona Maria está em bom estado, sem conserto, só com pátina. E a mesa do Seu João é só verniz.
 
-Me conta esses detalhes que a gente segue daqui.
-   [botões: Continuar este]
-22. ADRIANO (áudio): Ah, agora foi! Só uma cristaleira, da Dona Maria, em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Uns 1,80 de altura, tamanho médio. Pátina só por fora, sem conserto. O Seu João é a mesa, em orçamento também. Quanto a Dona Maria ainda deve? Ela não pagou nada ainda.
-   {entendido: Só uma cristaleira, da Dona Maria, em bom estado, sem nada quebrado, só desgastada na frente e nas laterais. Uns 1,80 de altura, tamanho médio. Pátina só por fora, sem conserto. O Seu João é a mesa, em orçamento também. Pergunta: quanto a Dona Maria ainda deve? Ela não pagou nada ainda. · rota: active_goal/quote_request_continue}
-23. BOT: 🎧 Ouvi: "Ah, agora foi! Só uma cristaleira, da Dona Maria, em…"
-24. BOT: Entendi: a 1ª cristaleira: fazer pátina inteira, sem reparos grandes; a 2ª cristaleira: fazer pátina inteira, sem reparos grandes. Certo?
-   [botões: Certo | Corrigir]
+Ainda não dá para fechar o orçamento da cristaleira, porque faltam algumas informações: tamanho, se é só por fora ou por dentro também, se pinta com pincel, rolo ou pistola, e quem leva e traz a peça.
+
+Qual é o tamanho da cristaleira? Pode ser em medidas (altura, largura, fundura) ou pequena, média ou grande. 📏
+7. ADRIANO (áudio): Ah, a cristaleira é média, uns 1,80 de altura, 1,20 de largura e 40 de fundura. Pátina só por fora, a parte de dentro é madeira crua mesmo, não precisa mexer. Pincel. Quem leva e traz sou eu mesmo, então não precisa colocar frete.
+8. BOT: 🎧 Ouvi: "Ah, a cristaleira é média, uns 1,80 de altura, 1,20…"
+9. BOT: Anotado: cristaleira média, 1,80 × 1,20 × 0,40 m, só a parte de fora com pátina, no pincel. Você busca e entrega, então não entrou frete.
+
+Fiz as contas da cristaleira da Dona Maria:
+
+**Sugestão: R$ 799,00**
+Abaixo de R$ 649,21 você fica no prejuízo.
+Material novo: uns R$ 207,00.
+Umas 13 horas de trabalho.
+
+Você concorda com esse valor, quer dar um desconto ou acrescentar algo?
+   [botões: 👍 Concordo | ➖ Dar desconto | ➕ Acrescentar]
+10. ADRIANO: [tocou: 👍 Concordo]
+11. BOT: [PDF enviado: Proposta-AP-2026-0001-v1.pdf]
+12. BOT: Orçamento fechado: cristaleira da Dona Maria por R$ 799,00. ✅
+
+O PDF já foi enviado. Quando a Dona Maria responder, me avisa se ela aceitou.
+
+E a mesa do Seu João, você já tem as informações dela? Se ainda não, me conta o tamanho dela para eu seguir daí. 🪵
+13. ADRIANO (áudio): Beleza, valeu! Então a Dona Maria tá com o orçamento fechado, né? Mas ela ainda não pagou nada, então quero saber quanto ela deve agora. E a mesa do Seu João, ainda não tenho as medidas dela, mas é só verniz mesmo, tá? Ela é pequena, uns 1,20 por 80, mais ou menos. Pode anotar aí.
+14. BOT: 🎧 Ouvi: "Beleza, valeu! Então a Dona Maria tá com o orçamento…"
+15. BOT: Anotado: a mesa do Seu João é só verniz, pequena, com medidas aproximadas de 1,20 por 80. Deixei as medidas como observação, porque ainda não estão confirmadas.
+
+Sobre a Dona Maria: ela ainda não pagou nada. O orçamento da cristaleira já está fechado, mas o acompanhamento ainda não mostra o valor a pagar. Quando ela pagar, eu registro.
+
+Para fechar o orçamento da mesa, falta saber o estado dela: está boa, só com riscos, precisa de reparos (colar, massa, acertar detalhes) ou está danificada? 🪵
+16. ADRIANO (áudio): Então, a Dona Maria tá com o orçamento fechado em 799, né? Mas ela ainda não pagou nada, quero saber quanto ela deve agora. E a mesa do Seu João, tá boa, só riscada na superfície, não precisa de reparo nenhum. Só o verniz mesmo. Pode anotar aí.
+17. BOT: 🎧 Ouvi: "Então, a Dona Maria tá com o orçamento fechado em…"
+18. BOT: Anotado: a mesa do Seu João está em bom estado, só com riscos na superfície, sem reparo. Só verniz.
+
+Sobre a Dona Maria: ela ainda não pagou nada (R$ 0,00). O orçamento fechado foi de R$ 799,00, então é esse o valor que ela deve. O acompanhamento ainda não mostra esse total, mas o valor que fechamos está certo. Quando ela pagar, eu registro.
+
+Para fechar a mesa, falta saber se o verniz é só por fora ou também por dentro. 🪵
+19. ADRIANO (áudio): Beleza, então a Dona Maria deve os 799 reais, né? Só não tá registrado aí no acompanhamento. E da mesa, é só verniz por fora mesmo, a parte de dentro não precisa.
+20. BOT: 🎧 Ouvi: "Beleza, então a Dona Maria deve os 799 reais, né?…"
+21. BOT: Anotado: a mesa do Seu João leva verniz só por fora, e a parte de dentro fica como está. Também anotei que não precisa de conserto.
+
+Sobre a Dona Maria: o orçamento fechado foi de R$ 799,00 e ela ainda não pagou nada, então ela deve os R$ 799,00. O acompanhamento ainda não mostra esse valor registrado, mas o número é esse. Quando ela pagar, me fala o valor e eu registro.
+
+Para fechar a mesa, falta saber como vai ser a aplicação do verniz: pincel, rolo ou pistola? 🛠️
+22. ADRIANO (áudio): Isso, a Dona Maria deve os 799 reais. Ela ainda não pagou nada. E a mesa do Seu João, o verniz é no pincel mesmo, tá? Pode anotar aí. Depois me diz quanto tempo leva e se tem mais alguma coisa que você quer saber da lista de serviços, tipo a situação de cada um.
+23. BOT: 🎧 Ouvi: "Isso, a Dona Maria deve os 799 reais. Ela ainda…"
+24. BOT: Anotado: a mesa do Seu João leva verniz no pincel, só por fora, e a superfície está boa, só com riscos.
+
+Sobre a Dona Maria: ela ainda não pagou nada. O sistema ainda não mostra o valor fechado da cristaleira (R$ 799,00), então o total que ela deve aparece como zero até o valor ser registrado. Quando ela pagar, me fala o valor que eu registro.
+
+Para fechar o orçamento da mesa, falta só saber quem leva e traz a peça. Você busca e entrega, ou o cliente traz e leva? Assim que souber, eu calculo o tempo de trabalho e o valor. 🪵
 ```
 
 </details>

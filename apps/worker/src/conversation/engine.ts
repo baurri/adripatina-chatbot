@@ -83,6 +83,7 @@ import { missingPriceKeys } from "../services/material-pricing.js";
 import { askCurrent as askPricingCurrent, isPlausiblePricingAnswer, onPricingCallback, pricingText, startPricing, targetPhrase } from "./pricing-flow.js";
 import { polishOutbound, understandInbound } from "./ai-layer.js";
 import { applyJobAi } from "./job-ai.js";
+import { runAgent } from "../agent/engine.js";
 import { onQuoteDecisionCallback, presentQuoteDecision, quoteDecisionText, reaskQuoteDecision } from "./quote-decision-flow.js";
 import {
   askQuoteRequestAgain,
@@ -2811,6 +2812,12 @@ function friendlyDomainError(err: DomainError): string {
 }
 
 export async function handleConversation(ctx: Ctx, input: EngineInput): Promise<OutgoingMessage[]> {
+  // D-075: o motor novo (Claude com ferramentas) responde texto, áudio e os botões dele; foto,
+  // pergunta proativa e botões antigos ficam com o motor antigo, que também é o plano B se o Claude falhar
+  if (ctx.ai.agent && (input.kind === "text" || input.kind === "voice" || (input.kind === "callback" && input.text.startsWith("ag:")))) {
+    const r = await runAgent(ctx, input);
+    if (r) return r;
+  }
   return new Conversation(ctx, input).run();
 }
 

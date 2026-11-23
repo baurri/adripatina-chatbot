@@ -5,6 +5,7 @@ import { describe, it } from "vitest";
 import { createHarness, type Harness } from "../harness.js";
 import { api } from "../helpers.js";
 import { ClaudeExtraction, FallbackExtraction } from "../../src/ai/claude.js";
+import { ClaudeAgentModel } from "../../src/ai/claude-agent.js";
 import { QUOTE_REQUEST_JSON_SCHEMA } from "../../src/ai/providers.js";
 import { resetAiBreaker } from "../../src/ai/service.js";
 import type { SentRecord } from "../../src/telegram/client.js";
@@ -142,7 +143,9 @@ async function runScenario(s: Scenario, key: string): Promise<Result> {
   await s.setup?.(h, (m, p, b) => api(h, m, p, b));
   h.ctx.config = { ...h.ctx.config, conversationAi: true, phrasingVariety: true, aiEnabled: true };
   h.ctx.ai.extraction = new FallbackExtraction(new ClaudeExtraction(key, BOT_MODEL, { timeoutMs: 30000 }), null, QUOTE_REQUEST_JSON_SCHEMA);
-  h.ctx.ai.stt = h.stt; // o "áudio" do Adriano simulado chega transcrito (mock de transcrição)
+  h.ctx.ai.stt = h.stt;
+  // D-075: motor novo (Claude com ferramentas); EVAL_ENGINE=legacy mede o antigo
+  if (process.env.EVAL_ENGINE !== "legacy") h.ctx.ai.agent = new ClaudeAgentModel(key, BOT_MODEL, { timeoutMs: 60000 }); // o "áudio" do Adriano simulado chega transcrito (mock de transcrição)
   const sim = new ClaudeExtraction(key, SIM_MODEL, { timeoutMs: 40000 });
   const judge = new ClaudeExtraction(key, JUDGE_MODEL, { timeoutMs: 90000 });
   const turns: Turn[] = [];
@@ -202,7 +205,7 @@ function report(results: Result[]): string {
   const lines = [
     `# Avaliação com Claude real — ${new Date().toISOString().slice(0, 16)}`,
     "",
-    `Bot: ${BOT_MODEL} · Adriano simulado: ${SIM_MODEL} · Avaliador: ${JUDGE_MODEL}`,
+    `Motor: ${process.env.EVAL_ENGINE === "legacy" ? "antigo" : "agente (D-075)"} · Bot: ${BOT_MODEL} · Adriano simulado: ${SIM_MODEL} · Avaliador: ${JUDGE_MODEL}`,
     "",
     `Conferências objetivas: **${checks.filter((c) => c.ok).length}/${checks.length}**`,
     "",

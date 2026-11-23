@@ -60,3 +60,10 @@ Ver `.env.example`. Segredos: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
 - Ligado por padrão quando há `ANTHROPIC_API_KEY`. Para desligar sem deploy de código: variável `CONVERSATION_AI=false` no Worker.
 - Custo esperado: ~3 chamadas Haiku por mensagem (entender, ler intenção, dar voz) — centavos por dia no uso do Adriano; o teto de US$ 5/mês no console da Anthropic protege.
 - Diagnóstico: `wrangler tail` mostra `understand_rejected` / `polish_rejected` quando a conferência descarta algo; o texto entendido de cada mensagem fica em `conversation_messages.routing_json.understood`.
+
+## Motor de conversa com o Claude (D-075)
+
+- Ligado quando há `ANTHROPIC_API_KEY` (padrão). `AGENT_ENGINE=false` volta tudo para o motor antigo sem deploy de código; `AI_AGENT_MODEL` troca o modelo (padrão `claude-haiku-5-5`).
+- Custo: 2 a 4 chamadas por mensagem; no Haiku, fração de centavo de real por mensagem. Uso registrado em `ai_usage` com `purpose = agent:step`.
+- Se o Claude falhar (rede, limite de gasto), a mensagem cai no motor antigo automaticamente (log `agent_failed`).
+- Avaliação antes de cada mudança grande: `EVAL=1 npx vitest run test/eval/real-eval.test.ts` (em `apps/worker`; `EVAL_ENGINE=legacy` mede o antigo). Cada rodada completa custa alguns dólares — atenção ao teto do console.
