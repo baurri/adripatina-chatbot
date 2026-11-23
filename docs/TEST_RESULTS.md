@@ -76,3 +76,11 @@ Detalhes, matriz de cenários e causas-raiz: [`VALIDATION_2026-11-22.md`](VALIDA
 Novos: `packages/conversations/test/proactive.test.ts` (29 — detectores, prioridade, horários/fuso/limites, mensagens, interpretação) e `apps/worker/test/proactive.test.ts` (19 — os três cenários obrigatórios ponta a ponta, idempotência e lock, destinatário pelo vínculo Telegram, pausa e tipos desativados, pergunta aguardando, falha do Telegram com nova tentativa, falha isolada do cron, botões idempotentes e humanizados, "não uso mais", resolução por outra conversa, demãos sem calibrar, horas reais, mudança de assunto, IA com fallback, simulação sem efeitos, painel com datas DD/MM/AAAA).
 
 Migration `0005_proactive_collection.sql` aplicada nos testes (D1 shim) sobre 0001–0004, incluindo a recriação de `learning_observations` com cópia dos dados. **Pendente em produção.**
+
+## 23/11/2026 — Iteração de estabilização em produção
+
+- Deploy de `272686f` (validação + catálogo mestre + coleta proativa) e teste de fumaça: saúde 200, webhook sem segredo 401, painel/API admin exigem Cloudflare Access (302). Produção: 56 atualizações processadas, nenhuma falha desde 22/11 20:40.
+- Regressões da integração corrigidas (`817a017`): "mesa de oito cadeiras" no catálogo, frase inteira como descrição, esclarecimento das louças, "sofá" com acento, "não tenho as medidas" = não sei.
+- Conversa completa até o orçamento revelou e corrigiu: "cadeirases" (plural duplicado), concordância "as 2 cadeiras são", "1 metro por 60" não reconhecido e **largura × fundura sem altura sem cálculo** (agora faixa com altura 0,4–1,0 m, NÃO CALIBRADA). Totais conferidos à mão.
+- Coleta proativa verificada: desligada por padrão (sem configuração em produção), com janela, limites diário/semanal, intervalo mínimo e bloqueio durante conversa ativa.
+- Testes: shared 24 · domain 7 · pricing 31 · pdf 7 · conversations 157 · worker 179 (+2 exploratórios) = **405** ✅; lint e typecheck ✅.

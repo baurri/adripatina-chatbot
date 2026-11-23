@@ -266,7 +266,7 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
         ? `${note}E como estão ${itemName(noCond[0]!)} hoje? ${FURNITURE[noCond[0]!.furnitureType ?? ""]?.feminine ? "Alguma" : "Algum"} precisa de reparo?`
         : noCond.length === 1
         ? `${note}E como está ${itemName(noCond[0]!)} hoje? Precisa de algum reparo ou está ${FURNITURE[noCond[0]!.furnitureType ?? ""]?.feminine ? "boa" : "bom"}?`
-        : `${note}${note ? "De qual peça era? E" : "E"} como estão ${humanList(noCond.map(itemName))}? Algum precisa de reparo?`,
+        : `${note}${note ? "De qual peça era? E" : "E"} como estão ${humanList(noCond.map(itemName))}? Alguma peça precisa de reparo?`,
     );
     return persist(c);
   }
@@ -463,7 +463,8 @@ function parseDims(text: string): FactValueMap["dimensions"] | "pequeno" | "medi
     if (!d || !d.gt(0)) return undefined;
     return d.gt(10) ? d.div(100).toString() : d.toString();
   };
-  const by = /(\d+(?:[.,]\d+)?)\s*(?:m|cm)?\s*(?:por|x)\s*(\d+(?:[.,]\d+)?)/.exec(n);
+  // "1,20 por 50", "1 metro por 60", "120 cm x 60"
+  const by = /(\d+(?:[.,]\d+)?)\s*(?:metros?|centimetros?|cm|m)?\s*(?:por|x)\s*(\d+(?:[.,]\d+)?)/.exec(n);
   if (by) {
     const w = toM(by[1]!);
     const d = toM(by[2]!);
@@ -787,7 +788,7 @@ async function applyGlobalChanges(c: Conversation, qr: QuoteRequestState, text: 
       }
       if (moved.length) {
         delete qr.ownerProposal;
-        acks.push(`Corrigi: ${humanList(moved.map(itemName))} ${moved.length > 1 ? "são" : "é"} ${deOf(clientName(d, os.clientRef)!)}.`);
+        acks.push(`Corrigi: ${humanList(moved.map(itemName))} ${moved.length > 1 || moved[0]!.quantity > 1 ? "são" : "é"} ${deOf(clientName(d, os.clientRef)!)}.`);
         changed = true;
       }
     }

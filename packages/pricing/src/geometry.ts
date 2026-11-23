@@ -69,6 +69,9 @@ function estimateBedArea(g: GeometryInput): AreaInput | null {
 /** Fração do porte correspondente ao tampo — hipótese NÃO CALIBRADA. */
 const TOP_FRACTION_OF_SIZE_CLASS = "0.25";
 
+/** Altura assumida quando só vieram largura e fundura — hipótese NÃO CALIBRADA (usa-se o máximo). */
+const MISSING_HEIGHT_RANGE_M = ["0.4", "1.0"] as const;
+
 /** Área só do tampo: largura × fundura; sem medidas, fração do porte (intervalo). */
 function estimateTopArea(g: GeometryInput, s: PricingSettings): AreaInput | null {
   const w = Dec.tryParse(g.width ?? null);
@@ -133,6 +136,16 @@ export function estimateArea(g0: GeometryInput, s: PricingSettings): AreaInput |
       minM2: minExt.mul(factor).round(3).toString(),
       maxM2: maxExt.mul(factor).round(3).toString(),
       source: "medidas_sem_profundidade",
+    };
+  }
+  if (w && d && w.gt(0) && d.gt(0)) {
+    // largura × fundura sem altura ("1 metro por 60" numa mesa): altura entre 0,4 e 1,0 m (NÃO CALIBRADA)
+    const ext = (hh: string) => w.mul(hh).add(d.mul(hh).mul(2)).add(w.mul(d));
+    return {
+      kind: "range",
+      minM2: ext(MISSING_HEIGHT_RANGE_M[0]).mul(factor).round(3).toString(),
+      maxM2: ext(MISSING_HEIGHT_RANGE_M[1]).mul(factor).round(3).toString(),
+      source: "medidas_sem_altura_nao_calibrado",
     };
   }
   if (g.sizeClass) {

@@ -38,3 +38,13 @@ describe("geometria — regressão", () => {
     expect(a?.kind).toBe("exact");
   });
 });
+
+describe("largura × fundura sem altura (23/11/2026)", () => {
+  it("vira faixa com altura 0,4–1,0 m em vez de 'sem medida' (fórmula independente)", () => {
+    const a = estimateArea({ width: "1", depth: "0.6" }, settings);
+    if (a?.kind !== "range") throw new Error("faixa esperada");
+    const ext = (h: number) => 1 * h + 2 * (0.6 * h) + 1 * 0.6;
+    expect(Number(a.minM2)).toBeCloseTo(ext(0.4), 3);
+    expect(Number(a.maxM2)).toBeCloseTo(ext(1.0), 3);
+  });
+});

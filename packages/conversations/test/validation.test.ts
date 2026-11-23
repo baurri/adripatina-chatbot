@@ -153,3 +153,14 @@ describe("catálogo: nomes informais e ambíguos", () => {
     expect(interpretRules("Peguei um móvel antigo que não sei o nome da dona Ana pra pintar").intent).toBe("new_job");
   });
 });
+
+describe("plural sem duplicar (23/11/2026)", () => {
+  it("'cadeiras' não vira 'cadeirases'", async () => {
+    const { pluralLabel, itemName } = await import("../src/index.js");
+    expect(pluralLabel("cadeiras", 2)).toBe("cadeiras");
+    expect(pluralLabel("cadeira", 2)).toBe("cadeiras");
+    expect(pluralLabel("aparador", 2)).toBe("aparadores");
+    const d = extractQuoteRequest("duas cadeiras da dona Ana", NOW);
+    expect(itemName(d.items[0]!)).toBe("as 2 cadeiras");
+  });
+});

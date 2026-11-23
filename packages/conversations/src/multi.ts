@@ -222,6 +222,8 @@ export function findAppositions(text: string, hits: FurnitureHit[], ownerConflic
 export function pluralLabel(label: string, qty: number): string {
   if (qty <= 1) return label;
   const [head, ...rest] = label.split(" ");
+  // já está no plural ("cadeiras", "móveis"): não pluraliza de novo ("cadeirases")
+  if (/s$/.test(head!)) return label;
   const p = /[aeiouáéíóúâêô]$/.test(head!) ? `${head}s` : /[rzs]$/.test(head!) ? `${head}es` : /l$/.test(head!) ? `${head!.slice(0, -1)}is` : `${head}s`;
   return [p, ...rest].join(" ");
 }
