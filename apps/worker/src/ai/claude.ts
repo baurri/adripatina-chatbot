@@ -15,16 +15,54 @@ import type { ExtractionProvider, GenerateRequest } from "../ports.js";
  * - recusa (`stop_reason: "refusal"`) ou erro → exceção → o chamador cai no Workers AI / regras.
  */
 
-/** Saída estruturada exige objetos fechados: acrescenta additionalProperties:false onde faltar. */
+// restrições que a saída estruturada não aceita (a validação Zod do código continua cobrindo)
+const UNSUPPORTED_KEYWORDS = new Set(["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minLength", "maxLength", "maxItems"]);
+const OBJECT_KEYS = new Set(["properties", "required", "additionalProperties"]);
+const ARRAY_KEYS = new Set(["items", "minItems"]);
+
+function typeOf(v: unknown): string {
+  if (v === null) return "null";
+  if (Array.isArray(v)) return "array";
+  if (typeof v === "number") return Number.isInteger(v) ? "integer" : "number";
+  return typeof v;
+}
+
+/**
+ * Adapta os schemas (escritos para o Workers AI) à saída estruturada da Anthropic:
+ * - objetos fechados (additionalProperties:false);
+ * - `type: ["string","null"]` (com ou sem enum) vira `anyOf` de tipos simples: a API recusou
+ *   o enum misto em produção ("Enum value 'pequeno' does not match declared type");
+ * - remove restrições numéricas/de tamanho que ela não aceita.
+ */
 export function closedSchema(schema: unknown): Record<string, unknown> {
   const walk = (node: unknown): unknown => {
     if (Array.isArray(node)) return node.map(walk);
     if (!node || typeof node !== "object") return node;
+    const src = node as Record<string, unknown>;
+    if (Array.isArray(src.type)) {
+      const types = src.type as string[];
+      const enumValues = Array.isArray(src.enum) ? (src.enum as unknown[]) : undefined;
+      const { type: _t, enum: _e, description, ...rest } = src;
+      const branches = types.map((t) => {
+        const branch: Record<string, unknown> = { type: t };
+        if (t === "object") for (const [k, v] of Object.entries(rest)) if (OBJECT_KEYS.has(k)) branch[k] = v;
+        if (t === "array") for (const [k, v] of Object.entries(rest)) if (ARRAY_KEYS.has(k)) branch[k] = v;
+        if (enumValues && t !== "null") {
+          const vals = enumValues.filter((v) => typeOf(v) === t || (t === "number" && typeOf(v) === "integer"));
+          if (vals.length) branch.enum = vals;
+        }
+        return walk(branch);
+      });
+      const out: Record<string, unknown> = { anyOf: branches };
+      if (description !== undefined) out.description = description;
+      return out;
+    }
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(node as Record<string, unknown>)) out[k] = walk(v);
-    const type = out.type;
-    const isObject = type === "object" || (Array.isArray(type) && type.includes("object"));
-    if (isObject && out.properties && out.additionalProperties === undefined) out.additionalProperties = false;
+    for (const [k, v] of Object.entries(src)) {
+      if (UNSUPPORTED_KEYWORDS.has(k)) continue;
+      out[k] = walk(v);
+    }
+    if (out.type === "object" && out.properties && out.additionalProperties === undefined) out.additionalProperties = false;
     return out;
   };
   return walk(schema) as Record<string, unknown>;

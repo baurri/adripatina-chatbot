@@ -137,7 +137,7 @@ export class WorkersAiExtraction implements ExtractionProvider {
 }
 
 /** Schema JSON para a extração de pedidos com vários itens (validado depois com Zod). */
-const QUOTE_REQUEST_JSON_SCHEMA = {
+export const QUOTE_REQUEST_JSON_SCHEMA = {
   type: "object",
   properties: {
     clients: { type: "array", items: { type: "object", properties: { rawName: { type: "string" } }, required: ["rawName"] } },

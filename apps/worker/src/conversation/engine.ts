@@ -265,7 +265,7 @@ export class Conversation {
     }
     // fora do roteiro (recomeçar, testar o áudio, conversa social): responde e volta ao ponto
     const meta = detectMeta(trimmed, { voice: this.input.kind === "voice" });
-    if (meta && (await this.onMeta(meta, trimmed))) return;
+    if (meta && (await this.onMeta(meta))) return;
     const nlu = await interpret(this.ctx, trimmed);
     const decision = decideRoute({ nlu, flow: this.session.flow, pendingQuestion: this.session.context.pendingQuestion ?? null, plausibleAnswer: this.isPlausibleAnswer(trimmed, nlu) });
     await this.logRouting(nlu, decision);
@@ -296,7 +296,7 @@ export class Conversation {
   }
 
   /** Fala fora do roteiro. Devolve false quando o fluxo normal deve tratar (ex.: "oi" sem nada em andamento). */
-  async onMeta(meta: MetaTurn, text: string): Promise<boolean> {
+  async onMeta(meta: MetaTurn): Promise<boolean> {
     const busy = this.session.flow !== "idle";
     switch (meta) {
       case "restart": {
@@ -315,7 +315,7 @@ export class Conversation {
         return true;
       }
       case "audio_test":
-        this.say(this.input.kind === "voice" ? `Tá chegando direitinho! 🎧 Entendi assim: "${text.slice(0, 200)}"` : "Tô aqui! 🎧 Pode mandar áudio que eu escuto e transcrevo.");
+        this.say(this.input.kind === "voice" ? "Tá chegando direitinho! 🎧 Pode mandar áudio à vontade que eu transcrevo." : "Tô aqui! 🎧 Pode mandar áudio que eu escuto e transcrevo.");
         if (busy) await this.reaskCurrent();
         return true;
       case "thanks":

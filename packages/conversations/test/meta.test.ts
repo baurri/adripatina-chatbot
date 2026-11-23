@@ -21,6 +21,24 @@ describe("falas fora do roteiro (teste real 23/11/2026)", () => {
   });
 
   it.each([
+    "testando, testando",
+    "tá me ouvindo?",
+    "o áudio tá chegando?",
+  ])("teste de áudio curto por voz: %s", (text) => {
+    expect(detectMeta(text, { voice: true })).toBe("audio_test");
+  });
+
+  // teste real 23/11/2026: pedido por voz virou "teste de áudio" por causa do "chegou"
+  it.each([
+    "Chegou uma cômoda da Dona Marta pra patinar de branco, uns 80 por 1 metro",
+    "chegou aqui uma mesa do seu Roberto",
+    "a cadeira já chegou, tá funcionando a gaveta",
+    "tá chegando um armário amanhã",
+  ])("pedido por voz não é teste de áudio: %s", (text) => {
+    expect(detectMeta(text, { voice: true })).toBeNull();
+  });
+
+  it.each([
     "peguei uma cômoda da dona Ana para começar amanhã",
     "tá bem estragado",
     "está boa",
