@@ -33,6 +33,8 @@ export interface PendingAction {
 export interface AgentState {
   /** serviços em foco na conversa (ordem de citação) */
   focus?: string[];
+  /** fotos recebidas que ainda não foram ligadas a um serviço (ids de attachments) */
+  photos?: string[];
   /** último orçamento mostrado (para fechar só num turno seguinte) */
   presented?: { jobIds: string[]; quoteIds: string[]; turn: number; baseCents: number; floorCents: number | null };
   /** contador de turnos (mensagens do usuário) — o orçamento mostrado num turno só fecha num seguinte */
@@ -160,6 +162,11 @@ const FIELDS_SCHEMA = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
+  {
+    name: "guardar_foto",
+    description: "Guarda a(s) foto(s) que ele mandou junto de um serviço. (criar_servico e anotar já guardam sozinhos a foto recebida; use esta só quando a foto for de um serviço que você não vai criar nem anotar agora.)",
+    input_schema: { type: "object", properties: { servico_id: { type: "string" } }, required: ["servico_id"] },
+  },
   {
     name: "listar_servicos",
     description: "Lista os serviços em andamento (com o que já está anotado e o que falta). Use para achar o servico_id de um serviço que ele citar.",
@@ -369,6 +376,15 @@ async function applyFields(t: ToolContext, job: Job, fields: Fields, correction:
   return { saved, rejected };
 }
 
+/** Liga as fotos ainda soltas desta conversa ao serviço. Devolve quantas foram guardadas. */
+async function attachPhotos(t: ToolContext, jobId: string): Promise<number> {
+  const ids = t.state.photos ?? [];
+  if (!ids.length) return 0;
+  for (const id of ids) await t.ctx.db.run("UPDATE attachments SET job_id = ? WHERE id = ? AND job_id IS NULL", jobId, id);
+  t.state.photos = [];
+  return ids.length;
+}
+
 function resolveFurniture(movel: string): { key: string; label: string } | null {
   const hit = parseFurnitureList(movel)[0] ?? parseFurnitureList(`um ${movel}`)[0];
   if (hit) return { key: hit.key, label: hit.description };
@@ -403,14 +419,24 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const r = await applyFields(t, fresh, fields, false);
       focus(t, job.id);
       const done = (await getJob(t.ctx, job.id))!;
-      return { criado: describeJob(done), anotado: r.saved, recusado: r.rejected };
+      const fotos = await attachPhotos(t, job.id);
+      return { criado: describeJob(done), anotado: r.saved, recusado: r.rejected, ...(fotos ? { fotos_guardadas: fotos } : {}) };
     }
     case "anotar": {
       const job = await loadJob(t, a.servico_id);
       if (typeof job === "string") return { erro: job };
       const r = await applyFields(t, job, (a.campos && typeof a.campos === "object" ? a.campos : {}) as Fields, a.correcao === true);
       focus(t, job.id);
-      return { anotado: r.saved, recusado: r.rejected, servico: describeJob((await getJob(t.ctx, job.id))!) };
+      const fotos = await attachPhotos(t, job.id);
+      return { anotado: r.saved, recusado: r.rejected, servico: describeJob((await getJob(t.ctx, job.id))!), ...(fotos ? { fotos_guardadas: fotos } : {}) };
+    }
+    case "guardar_foto": {
+      const job = await loadJob(t, a.servico_id);
+      if (typeof job === "string") return { erro: job };
+      const fotos = await attachPhotos(t, job.id);
+      if (!fotos) return { erro: "não tem foto nova para guardar" };
+      focus(t, job.id);
+      return { fotos_guardadas: fotos, servico: jobPhrase(job) };
     }
     case "calcular_orcamento": {
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];

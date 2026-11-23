@@ -198,7 +198,8 @@ async function handlePhoto(ctx: Ctx, user: User, chatId: string, msg: TelegramMe
     classification === "recibo" ? addDays(ctx.clock(), ctx.config.mediaRetentionDays).toISOString() : null,
     nowIso(ctx),
   );
-  const visionHint = classification === "foto_movel" ? await describeImage(ctx, bytes, mime) : null;
+  // com o motor novo, o próprio Claude olha a foto; o palpite do modelo de imagem só serve ao motor antigo
+  const visionHint = classification === "foto_movel" && !ctx.ai.agent ? await describeImage(ctx, bytes, mime) : null;
   const inId = await logMessage(ctx, { sessionId, userId: user.id, jobId, direction: "in", kind: "photo", text: caption, updateId, messageId: msg.message_id, fileUniqueId: best.file_unique_id });
   return deliver(ctx, user, chatId, { user, chatId, kind: "photo", text: caption, inboundMessageId: inId, photo: { attachmentId: attId, hash, visionHint } });
 }

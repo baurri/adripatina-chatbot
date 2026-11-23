@@ -136,6 +136,31 @@ describe("motor novo (D-075): travas do código", () => {
     expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM jobs").then((r) => r!.n)).toBe(1);
   });
 
+  it("foto: o Claude recebe a imagem, e ela fica guardada no serviço criado; 'isso' confirma o que ele viu", async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 8, 7, 6]);
+    let sawImage = false;
+    let created: Record<string, unknown> = {};
+    const { h } = await setup([
+      (m) => {
+        const last = m.at(-1)!;
+        sawImage = Array.isArray(last.content) && last.content.some((b) => (b as { type: string }).type === "image");
+        return say("Pela foto é uma cômoda com 4 gavetas, meio descascada, certo? 📸");
+      },
+      () => tool("criar_servico", { movel: "cômoda", campos: { gavetas: 4, estado: "reparos" } }),
+      (m) => {
+        created = lastToolResult(m);
+        return say("Anotado! ✅ De quem é?");
+      },
+    ]);
+    await h.photo(jpeg);
+    expect(sawImage).toBe(true);
+    await h.send("isso");
+    expect(created.fotos_guardadas).toBe(1);
+    expect(JSON.stringify(created.recusado ?? [])).not.toMatch(/gavetas/);
+    const att = await h.ctx.db.first<{ job_id: string | null }>("SELECT job_id FROM attachments");
+    expect(att?.job_id).toBeTruthy();
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };

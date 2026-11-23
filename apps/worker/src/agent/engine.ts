@@ -4,7 +4,7 @@ import type { Ctx } from "../context.js";
 import type { AgentMessage, AgentTool, OutgoingMessage } from "../ports.js";
 import { logUsage } from "../ai/service.js";
 import { loadSession, saveSession } from "../repos/sessions.js";
-import { jobPhrase, listActiveJobs } from "../repos/jobs.js";
+import { getJob, jobPhrase, listActiveJobs } from "../repos/jobs.js";
 import type { EngineInput } from "../conversation/engine.js";
 import { AGENT_TOOLS, executePending, runTool, type AgentState, type ToolContext } from "./tools.js";
 
@@ -46,6 +46,9 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Conversa encerrada e ele só se despedindo/agradecendo: responda numa linha, sem repetir resumo nem valores.
 - Gavetas e portas: SEMPRE no campo gavetas/portas quando ele disser (além da observação, se quiser).
 - Nunca fale de "sistema", "registro", "ferramenta" ou erro técnico. Se algo não deu certo, diga numa frase leve ("Opa, tropecei aqui 😅 Manda de novo?").
+- FOTOS: se ele mandar foto, olhe com atenção: que móvel é, quantas gavetas/portas, estado (descascado, riscado, quebrado, cupim), se tem parte de dentro. Diga em UMA frase o que viu e pergunte se está certo ("Pela foto é uma cômoda com 4 gavetas, meio descascada, certo?"). Só anote o que ele confirmar. Medida não dá pra saber pela foto: pergunte. A foto fica guardada no serviço quando você cria ou anota nele (ou use guardar_foto).
+- Foto sem dizer de qual peça e com vários serviços abertos: pergunte de qual é.
+- Peça nova sem foto: no começo, peça UMA vez, sem obrigar ("Se tiver foto, manda que ajuda 📸"). Se ele não mandar, siga normal e não peça de novo.
 - Fale dos serviços pelo móvel e pelo cliente ("a cômoda da Dona Carla"), nunca por código ou id.
 - Só liste os serviços em andamento se ele perguntar ou se precisar saber de qual peça ele está falando.
 - Resposta final: CURTA. Em geral 1 a 3 frases curtas e uma pergunta no fim. Nada de listas de campos, nada de repetir tudo o que ele falou.`;
@@ -55,14 +58,15 @@ function systemFor(firstName: string, today: string): string {
 }
 
 async function historyMessages(ctx: Ctx, userId: string, currentId: string): Promise<AgentMessage[]> {
-  const rows = await ctx.db.all<{ id: string; direction: string; text: string | null; transcript: string | null }>(
-    "SELECT id, direction, text, transcript FROM conversation_messages WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?",
+  const rows = await ctx.db.all<{ id: string; direction: string; kind: string; text: string | null; transcript: string | null }>(
+    "SELECT id, direction, kind, text, transcript FROM conversation_messages WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?",
     userId,
     HISTORY + 1,
   );
   const msgs: AgentMessage[] = [];
   for (const r of rows.filter((x) => x.id !== currentId).reverse()) {
-    const text = (r.text ?? r.transcript ?? "").trim();
+    const raw = (r.text ?? r.transcript ?? "").trim();
+    const text = r.kind === "photo" ? `[mandou uma foto]${raw ? ` ${raw}` : ""}` : raw;
     if (!text) continue;
     const role = r.direction === "in" ? "user" : "assistant";
     const shown = role === "user" && /^[a-z]+:[a-z_]+/.test(text) ? `[tocou num botão: ${text}]` : text;
@@ -72,6 +76,30 @@ async function historyMessages(ctx: Ctx, userId: string, currentId: string): Pro
   }
   while (msgs.length && msgs[0]!.role !== "user") msgs.shift();
   return msgs;
+}
+
+/** Foto recebida: carrega do armazenamento para o Claude ver e deixa na fila para guardar no serviço. */
+async function loadPhoto(ctx: Ctx, state: AgentState, input: EngineInput): Promise<{ block: Record<string, unknown> | null; repeated: string | null }> {
+  const p = input.photo;
+  if (!p) return { block: null, repeated: null };
+  const dup = await ctx.db.first<{ job_id: string }>(
+    "SELECT job_id FROM attachments WHERE sha256 = ? AND id <> ? AND job_id IS NOT NULL AND deleted_at IS NULL LIMIT 1",
+    p.hash,
+    p.attachmentId,
+  );
+  if (dup) {
+    await ctx.db.run("UPDATE attachments SET deleted_at = ? WHERE id = ?", ctx.clock().toISOString(), p.attachmentId);
+    const job = await getJob(ctx, dup.job_id);
+    return { block: null, repeated: job ? jobPhrase(job) : "num serviço" };
+  }
+  state.photos = [...(state.photos ?? []), p.attachmentId].slice(-6);
+  const att = await ctx.db.first<{ r2_key: string; mime: string }>("SELECT r2_key, mime FROM attachments WHERE id = ?", p.attachmentId);
+  const obj = att ? await ctx.storage.get(att.r2_key) : null;
+  if (!att || !obj) return { block: null, repeated: null };
+  const bytes = new Uint8Array(await obj.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { block: { type: "image", source: { type: "base64", media_type: att.mime, data: btoa(bin) } }, repeated: null };
 }
 
 async function stateSnapshot(ctx: Ctx, state: AgentState): Promise<string> {
@@ -110,6 +138,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   const session = await loadSession(ctx, input.user.id);
   // pergunta proativa aguardando resposta: o fluxo dela (estruturado) responde
   if (session.flow === "data_collection") return null;
+  if (input.kind === "photo" && session.flow === "quote_material_pricing") return null;
   const state = ((session.context as { agent?: AgentState }).agent ??= {});
   const out: OutgoingMessage[] = [];
   const firstName = input.user.displayName.split(" ")[0] ?? "";
@@ -145,23 +174,30 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
 
   const history = await historyMessages(ctx, input.user.id, input.inboundMessageId);
   const recentUser = history.filter((m) => m.role === "user").slice(-6).map((m) => String(m.content)).join("\n");
+  // "isso"/"sim" responde ao que o assistente acabou de perguntar (ex.: "pela foto são 4 gavetas, certo?")
+  const lastBot = history.at(-1)?.role === "assistant" ? String(history.at(-1)!.content) : "";
+  const confirmsBot = lastBot && normalizeText(userText).split(" ").length <= 6 && AFFIRM.test(normalizeText(userText)) ? `\n[ele confirmou: ${lastBot.slice(-400)}]` : "";
   const t: ToolContext = {
     ctx,
     user: input.user,
     chatId: input.chatId,
     inboundMessageId: input.inboundMessageId,
-    userCorpus: `${recentUser}\n${userText}`,
+    userCorpus: `${recentUser}\n${userText}${confirmsBot}`,
     state,
     turn: (state.turn = (state.turn ?? 0) + 1),
     effects: {},
   };
   const today = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }).format(ctx.clock());
   const system = systemFor(firstName, today);
-  const current = `ESTADO ATUAL (dados): ${await stateSnapshot(ctx, state)}\n\nMENSAGEM DO ${firstName.toUpperCase() || "ARTESÃO"}${input.kind === "voice" ? " (áudio transcrito)" : ""}: ${userText}`;
+  const photo = input.kind === "photo" ? await loadPhoto(ctx, state, input) : null;
+  const what = input.kind === "voice" ? " (áudio transcrito)" : photo ? ` (mandou uma foto${photo.repeated ? ` — essa mesma foto já estava guardada ${photo.repeated}` : ""}${userText ? "; legenda" : ", sem legenda"})` : "";
+  const current = `ESTADO ATUAL (dados): ${await stateSnapshot(ctx, state)}\n\nMENSAGEM DO ${firstName.toUpperCase() || "ARTESÃO"}${what}: ${userText}`;
   const messages: AgentMessage[] = [...history];
   const last = messages.at(-1);
-  if (last && last.role === "user") last.content = `${String(last.content)}\n\n${current}`;
-  else messages.push({ role: "user", content: current });
+  const merged = last && last.role === "user" ? `${String(last.content)}\n\n${current}` : current;
+  const content = photo?.block ? [photo.block, { type: "text", text: merged }] : merged;
+  if (last && last.role === "user") last.content = content;
+  else messages.push({ role: "user", content });
 
   const toolResults: string[] = [];
   let finalText = "";
@@ -193,7 +229,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
       messages.push({ role: "user", content: results });
     }
     // conferência da resposta: nenhum número que não veio das ferramentas, do estado ou dele
-    const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current)];
+    const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...(photo?.block ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
     const invented = numbersIn(finalText).filter((x) => !grounded(x, allowed));
     const tone = toneIssues(finalText, 4);
     // acessibilidade: mensagem comprida cansa; só o orçamento (que traz valores) pode ser maior
