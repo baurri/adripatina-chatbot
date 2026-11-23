@@ -64,6 +64,21 @@ describe("números em português", () => {
     expect(extractLengths("um metro e oitenta")[0]?.meters.toString()).toBe("1.8");
     expect(extractLengths("dois metros")[0]?.meters.toString()).toBe("2");
   });
+
+  it.each([
+    ["ela tem mais ou menos um metro por oitenta", ["1", "0.8"]],
+    ["uns 80 por 1 metro", ["0.8", "1"]],
+    ["1,20 por 80", ["1.2", "0.8"]],
+    ["1 metro por 50 cm", ["1", "0.5"]],
+    ["1,70 x 2,10", ["1.7", "2.1"]],
+    ["dois metros por um", ["2", "1"]],
+  ])("par de medidas: %s", (text, expected) => {
+    expect(extractLengths(text).map((l) => l.meters.toString())).toEqual(expected);
+  });
+
+  it.each(["vendi 2 por 300 reais", "faço por 80", "2 por 3", "duas cadeiras por cem reais"])("não é medida: %s", (text) => {
+    expect(extractLengths(text)).toEqual([]);
+  });
 });
 
 describe("texto", () => {

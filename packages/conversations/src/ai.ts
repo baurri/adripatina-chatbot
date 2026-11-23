@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeText } from "@adripatina/shared";
 import { EntitiesSchema, INTENTS, type NluResult } from "./nlu.js";
 import { FURNITURE, TECHNIQUES } from "./vocabulary.js";
 
@@ -75,6 +76,27 @@ export function sanitizeAiExtraction(raw: unknown): AiExtraction | null {
 }
 
 /**
+ * Descritor é característica curta da peça ("antiga", "de madeira", "com espelho").
+ * A IA às vezes devolve frases inteiras com medida e cliente (teste real 23/11/2026:
+ * "cômoda com aproximadamente 1 metro por 80 centímetros", "cliente Carla e seu Abreu"),
+ * que apareciam no resumo do serviço. Medida e cliente já têm campo próprio.
+ */
+export function cleanAiDescriptors(list: readonly string[], furnitureType?: string): string[] {
+  const furniture = furnitureType ? normalizeText(furnitureType) : "";
+  const out: string[] = [];
+  for (const raw of list) {
+    const d = raw.trim();
+    const n = normalizeText(d);
+    if (!n || n.split(/\s+/).length > 4) continue;
+    if (/\d/.test(n)) continue;
+    if (/\b(cliente|dona|seu|sr|sra|senhor|senhora|metros?|centimetros?|cm|altura|largura|fundura|profundidade|aproximadamente|mais ou menos|orcamento|patina|pintura)\b/.test(n)) continue;
+    if (furniture && n === furniture) continue;
+    if (!out.includes(d)) out.push(d);
+  }
+  return out;
+}
+
+/**
  * Combina regras + IA. Regras têm precedência para dinheiro (texto literal) e
  * para entidades já extraídas; a IA preenche lacunas e pode elevar a confiança
  * da intenção. Valores monetários mencionados nunca viram preço de orçamento.
@@ -85,7 +107,7 @@ export function mergeNlu(rules: NluResult, ai: AiExtraction | null): NluResult {
   if (!e.furnitureType && ai.furnitureType) e.furnitureType = ai.furnitureType;
   if (e.techniques.length === 0 && ai.techniques?.length) e.techniques = ai.techniques;
   if (!e.clientName && ai.clientName) e.clientName = ai.clientName;
-  if (e.descriptors.length === 0 && ai.descriptors?.length) e.descriptors = ai.descriptors;
+  if (e.descriptors.length === 0 && ai.descriptors?.length) e.descriptors = cleanAiDescriptors(ai.descriptors, e.furnitureType);
   // valores em dinheiro vêm SOMENTE do texto literal (regras); a IA nunca introduz um valor
   // que não foi dito — evita que alucinação ou erro de estruturação vire lançamento financeiro.
   if (!e.sizeClass && ai.sizeClass) e.sizeClass = ai.sizeClass;

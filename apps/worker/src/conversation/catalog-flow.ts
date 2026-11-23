@@ -161,8 +161,12 @@ export async function nextCatalogStep(c: Conversation, job: Job, nextFieldIn: Pr
   return nextAttr ? { kind: "attr", key: nextAttr } : null;
 }
 
-function plan(c: Conversation, purpose: string, fallback: string, question: string, extraKeys: string[] = [], facts: string[] = []): MessagePlan {
-  return { purpose, fallback, question, keyTerms: keyTermsOf(question, extraKeys), facts, greet: false, recent: c.recentBotTexts(), topicEmoji: null };
+function plan(c: Conversation, job: Job, purpose: string, fallback: string, question: string, extraKeys: string[] = [], facts: string[] = []): MessagePlan {
+  // nome do artesão, do cliente e o móvel contam como contexto: "Certo, a cômoda da Dona Carla..." não é invenção
+  const fv = ftOf(job);
+  const names = [c.firstName, String(job.facts.client_name?.value ?? "")].filter(Boolean);
+  const ctxFacts = fv ? [furnitureLabel(fv.kindTerm ?? fv.type).replace(/_/g, " "), ...(fv.descriptors ?? [])] : [];
+  return { purpose, fallback, question, keyTerms: keyTermsOf(question, extraKeys), facts: [...facts, ...ctxFacts], names, greet: false, recent: c.recentBotTexts(), topicEmoji: null };
 }
 
 export async function askCatalogStep(c: Conversation, job: Job, step: CatalogStep, prefix: string): Promise<void> {
@@ -180,7 +184,7 @@ export async function askCatalogStep(c: Conversation, job: Job, step: CatalogSte
     c.session.lastQuestion = null;
     c.session.context.catalogQ = { kind: "kind", jobId: job.id, tries: 0 };
     c.setPending({ type: "furniture_kind", entity: { kind: "job", id: job.id } });
-    const msg = await composeMessage(c.ctx, plan(c, "clarify_furniture_kind", question, question, names.slice(0, 2)));
+    const msg = await composeMessage(c.ctx, plan(c, job, "clarify_furniture_kind", question, question, names.slice(0, 2)));
     c.say(`${prefix}${msg.text}`);
     return;
   }
@@ -191,7 +195,7 @@ export async function askCatalogStep(c: Conversation, job: Job, step: CatalogSte
     c.session.context.catalogQ = { kind: "dims", jobId: job.id, tries: 0 };
     c.setPending({ type: "item_dimensions", entity: { kind: "job", id: job.id }, field: "dimensions" });
     const core = question.split("\n\n")[0]!;
-    const msg = await composeMessage(c.ctx, { ...plan(c, "ask_dimensions", question, core), topicEmoji: "📏" });
+    const msg = await composeMessage(c.ctx, { ...plan(c, job, "ask_dimensions", question, core), topicEmoji: "📏" });
     c.say(`${prefix}${msg.text}`);
     return;
   }
@@ -200,7 +204,7 @@ export async function askCatalogStep(c: Conversation, job: Job, step: CatalogSte
   c.session.lastQuestion = null;
   c.session.context.catalogQ = { kind: "attr", key: step.key, jobId: job.id, tries: 0 };
   c.setPending({ type: "furniture_detail", entity: { kind: "job", id: job.id } });
-  const msg = await composeMessage(c.ctx, plan(c, `ask_${step.key}`, question, question));
+  const msg = await composeMessage(c.ctx, plan(c, job, `ask_${step.key}`, question, question));
   c.say(`${prefix}${msg.text}`);
 }
 

@@ -190,7 +190,59 @@ export function extractLengths(text: string): LengthMention[] {
     }
     out.push({ meters, raw: tokens.slice(j + 1, i + 1).join(" ") });
   }
+  const pair = extractLengthPair(norm);
+  if (pair) return [...pair, ...out.filter((l) => !pair.some((p) => p.meters.eq(l.meters)))];
   return out;
+}
+
+const UNIT_TOKEN = /^(metros?|m|centimetros?|cm)$/;
+
+/**
+ * "um metro por oitenta", "1,20 por 80", "80 por 1 metro", "1 x 0,5": o par vem na ordem dita.
+ * Número sem unidade: > 10 é centímetro ("oitenta" → 0,8 m), senão metro.
+ * Visto no teste real de 23/11/2026: "um metro por oitenta" guardava só "altura 1 m".
+ */
+function extractLengthPair(norm: string): [LengthMention, LengthMention] | null {
+  const tokens = norm.replace(/(?<!\d)[.,]|[.,](?!\d)/g, " ").split(" ").filter(Boolean);
+  const numberAt = (start: number, dir: 1 | -1): { value: Dec; from: number; to: number } | null => {
+    const t = tokens[start];
+    if (t === undefined) return null;
+    if (/^\d+(?:[.,]\d+)?$/.test(t)) {
+      const v = Dec.tryParse(t.replace(",", "."));
+      return v && v.gt(0) ? { value: v, from: start, to: start } : null;
+    }
+    let k = start;
+    while (k >= 0 && k < tokens.length && NUMBER_WORDS.has(tokens[k]!)) k += dir;
+    const [lo, hi] = dir === 1 ? [start, k - 1] : [k + 1, start];
+    const words = tokens.slice(lo, hi + 1);
+    while (words[0] === "e") words.shift();
+    const n = words.length ? wordsToNumber(words) : null;
+    return n && n > 0 ? { value: Dec.from(n), from: lo, to: hi } : null;
+  };
+  const toMeters = (v: Dec, unit: string | undefined): Dec | null => {
+    const m = unit ? (unit.startsWith("c") ? v.div(100) : v) : v.gt(10) ? v.div(100) : v;
+    return m.gt(0) && m.lte(5) ? m : null;
+  };
+  for (let p = 1; p < tokens.length - 1; p++) {
+    if (tokens[p] !== "por" && tokens[p] !== "x") continue;
+    const leftUnit = UNIT_TOKEN.test(tokens[p - 1]!) ? tokens[p - 1] : undefined;
+    const left = numberAt(leftUnit ? p - 2 : p - 1, -1);
+    const right = numberAt(p + 1, 1);
+    if (!left || !right) continue;
+    const after = tokens[right.to + 1];
+    if (after && /^(reais|real|conto|contos|pila)$/.test(after)) continue;
+    const rightUnit = after && UNIT_TOKEN.test(after) ? after : undefined;
+    // sem unidade nenhuma, só aceita com vírgula/decimal ou número grande ("1,20 por 80"): evita "2 por 3"
+    if (!leftUnit && !rightUnit && !/[.,]/.test(tokens[left.to]!) && left.value.lte(10) && right.value.lte(10)) continue;
+    const a = toMeters(left.value, leftUnit);
+    const b = toMeters(right.value, rightUnit);
+    if (!a || !b) continue;
+    return [
+      { meters: a, raw: tokens.slice(left.from, p).join(" ") },
+      { meters: b, raw: tokens.slice(p + 1, right.to + (rightUnit ? 2 : 1)).join(" ") },
+    ];
+  }
+  return null;
 }
 
 /** Extrai uma contagem simples: "três portas" → {count:3, noun:"portas"}. */
