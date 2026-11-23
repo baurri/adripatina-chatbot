@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, formatDate } from "../api";
 import { Badge, Field, Loading, Section, useLoad } from "../ui";
 
@@ -49,16 +49,44 @@ function learningText(row: LearningRow): string {
   }
 }
 
+function maskDateBR(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join("/");
+}
+
+function dateBRToIso(value: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (date.getUTCFullYear() !== Number(year) || date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return null;
+  return `${year}-${month}-${day}`;
+}
+
 export function Conversations() {
   const [userId, setUserId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const users = useLoad(() => api<{ rows: UserRow[] }>("/users"));
+  const defaultApplied = useRef(false);
+  const defaultArtisanId =
+    users.data?.rows.find((u) => u.active && u.role === "ARTESAO" && /\badriano\b/i.test(u.displayName))?.id ??
+    users.data?.rows.find((u) => u.active && u.role === "ARTESAO")?.id ??
+    "";
+  useEffect(() => {
+    if (!defaultApplied.current && users.data) {
+      setUserId(defaultArtisanId);
+      defaultApplied.current = true;
+    }
+  }, [users.data, defaultArtisanId]);
+  const fromIso = dateBRToIso(from);
+  const toIso = dateBRToIso(to);
+  const invalidDate = (from !== "" && !fromIso) || (to !== "" && !toIso) || (!!fromIso && !!toIso && fromIso > toIso);
   const query = () => {
     const params = new URLSearchParams({ limit: "300" });
     if (userId) params.set("userId", userId);
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
+    if (fromIso) params.set("from", fromIso);
+    if (toIso) params.set("to", toIso);
     return params.toString();
   };
   const messages = useLoad(() => api<{ rows: MessageRow[] }>(`/conversations?${query()}`), [userId, from, to]);
@@ -74,14 +102,15 @@ export function Conversations() {
           <Field label="Usuário">
             <select value={userId} onChange={(e) => setUserId(e.target.value)}>
               <option value="">Todos os usuários</option>
-              {(users.data?.rows ?? []).map((u) => <option key={u.id} value={u.id}>{u.role === "ADMIN" ? "Administrador" : "Artesão"} — {u.displayName}{u.active ? "" : " (inativo)"}</option>)}
+              {(users.data?.rows ?? []).map((u) => <option key={u.id} value={u.id}>{u.role === "ADMIN" ? "Administrador" : "Artesão"} - {u.displayName}{u.active ? "" : " (inativo)"}</option>)}
             </select>
           </Field>
-          <Field label="Data inicial"><input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></Field>
-          <Field label="Data final"><input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></Field>
-          <button className="secondary" disabled={!userId && !from && !to} onClick={() => { setUserId(""); setFrom(""); setTo(""); }}>Limpar filtros</button>
+          <Field label="Data inicial"><input inputMode="numeric" value={from} placeholder="DD/MM/AAAA" maxLength={10} onChange={(e) => setFrom(maskDateBR(e.target.value))} /></Field>
+          <Field label="Data final"><input inputMode="numeric" value={to} placeholder="DD/MM/AAAA" maxLength={10} onChange={(e) => setTo(maskDateBR(e.target.value))} /></Field>
+          <button className="secondary filter-clear" disabled={userId === defaultArtisanId && !from && !to} onClick={() => { setUserId(defaultArtisanId); setFrom(""); setTo(""); }}>Limpar filtros</button>
         </div>
         <Loading error={users.error} loading={users.loading} />
+        {invalidDate && <p className="notice error" role="alert">Informe datas válidas no formato DD/MM/AAAA. A data inicial não pode ser posterior à final.</p>}
         <p className="muted">Os filtros são aplicados tanto às conversas quanto ao aprendizado do bot.{selectedUser ? ` Exibindo apenas ${selectedUser.displayName}.` : ""}</p>
       </Section>
       <Section title={`Histórico de conversa${selectedUser ? ` — ${selectedUser.displayName}` : ""}`}>
