@@ -67,6 +67,21 @@ export function extractNotes(text: string, ctx: NoteContext = {}): string[] {
     }
   }
 
+  // peça diferente das outras: "4 gavetas e 1 gavetão" (o total vai para a contagem; o detalhe, para cá)
+  const bigDrawer = /\b(\d+|um|uma|dois|duas|tres)\s+(gavetao|gavetoes|gavetona|gavetonas)\b/.exec(f);
+  if (bigDrawer) {
+    const q = n(bigDrawer[1]!);
+    out.push(`inclui ${q} ${q === "1" ? "gavetão" : "gavetões"}`);
+  }
+
+  // ferramenta ou etapa extra: "pincel e estilete pra raspar" (teste real 23/11/2026: o estilete se perdia)
+  const tools: string[] = [];
+  for (const m of f.matchAll(/\b(estilete|espatula|lixadeira|soprador termico|soprador|removedor|formao|grosa|palha de aco|escova de aco|esponja de aco)\b(?:\s+(?:pra|para|p\/)\s+([a-z]+))?/g)) {
+    tools.push(text.slice(m.index!, m.index! + m[0].length).trim().toLowerCase());
+  }
+  if (!tools.length && /\b(raspar|raspagem|decapar|decapagem)\b/.test(f)) tools.push(/\bdecap/.test(f) ? "decapagem" : "raspagem");
+  if (tools.length) out.push(`também vai usar: ${tools.join(", ")}`);
+
   // outro dono citado junto ("do seu Abreu e da dona Isa")
   const known = ctx.clientName ? fold(ctx.clientName).replace(/^(dona|seu|sr|sra|dr|dra)\.?\s+/, "") : null;
   const others = extractClientNames(text).filter((name) => {

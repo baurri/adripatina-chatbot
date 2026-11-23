@@ -449,3 +449,65 @@ describe("conversa real do administrador refeita (23/11/2026): mais curta, sem p
     expect(r).not.toMatch(/Não entendi/);
   });
 });
+
+describe("teste real 23/11/2026 (tarde): cômoda da Dona Carla", () => {
+  const START = "chegou uma cômoda hoje aqui para patinar é da dona Carla e do seu Abreu eu preciso fazer o orçamento ela tem mais ou menos um metro por oitenta";
+  async function carla(h: Harness) {
+    const out: string[] = [h.allText(await h.send(START))];
+    for (let i = 0; i < 12; i++) {
+      const q = lastQuestion(out.at(-1)!);
+      if (/pode calcular/i.test(out.at(-1)!)) break;
+      if (/quantas gavetas/i.test(q)) out.push(h.allText(await h.send("4 gavetas e 1 gavetão")));
+      else if (/estado|chegou|está hoje/i.test(q)) out.push(h.allText(await h.send("até que tá boazinha")));
+      else if (/fora|dentro/i.test(q)) out.push(h.allText(await h.send("só por fora")));
+      else if (/conserto/i.test(q)) out.push(h.allText(await h.send("nao")));
+      else if (/pincel|rolo|pistola/i.test(q)) {
+        out.push(h.allText(await h.send("pincel")));
+        out.push(h.allText(await h.send("vou aplicar com pincel e estilete pra raspar")));
+      } else if (/buscar|entregar|transporte|traz/i.test(q)) out.push(h.allText(await h.send("cliente deixa comigo e depois de pronto ele busca")));
+      else if (/medida|tamanho/i.test(q)) out.push(h.allText(await h.send("1 metro de altura por 80 de largura")));
+      else out.push(h.allText(await h.send("não sei")));
+    }
+    return out;
+  }
+
+  it("medida, gavetão, estilete e logística entendidos; sem 'Não achei esse serviço'", async () => {
+    const h = await setup();
+    const out = await carla(h);
+    const all = out.join("\n---\n");
+    if (process.env.DUMP) console.info(all);
+    expect(all).not.toMatch(/Não achei esse serviço/);
+    expect(all).not.toMatch(/essa eu não entendi/i);
+    expect(out.at(-1)).toMatch(/pode calcular/i);
+    const job = (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs ORDER BY created_at DESC"))!;
+    const f = (await getJob(h.ctx, job.id))!.facts;
+    const ft = f.furniture_type!.value as { drawers?: number; attributes?: { drawers_count?: number } };
+    expect(ft.attributes?.drawers_count ?? ft.drawers).toBe(5);
+    expect(f.details?.value).toMatch(/gavetão/);
+    expect(f.details?.value).toMatch(/estilete/);
+    expect(f.logistics?.value).toEqual({ pickup: false, delivery: false });
+    expect(f.dimensions?.value).toMatchObject({ height: "1", width: "0.8" });
+  });
+});
+
+describe("corrigir o que já foi dito, falando do jeito dele (teste real 23/11/2026)", () => {
+  it.each([
+    ["na verdade vou usar rolo", /rolo/],
+    ["errei, não é pincel, é rolo", /rolo/],
+    ["muda pra rolo", /rolo/],
+  ])("'%s' troca o método", async (text, re) => {
+    const h = await setup();
+    await h.send("chegou uma cômoda da dona Carla pra patinar, uns 80 por 1 metro");
+    for (let i = 0; i < 10; i++) {
+      const s = await h.ctx.db.first<{ last_question: string | null }>("SELECT last_question FROM conversation_sessions");
+      const job = (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs"))!;
+      if ((await getJob(h.ctx, job.id))!.facts.application_method) break;
+      void s;
+      await h.send(i % 2 ? "pincel" : "não sei");
+    }
+    const r = h.allText(await h.send(text));
+    if (process.env.DUMP) console.info(r);
+    const job = (await h.ctx.db.first<{ id: string }>("SELECT id FROM jobs"))!;
+    expect((await getJob(h.ctx, job.id))!.facts.application_method?.value).toMatch(re);
+  });
+});

@@ -79,6 +79,7 @@ import { decideRoute, type RoutingDecision } from "./router.js";
 import { dataCollectionText, isPlausibleCollectionAnswer, onDataCollectionCallback, releaseCollection } from "./data-collection-flow.js";
 import { missingPriceKeys } from "../services/material-pricing.js";
 import { askCurrent as askPricingCurrent, isPlausiblePricingAnswer, onPricingCallback, pricingText, startPricing, targetPhrase } from "./pricing-flow.js";
+import { onQuoteDecisionCallback, presentQuoteDecision, quoteDecisionText, reaskQuoteDecision } from "./quote-decision-flow.js";
 import {
   askQuoteRequestAgain,
   buildDraft,
@@ -345,6 +346,7 @@ export class Conversation {
     }
     if (flow === "collecting" && job) return this.askNext(job);
     if (flow === "quote_request" || flow === "quote_material_pricing") return this.resumePrompt();
+    if (flow === "quote_decision") return reaskQuoteDecision(this);
   }
 
   /** "Recomeçar do zero": o serviço sai da lista (cancelado, com histórico) e a conversa volta ao início. */
@@ -403,6 +405,8 @@ export class Conversation {
     switch (flow) {
       case "quote_material_pricing":
         return pricingText(this, text, nlu);
+      case "quote_decision":
+        return quoteDecisionText(this, text, nlu);
       case "data_collection":
         return dataCollectionText(this, text, nlu);
       case "quote_request":
@@ -557,6 +561,8 @@ ${GUIDE}`);
     switch (this.session.flow) {
       case "quote_material_pricing":
         return askPricingCurrent(this);
+      case "quote_decision":
+        return reaskQuoteDecision(this);
       case "quote_request":
         return askQuoteRequestAgain(this);
       case "intake":
@@ -609,7 +615,8 @@ ${GUIDE}`);
       this.say("Isso eu não consigo resolver por aqui: depende de um ajuste no cadastro, que o administrador faz no painel. O serviço fica guardado e, depois do ajuste, é só pedir \"calcular o orçamento\" de novo.");
       return;
     }
-    this.say(`Orçamento ${de(job)}:\n${artisanQuoteSummary(quote)}`);
+    // D-070: o artesão decide o valor (concorda, desconto ou acréscimo) e o PDF sai na hora
+    if (quote.recommendedCents !== null) return presentQuoteDecision(this, job, quote);
     const settings = await getActiveSettings(this.ctx);
     this.clearPending();
     if (settings.params.requireAdminReview || !quote.definitiveAllowed) {
@@ -1077,12 +1084,12 @@ ${GUIDE}`);
       this.session.context.contradiction = { ...c, newValue: ans.value };
       return this.onCallback("fact:new");
     }
-    this.say("Só para eu não errar: toque em \"Vale o novo\" ou \"Fica como estava\".", [
-      [
-        { text: "Vale o novo", data: "fact:new" },
-        { text: "Fica como estava", data: "fact:old" },
-      ],
-    ]);
+    // sem resposta clara: mantém o que estava e segue a conversa com a mensagem nova
+    // (antes repetia "toque em..." para sempre — teste real 23/11/2026)
+    delete this.session.context.contradiction;
+    this.session.flow = "collecting";
+    this.say(`Deixei como estava: ${describeFact(c.field, c.oldValue)}. Se quiser trocar, é só me falar. 😉`);
+    return this.onText(text, false);
   }
 
   async resetToCollecting(): Promise<void> {
@@ -1639,6 +1646,7 @@ ${await this.questionText(job, field, 4)}`);
     if (ns === "photo") return this.onPhotoChoice(action, arg);
     if (ns === "adm") return this.onAdmin(action, arg);
     if (ns === "mp") return onPricingCallback(this, action, arg);
+    if (ns === "qa") return onQuoteDecisionCallback(this, action, arg);
     if (ns === "dc") return onDataCollectionCallback(this, action, arg);
     if (ns === "qr") {
       if (action === "resume") return askQuoteRequestAgain(this);

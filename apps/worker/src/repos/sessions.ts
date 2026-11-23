@@ -25,10 +25,12 @@ export type Flow =
   | "quote_request"
   | "quote_material_pricing"
   /** resposta a uma pergunta proativa (coleta de informação) */
-  | "data_collection";
+  | "data_collection"
+  /** orçamento calculado: o artesão concorda, dá desconto ou acrescenta (D-070) */
+  | "quote_decision";
 
 /** Fluxos que representam um OBJETIVO do usuário (sobrevivem a interrupções). */
-export const GOAL_FLOWS: readonly Flow[] = ["intake", "collecting", "confirm_calc", "quote_request", "quote_material_pricing"];
+export const GOAL_FLOWS: readonly Flow[] = ["intake", "collecting", "confirm_calc", "quote_request", "quote_material_pricing", "quote_decision"];
 
 /** Tipo da pergunta pendente: a resposta é interpretada primeiro dentro deste tipo. */
 export type PendingQuestionType =
@@ -144,6 +146,10 @@ export interface PricingState {
   total: number;
   current: PricingCurrent | null;
   recalcFailed?: boolean;
+  /** materiais que o artesão disse não usar neste orçamento */
+  skipped?: string[];
+  /** pergunta final "faltou algum material?": feita uma vez por coleta */
+  extraAsk?: "asking" | "done";
 }
 
 export interface MentionSnapshot extends Partial<Entities> {
@@ -182,6 +188,8 @@ export interface SessionContext {
   unparsedCount?: number;
   /** campo que bloqueou o cálculo e foi perguntado de novo: ao responder, recalcula direto */
   calcAfter?: { jobId: string; field: ProjectField };
+  /** decisão do valor pelo artesão (D-070) */
+  quoteDecision?: { quoteId: string; step: "decide" | "discount" | "add" | "below_floor"; finalCents?: number; label?: string };
   /** faixa de preço antecipada já mostrada para este serviço (mostra uma vez só) */
   previewShownFor?: string;
   deferredText?: string;

@@ -2,7 +2,8 @@ import { packageSizeLabel, parsePriceAnswer, pricePerPackageCents, type Button, 
 import { formatBRL, newId, normalizeText } from "@adripatina/shared";
 import type { Conversation } from "./engine.js";
 import { getActiveSettings, getMaterialByKey } from "../repos/catalog.js";
-import { getJob, jobPhrase } from "../repos/jobs.js";
+import { getJob, jobPhrase, setFact } from "../repos/jobs.js";
+import { calculateQuote, getOverrides, saveOverrides } from "../services/quotes.js";
 import { applyConfirmedPrice } from "../services/material-pricing.js";
 import { enqueueOutbox } from "../services/outbox.js";
 import type { PricingCurrent, PricingState } from "../repos/sessions.js";
@@ -151,6 +152,7 @@ function laterButtons(): Button[][] {
 /** Resposta plausível para a etapa atual (usada pelo roteador). */
 export function isPlausiblePricingAnswer(c: Conversation, text: string, nlu: NluResult): boolean {
   const p = c.session.context.pricing;
+  if (p?.extraAsk === "asking" && !p.current) return true;
   if (!p?.current) return false;
   if (["yes", "no", "dont_know"].includes(nlu.intent)) return true;
   const a = parsePriceAnswer(text, "L", { expectPrice: true });
@@ -160,6 +162,7 @@ export function isPlausiblePricingAnswer(c: Conversation, text: string, nlu: Nlu
 /** Interpreta texto/transcrição dentro da coleta de preço. */
 export async function pricingText(c: Conversation, text: string, nlu: NluResult): Promise<void> {
   const p = c.session.context.pricing;
+  if (p?.extraAsk === "asking" && !p.current) return extraMaterialsAnswer(c, text, nlu);
   if (!p?.current) return finishPricing(c);
   const cur = p.current;
   const { unit } = await materialInfo(c, cur.key);
@@ -173,6 +176,10 @@ export async function pricingText(c: Conversation, text: string, nlu: NluResult)
     if (/\b(valor|preco|reais)\b/.test(norm)) return onPricingCallback(c, "fixprice");
     if (/\b(embalagem|tamanho|lata|litro|ml|galao)\b/.test(norm) && !/\d/.test(norm)) return onPricingCallback(c, "fixsize");
   }
+
+  // "não vou usar solvente dessa vez": tira o material DESTE orçamento (teste real 23/11/2026:
+  // o bot insistia no preço de um material que o Adriano não usa na pátina)
+  if (cur.step !== "confirm" && cur.step !== "confirm_high" && saysNotUsed(text)) return skipCurrent(c);
 
   const a = parsePriceAnswer(text, unit, { expectPrice: cur.step !== "ask_size" });
   if (a.dontKnow && a.amountCents === undefined && a.packageSize === undefined) {
@@ -226,6 +233,85 @@ export async function pricingText(c: Conversation, text: string, nlu: NluResult)
   return advance(c);
 }
 
+const NOT_USED = /\b(nao (uso|usa|usamos|usar|vou usar|vai usar|utilizo|vou utilizar|precisa|preciso|vou precisar|vai precisar|entra|vai entrar|passo|vou passar|trabalho com)|nunca uso|nem uso|dispenso|nada de|sem (esse|essa|isso)|(esse|essa|isso) (ai )?nao)\b/;
+
+/**
+ * Resposta a "usa algum outro material?". O material citado não entra na conta agora (não tem
+ * preço nem rendimento cadastrado): fica anotado no serviço e o administrador é avisado para
+ * incluir na receita. Assim o valor nunca é inventado.
+ */
+async function extraMaterialsAnswer(c: Conversation, text: string, nlu: NluResult): Promise<void> {
+  const p = c.session.context.pricing!;
+  const n = normalizeText(text);
+  p.extraAsk = "done";
+  if (nlu.intent === "no" || /^(nao|n|nenhum|nada|so isso|e so isso|so|nao uso|nao precisa)\b/.test(n)) return finishPricing(c);
+  const jobId = p.target.kind === "job" ? p.target.jobId : null;
+  const said = text.trim().replace(/[.!]+$/, "").slice(0, 200);
+  if (jobId) {
+    const job = await getJob(c.ctx, jobId);
+    const prev = (job?.facts.details?.value as string | undefined) ?? "";
+    const note = `outros materiais que ele usa: ${said}`;
+    await setFact(c.ctx, jobId, "details", (prev ? `${prev}; ${note}` : note) as never, { actor: c.input.user.id, source: c.sourceKind(), messageId: c.input.inboundMessageId });
+    await recordUsageObservation(c, "job", jobId, { extraMaterials: said }, jobId);
+  }
+  await enqueueOutbox(c.ctx, "notify_admins", { text: `${c.input.user.displayName} disse que também usa: "${said}". Vale incluir na receita da técnica (painel → Técnicas/Materiais).` }, `extra-materials:${jobId ?? "qr"}:${c.input.inboundMessageId}`);
+  c.say(`Anotado! 📝 Vou avisar pra incluir isso no cadastro. Por enquanto faço a conta com o que já tenho. Quando o cadastro for ajustado, ele passa a entrar nas contas.`);
+  return finishPricing(c);
+}
+
+/** Observação para o administrador revisar a receita (não muda nada sozinha: status COLETADO). */
+async function recordUsageObservation(c: Conversation, entityType: "material" | "job", key: string, data: Record<string, unknown>, jobId: string | null): Promise<void> {
+  try {
+    await c.ctx.db.run(
+      "INSERT INTO learning_observations (id, user_id, job_id, message_id, kind, entity_type, entity_key, data_json, confidence, status, created_at, origin, source_text) VALUES (?, ?, ?, ?, 'MATERIAL_USAGE', ?, ?, ?, 1, 'COLETADO', ?, 'telegram_quote', ?)",
+      newId(),
+      c.input.user.id,
+      jobId,
+      c.input.inboundMessageId ?? null,
+      entityType,
+      key,
+      JSON.stringify(data),
+      new Date(c.ctx.clock()).toISOString(),
+      c.input.text.slice(0, 500),
+    );
+  } catch (err) {
+    console.error(JSON.stringify({ level: "warn", msg: "usage_observation_failed", error: err instanceof Error ? err.message.slice(0, 160) : String(err) }));
+  }
+}
+
+/** "não uso solvente", "não vou usar dessa vez", "esse não precisa". */
+export function saysNotUsed(text: string): boolean {
+  const n = normalizeText(text);
+  return NOT_USED.test(n) && !/\d/.test(n);
+}
+
+/** Tira o material atual deste orçamento (os outros serviços continuam usando a receita normal). */
+async function skipCurrent(c: Conversation): Promise<void> {
+  const p = c.session.context.pricing!;
+  const cur = p.current!;
+  const { name } = await materialInfo(c, cur.key);
+  const jobIds = new Set<string>();
+  if (p.target.kind === "job") jobIds.add(p.target.jobId);
+  for (const id of p.quoteIds) {
+    const q = await c.ctx.db.first<{ job_id: string }>("SELECT job_id FROM quotes WHERE id = ?", id);
+    if (q) jobIds.add(q.job_id);
+  }
+  for (const jobId of jobIds) {
+    const ov = await getOverrides(c.ctx, jobId);
+    if (!ov.excludedMaterials.includes(cur.key)) await saveOverrides(c.ctx, jobId, { ...ov, excludedMaterials: [...ov.excludedMaterials, cur.key] }, c.input.user.id);
+  }
+  // o administrador fica sabendo: a receita da técnica pode estar com material a mais
+  await recordUsageObservation(c, "material", cur.key, { used: false, jobIds: [...jobIds] }, p.target.kind === "job" ? p.target.jobId : null);
+  p.skipped = [...(p.skipped ?? []), cur.key];
+  p.pending = p.pending.filter((k) => k !== cur.key);
+  p.total = Math.max(p.resolved.length + p.pending.length, 0);
+  c.say(`Beleza, tirei ${deName(name).replace(/^d/, "")} desse orçamento. 👍`);
+  const next = p.pending[0];
+  p.current = next ? newCurrent(next) : null;
+  if (next) return askCurrent(c);
+  return finishPricing(c);
+}
+
 async function advance(c: Conversation): Promise<void> {
   const p = c.session.context.pricing!;
   const cur = p.current!;
@@ -256,6 +342,11 @@ export async function onPricingCallback(c: Conversation, action: string, arg?: s
     c.say("Esse orçamento já foi resolvido, não precisa fazer mais nada. 🙂");
     return;
   }
+  if (action === "noextra") {
+    if (p.extraAsk !== "asking") return;
+    p.extraAsk = "done";
+    return finishPricing(c);
+  }
   if (action === "retry" || action === "resume") {
     if (!p.current) return finishPricing(c);
     if (p.current.step === "paused") p.current.step = p.current.amountCents !== undefined ? "confirm" : "ask_price";
@@ -263,7 +354,14 @@ export async function onPricingCallback(c: Conversation, action: string, arg?: s
     return askCurrent(c);
   }
   const cur = p.current;
-  if (!cur) return finishPricing(c);
+  if (!cur) {
+    // clique repetido enquanto pergunto "usa outro material?": não dispara a conta de novo
+    if (p.extraAsk === "asking") {
+      c.say("Esse preço já está anotado. 🙂");
+      return;
+    }
+    return finishPricing(c);
+  }
   switch (action) {
     case "ok": {
       if (arg !== cur.token || (cur.step !== "confirm" && cur.step !== "confirm_high")) {
@@ -372,8 +470,19 @@ function capitalize(s: string): string {
 export async function finishPricing(c: Conversation): Promise<void> {
   const p = c.session.context.pricing;
   if (!p) return;
-  if (p.total > 1 && p.pending.length === 0 && !p.recalcFailed) c.say(`Pronto! Atualizei os ${p.total} materiais. Vou recalcular o orçamento. 🧮`);
-  else if (p.pending.length === 0 && !p.recalcFailed) c.say("Vou refazer as contas desse orçamento agora. 🙂");
+  const firstPass = !p.extraAsk;
+  const done = p.pending.length === 0 && !p.recalcFailed;
+  // antes de fechar a conta: a receita pode não ter algum material que ele usa (teste real 23/11/2026)
+  if (p.target.kind === "job" && firstPass && done) {
+    // recálculo silencioso: o orçamento já deixa de "faltar preço" (a coleta proativa olha isso)
+    await calculateQuote(c.ctx, p.target.jobId, c.input.user.id).catch(() => undefined);
+    if (p.total > 1) c.say(`Pronto! Atualizei os ${p.total} materiais. 👍`);
+    p.extraAsk = "asking";
+    c.session.flow = "quote_material_pricing";
+    c.say("Só mais uma coisinha antes das contas: 🤔\n\nNesse trabalho você usa algum outro material que eu não perguntei? Tipo estopa, cera ou lixa d'água.\n\nSe não usa, é só dizer \"não\".", [[{ text: "Não, é só isso", data: "mp:noextra" }]]);
+    return;
+  }
+  if (done) c.say(p.total > 1 && firstPass ? `Pronto! Atualizei os ${p.total} materiais. Vou recalcular o orçamento. 🧮` : "Vou fazer as contas agora. 🧮");
   try {
     p.recalcFailed = false;
     c.clearPending();

@@ -31,6 +31,8 @@ export const PricingOverridesSchema = z.object({
     .default([]),
   specificRisk: z.object({ pct: z.string().regex(/^\d+(\.\d+)?$/), reason: z.string().min(3) }).nullable().default(null),
   areaM2Override: z.string().regex(/^\d+(\.\d+)?$/).nullable().default(null),
+  /** materiais da receita que o artesão disse não usar neste serviço */
+  excludedMaterials: z.array(z.string()).default([]),
 });
 export type PricingOverrides = z.infer<typeof PricingOverridesSchema>;
 
@@ -45,7 +47,16 @@ function nominalBedFromDescriptors(descriptors: readonly string[]): { label: str
   return null;
 }
 
+/** Ajuste do artesão sobre o valor calculado (D-070). baseCents = valor sugerido pelo sistema. */
+export interface PriceAdjustment {
+  baseCents: number;
+  /** positivo = acréscimo, negativo = desconto */
+  deltaCents: number;
+  label: string;
+}
+
 export interface QuoteRecord {
+  priceAdjustment: PriceAdjustment | null;
   id: string;
   jobId: string;
   version: number;
@@ -68,6 +79,7 @@ export interface QuoteRecord {
 }
 
 interface QuoteRow {
+  price_adjustment_json?: string | null;
   id: string;
   job_id: string;
   version: number;
@@ -110,6 +122,7 @@ function mapQuote(r: QuoteRow): QuoteRecord {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     rowVersion: r.row_version,
+    priceAdjustment: r.price_adjustment_json ? (JSON.parse(r.price_adjustment_json) as PriceAdjustment) : null,
   };
 }
 
@@ -255,6 +268,7 @@ export async function buildPricingInput(
       specificRisk: overrides.specificRisk,
       inventory,
       proposedPriceCents: extra.proposedPriceCents ?? null,
+      excludedMaterialKeys: overrides.excludedMaterials,
       approvals: { belowFloor: extra.approvals?.belowFloor ?? false, uncalibrated: extra.approvals?.uncalibrated ?? false },
     },
     gaps,
@@ -411,7 +425,7 @@ export async function calculateQuote(
     quoteId = latest.id;
     await ctx.db.batch([
       ctx.db.stmt(
-        `UPDATE quotes SET status = 'ESTIMATIVA', input_json = ?, result_json = ?, floor_cents = ?, recommended_cents = ?, final_price_cents = ?, confidence = ?, definitive_allowed = ?, engine_version = ?, settings_version_id = ?, approved_by = NULL, approved_at = NULL, valid_until = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ?`,
+        `UPDATE quotes SET status = 'ESTIMATIVA', input_json = ?, result_json = ?, floor_cents = ?, recommended_cents = ?, final_price_cents = ?, confidence = ?, definitive_allowed = ?, engine_version = ?, settings_version_id = ?, approved_by = NULL, approved_at = NULL, price_adjustment_json = NULL, valid_until = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ?`,
         JSON.stringify(inputSnapshot),
         JSON.stringify(fullResult),
         result.floorCents,
@@ -585,6 +599,41 @@ function commercialFilename(number: string, version: number, preliminary: boolea
   return `${preliminary ? "Estimativa" : "Proposta"}-${number}-v${version}.pdf`;
 }
 
+/**
+ * O artesão decide o valor final (D-070): concorda com o sugerido, dá desconto ou acrescenta.
+ * Recalcula com o valor dele (exceções registradas na auditoria), guarda o ajuste para o PDF e
+ * aprova em nome dele. Bloqueio real (ex.: preço de material faltando) não é aprovado: volta
+ * "blocked" e o PDF sai como estimativa.
+ */
+export async function closeQuoteByArtisan(
+  ctx: Ctx,
+  quoteId: string,
+  userId: string,
+  finalCents: number,
+  adjustment: PriceAdjustment | null,
+): Promise<{ quote: QuoteRecord; preliminary: boolean; blocked: boolean }> {
+  const q = await getQuote(ctx, quoteId);
+  if (!q) throw new DomainError("NOT_FOUND", "Orçamento não encontrado", 404);
+  const belowFloor = q.floorCents !== null && finalCents < q.floorCents;
+  let q2 = await calculateQuote(ctx, q.jobId, userId, {
+    proposedPriceCents: finalCents === q.recommendedCents ? null : finalCents,
+    approvals: { uncalibrated: true, belowFloor },
+  });
+  await ctx.db.run("UPDATE quotes SET price_adjustment_json = ? WHERE id = ?", adjustment && adjustment.deltaCents !== 0 ? JSON.stringify(adjustment) : null, q2.id);
+  q2 = (await getQuote(ctx, q2.id))!;
+  const gaps = q2.result.gaps ?? [];
+  const preliminary = gaps.some((g) => g.code === "DIMENSIONS_UNCONFIRMED" || g.code === "DIMENSIONS_NOMINAL" || g.code === "BED_NOMINAL_SIZE");
+  if (q2.result.blockers.length > 0) return { quote: q2, preliminary: true, blocked: true };
+  const note = [
+    "Valor definido pelo artesão",
+    adjustment && adjustment.deltaCents !== 0 ? `${adjustment.label} ${formatBRL(Math.abs(adjustment.deltaCents))} sobre ${formatBRL(adjustment.baseCents)}` : "sem ajuste",
+    belowFloor ? "abaixo do piso" : "",
+    gaps.length ? `lacunas: ${gaps.map((g) => g.code).join(", ")}` : "",
+  ].filter(Boolean).join(" · ");
+  await setQuoteStatus(ctx, q2, "APROVADO", userId, "approved_by = ?, approved_at = ?, approval_note = ?,", [userId, nowIso(ctx), note], note);
+  return { quote: (await getQuote(ctx, q2.id))!, preliminary, blocked: false };
+}
+
 /** Monta o documento comercial a partir do snapshot — sem nenhum custo interno. */
 export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, number: string, docVersion: number, preliminary: boolean): Promise<CommercialQuoteDoc> {
   const settings = await getActiveSettings(ctx);
@@ -607,8 +656,14 @@ export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, num
   const logistics = f.logistics?.value as FactValueMap["logistics"] | null | undefined;
   if (logistics?.pickup) scope.push("Retirada do móvel");
   if (logistics?.delivery) scope.push("Entrega do móvel");
-  const lines =
-    b.showCommercialBreakdown && r.commercial
+  // valor ajustado pelo artesão: mostra o calculado e o desconto/acréscimo (D-070)
+  const adj = q.priceAdjustment;
+  const lines = adj && adj.deltaCents !== 0
+    ? [
+        { label: "Valor do serviço", amountCents: adj.baseCents },
+        { label: adj.label, amountCents: adj.deltaCents },
+      ]
+    : b.showCommercialBreakdown && r.commercial
       ? [
           { label: "Serviços", amountCents: r.commercial.servicesCents },
           { label: "Materiais e insumos", amountCents: r.commercial.materialsCents },
@@ -671,7 +726,7 @@ function capitalize(s: string): string {
  * - definitivo: exige orçamento APROVADO e sem bloqueios
  * - preliminar: permitido em ESTIMATIVA/AGUARDANDO_REVISAO, rotulado NÃO DEFINITIVO
  */
-export async function issueDocuments(ctx: Ctx, quoteId: string, actor: string, opts: { preliminary: boolean }): Promise<{ commercial: IssuedDocument; internal: IssuedDocument }> {
+export async function issueDocuments(ctx: Ctx, quoteId: string, actor: string, opts: { preliminary: boolean; artisanClosed?: boolean }): Promise<{ commercial: IssuedDocument; internal: IssuedDocument }> {
   const q = await getQuote(ctx, quoteId);
   if (!q) throw new DomainError("NOT_FOUND", "Orçamento não encontrado", 404);
   const job = await getJob(ctx, q.jobId);
@@ -681,7 +736,8 @@ export async function issueDocuments(ctx: Ctx, quoteId: string, actor: string, o
   }
   if (!opts.preliminary) {
     if (q.status !== "APROVADO" && q.status !== "ENVIADO") throw new DomainError("NOT_APPROVED", "Proposta definitiva exige aprovação do administrador.", 422);
-    if (!q.definitiveAllowed) throw new DomainError("BLOCKED", "O orçamento tem pendências e não pode virar proposta definitiva.", 422);
+    // fechado pelo artesão (D-070): ele decidiu o valor sabendo das lacunas; bloqueio de verdade continua barrando
+    if (!q.definitiveAllowed && !(opts.artisanClosed && q.result.blockers.length === 0)) throw new DomainError("BLOCKED", "O orçamento tem pendências e não pode virar proposta definitiva.", 422);
   } else if (!["ESTIMATIVA", "AGUARDANDO_REVISAO", "APROVADO"].includes(q.status)) {
     throw new DomainError("INVALID_STATUS", "Status não permite estimativa preliminar.", 422);
   }
@@ -910,6 +966,11 @@ export async function sendDocumentToArtisan(ctx: Ctx, documentId: string, actor:
 export async function markQuoteOutcome(ctx: Ctx, quoteId: string, actor: string, outcome: "ACEITO" | "RECUSADO"): Promise<QuoteRecord> {
   const q = await getQuote(ctx, quoteId);
   if (!q) throw new DomainError("NOT_FOUND", "Orçamento não encontrado", 404);
+  // fechado pelo artesão e entregue como estimativa: APROVADO → ENVIADO antes da resposta do cliente
+  if (q.status === "APROVADO") {
+    await setQuoteStatus(ctx, q, "ENVIADO", actor, "", [], "resposta do cliente informada pelo artesão");
+    return markQuoteOutcome(ctx, quoteId, actor, outcome);
+  }
   await setQuoteStatus(ctx, q, outcome, actor);
   if (outcome === "ACEITO") {
     const price = q.finalPriceCents ?? q.recommendedCents;

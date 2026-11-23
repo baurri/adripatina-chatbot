@@ -232,7 +232,7 @@ describe("IA: composição, interpretação e fallback", () => {
   it("validador recusa: pergunta essencial ausente, número inventado, emojis demais, autismo, tom infantil, duas perguntas", () => {
     expect(validateComposed(plan, { text: "Anotei! Quer mais alguma coisa?" }).reasons.join()).toMatch(/litros/);
     expect(validateComposed(plan, { text: "Essa lata de 900 ml é de quantos litros?" }).reasons.join()).toMatch(/número inventado/);
-    expect(validateComposed(plan, { text: "🎨🎨🎨 Essa lata é de quantos litros?" }).reasons.join()).toMatch(/emojis/);
+    expect(validateComposed(plan, { text: "🎨🎨🎨🎨 Essa lata é de quantos litros?" }).reasons.join()).toMatch(/emojis/);
     expect(validateComposed(plan, { text: "Como você é autista, vou perguntar devagar: essa lata é de quantos litros?" }).ok).toBe(false);
     expect(validateComposed(plan, { text: "Muito bem, amiguinho! Essa lata é de quantos litros?" }).ok).toBe(false);
     expect(validateComposed(plan, { text: "Essa lata é de quantos litros? E quanto custou?" }).reasons.join()).toMatch(/perguntas/);

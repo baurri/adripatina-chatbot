@@ -138,6 +138,8 @@ export const PricingInputSchema = z.object({
     .record(z.string(), z.object({ quantity: decStr, historicalUnitCostCents: cents.nonnegative().optional() }))
     .default({}),
   proposedPriceCents: cents.positive().nullable().default(null),
+  /** materiais da receita que o artesão disse não usar neste serviço ("não uso solvente") */
+  excludedMaterialKeys: z.array(z.string()).default([]),
   approvals: z
     .object({
       belowFloor: z.boolean().default(false),

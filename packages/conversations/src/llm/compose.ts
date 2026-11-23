@@ -34,10 +34,11 @@ export interface MessagePlan {
 
 /** Preferências de comunicação (explícitas; nada de diagnóstico nas mensagens). */
 export const COMMUNICATION_PROFILE = [
-  "frases curtas e claras, vocabulário simples e respeitoso, tom acolhedor, curioso e leve",
+  // pedido do administrador (23/11/2026): mais amigável, engraçadinho, com mais emojis e bem espaçado
+  "frases curtas e claras, vocabulário simples e respeitoso, tom de parceiro de oficina: amigo, animado e bem-humorado (pode brincar de leve com o trabalho, nunca com a pessoa)",
   "parágrafos curtos separados por uma linha em branco; a pergunta no último parágrafo",
   "uma única pergunta por mensagem",
-  "no máximo um ou dois emojis, ligados ao assunto (🎨 pintura, 📦 materiais, 🛠️ trabalho manual, 📏 medidas, 💰 valores, ✅ confirmação, 📅 agenda, 💡 ideia)",
+  "dois ou três emojis, ligados ao assunto (🎨 pintura, 📦 materiais, 🛠️ trabalho manual, 📏 medidas, 💰 valores, ✅ confirmação, 📅 agenda, 💡 ideia, 😄 humor)",
   "sem pressão, sem cobrança, sem linguagem técnica, sem tom infantil",
 ].join("; ");
 
@@ -144,7 +145,7 @@ export function validateComposed(plan: MessagePlan, raw: unknown): ComposeCheck 
     const stem = normalizeText(k).slice(0, Math.max(4, Math.min(6, k.length)));
     if (!norm.includes(stem)) reasons.push(`faltou "${k}"`);
   }
-  if (countEmojis(text) > 2) reasons.push("emojis demais");
+  if (countEmojis(text) > 3) reasons.push("emojis demais");
   if (!plan.greet && GREETING.test(text)) reasons.push("saudação repetida");
   if ((plan.recent ?? []).some((r) => normalizeText(r) === norm)) reasons.push("repetiu mensagem recente");
   if (PERSONAL_STORY.test(norm)) reasons.push("história pessoal inventada");
@@ -172,7 +173,7 @@ const PERSONAL_STORY = /\b(meu|minha|meus|minhas|nosso|nossa)\s+(filh|esposa|mar
 const FORMAL_OR_PT_PT = /\b(o senhor|a senhora|ao senhor|do senhor|preferes|queres|tens|podes|sabes|(diga|diz|conte|informe)[- ]me|o traz|a traz|busca[- ]l[oa])\b/;
 
 const TONE_WORDS = new Set(
-  "perfeito perfeita certo certa claro otimo otima beleza certinho entendi entendido anotei anotado anotada combinado tranquilo tranquila valeu obrigado obrigada legal bacana maravilha show joia agora entao menos cerca aproximadamente sobre ainda depois preciso precisar saber queria gostaria seguir seguimos vamos proxima proximo pergunta coisa coisinha rapidinho rapida rapido momento ajuda ajudar contar conta dizer falar melhor tambem aquele aquela assim parte ultima ultimo falta faltando pouco pouquinho quase terminar continuar orcamento servico movel peca pecas moveis conferir confirmar pronto pronta registrado registrei guardei guardado deixei deixar pendente problema certeza sabe acha achar lembra lembrar quando puder ideia importante fechar conta contas calculo calcular entender boa bom caso".split(" "),
+  "perfeito perfeita certo certa claro otimo otima beleza bora caprichar capricho massa joinha partiu demais oba opa eita fechou fechado sossego animado simbora rapidinha mandar manda certinho entendi entendido anotei anotado anotada combinado tranquilo tranquila valeu obrigado obrigada legal bacana maravilha show joia agora entao menos cerca aproximadamente sobre ainda depois preciso precisar saber queria gostaria seguir seguimos vamos proxima proximo pergunta coisa coisinha rapidinho rapida rapido momento ajuda ajudar contar conta dizer falar melhor tambem aquele aquela assim parte ultima ultimo falta faltando pouco pouquinho quase terminar continuar orcamento servico movel peca pecas moveis conferir confirmar pronto pronta registrado registrei guardei guardado deixei deixar pendente problema certeza sabe acha achar lembra lembrar quando puder ideia importante fechar conta contas calculo calcular entender boa bom caso".split(" "),
 );
 
 const STOP = new Set(["voce", "voces", "qual", "quais", "quanto", "quantos", "quantas", "como", "esta", "estao", "essa", "esse", "isso", "pode", "para", "mais", "tem", "sao", "dele", "dela", "nela", "nele", "aqui", "seria", "fica", "ficar", "vai", "precisa", "porque", "onde", "tudo", "todo", "toda", "algum", "alguma", "nenhum", "nenhuma", "outro", "outra", "muito", "muita", "seus", "suas", "este", "estes", "esses", "essas", "foram", "estava", "sendo", "sido", "tinha", "temos", "vamos", "favor"]);

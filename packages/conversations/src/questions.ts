@@ -95,6 +95,25 @@ const PICKUP_NOT_NEEDED = /\b(vai|vem|vao|ela vai|ele vai|eles vao|vou receber|c
 const CLIENT_PICKS_UP = /\b(vem buscar|vai buscar|busca aqui|retira aqui|vai retirar|passa (pra )?pegar|vem pegar|manda buscar)\b|\b(ela|ele|elas|eles|cliente|dona \w+|seu \w+) (mesm[oa]s? )?(busca|buscam|pega|pegam|retira|retiram)\b/;
 const I_DELIVER = /\b(eu (levo|entrego|vou levar|vou entregar)|levo de volta|entrego (la|na casa|pra ela|pra ele)|vou ter que (levar|entregar))\b/;
 const I_PICK_UP = /\b(eu (busco|pego|vou buscar|vou pegar)|tenho que buscar|vou ter que buscar|preciso buscar)\b/;
+// quem fala do transporte em 1ª pessoa: as regras do cliente não valem
+const FIRST_PERSON_TRANSPORT = /\b(eu (busco|pego|levo|entrego|vou)|vou (buscar|pegar|levar|entregar)|busco|levo|entrego|tenho que (buscar|levar|entregar|pegar)|preciso (buscar|levar|entregar|pegar)|vou ter que)\b/;
+const THIRD_PERSON = /\b(ele|ela|eles|elas|cliente|dona|seu|moca|moco|rapaz|senhora|senhor|vai|vem|vao|traz|trazem|deixa|deixam|busca|buscam|pega|pegam|retira|retiram|manda|mandam)\b/;
+const CLIENT_BRINGS = /\b(traz|trazem|trazer|trouxe|deixa|deixam|deixar|deixou|manda|mandam|mandar)\b/;
+const CLIENT_TAKES_BACK = /\b(busca|buscam|buscar|pega|pegam|pegar|retira|retiram|retirar|leva de volta|levar de volta|leva embora|levar embora|e leva|e levar)\b/;
+
+/**
+ * "ele vai trazer e buscar quando estiver pronta", "cliente deixa comigo e depois ele busca",
+ * "cliente traz": o cliente cuida do transporte. Visto no teste real de 23/11/2026, em que
+ * nenhuma dessas foi entendida.
+ */
+export function clientHandlesTransport(text: string): { pickup?: false; delivery?: false } {
+  const n = normalizeText(text);
+  if (FIRST_PERSON_TRANSPORT.test(n) || !THIRD_PERSON.test(n)) return {};
+  const out: { pickup?: false; delivery?: false } = {};
+  if (CLIENT_BRINGS.test(n)) out.pickup = false;
+  if (CLIENT_TAKES_BACK.test(n)) out.delivery = false;
+  return out;
+}
 
 /** Interpreta a resposta do usuário a uma pergunta específica. */
 export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer {
@@ -138,7 +157,7 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
     case "condition": {
       if (/\b(bem|muito|todo|toda|tudo|bastante) (estragad|detonad|judiad|acabad|ruim|velh|podre)\w*|\b(danificad|pessim|cupim|podre|quebrad|caindo aos pedacos|detonad)\w*/.test(norm)) return specific(field, "danificado");
       if (/\b(reparos?|consertos?|arranhad|riscad|descascand|desgastad|estragad|velh|manchad|lascad|solt)\w*/.test(norm) || /\bprecis\w* de (uns |um |alguns |algum )?(reparo|conserto|massa|cola|ajuste|cuidado|restauro)/.test(norm)) return specific(field, "reparos");
-      if (/\b(bom|boa|otim[oa]|inteir[oa]|conservad[oa]|bonit[oa]|tranquil[oa]|em bom estado)\b/.test(norm)) return specific(field, "bom");
+      if (/\b(bom|boa|boazinha|bonzinho|bonzinha|boinha|otim[oa]|inteir[oa]|inteirinh[oa]|conservad[oa]|bonit[oa]|tranquil[oa]|em bom estado|razoavel|ok|de boa|em ordem|ajeitad[oa]|direitinh[oa])\b/.test(norm)) return specific(field, "bom");
       // texto livre só quando fala de alguma parte/acabamento da peça (nunca "hmm deixa eu ver")
       return /\b(pe|pes|perna|pernas|cabeceira|peseira|tampo|gaveta|gavetas|porta|portas|pintura|verniz|madeira|lateral|laterais|estrutura|acabamento|assento|encosto|puxador|puxadores)\b/.test(norm)
         ? free(field, text.trim())
@@ -207,6 +226,9 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
       if (I_PICK_UP.test(norm) || is("buscar") || /^(so )?buscar\b/.test(norm)) known.pickup = true;
       if (/\bso (buscar|pegar)\b/.test(norm)) known.delivery = false;
       if (/\bso entregar\b/.test(norm)) known.pickup = false;
+      const byClient = clientHandlesTransport(text);
+      if (known.pickup === undefined && byClient.pickup === false) known.pickup = false;
+      if (known.delivery === undefined && byClient.delivery === false) known.delivery = false;
       if (known.pickup !== undefined && known.delivery !== undefined) return specific(field, { pickup: known.pickup, delivery: known.delivery });
       if (known.pickup !== undefined || known.delivery !== undefined) return { kind: "partial", field: "logistics", known };
       return { kind: "unparsed" };
@@ -471,5 +493,5 @@ export const FIELD_EXPLANATION: Record<ProjectField, string> = {
 /** Confirmações variadas e naturais (nunca o mesmo "Anotado" sempre). */
 export function naturalAck(fact: string, seed: number): string {
   const cap = fact ? fact[0]!.toUpperCase() + fact.slice(1) : fact;
-  return pick([`Anotado: ${fact}. ✅`, `Beleza, anotei: ${fact}.`, `Entendi! ${cap}.`, `Perfeito, ${fact}.`, `Certo, ${fact}. 👍`], seed);
+  return pick([`Anotado: ${fact}. ✅`, `Show! Anotei: ${fact}. 👌`, `Beleza, ${fact}. Tá na mão! 🙌`, `Perfeito, ${fact}. ✍️`, `Opa, anotadinho: ${fact}. 📝`, `Entendi! ${cap}. 😉`, `Certo, ${fact}. 👍`], seed);
 }

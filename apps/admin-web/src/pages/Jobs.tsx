@@ -67,7 +67,7 @@ interface JobDetailData {
   subcontracts: { id: string; scope: string; cost_cents: number | null; confirmed: number; lead_days: number | null }[];
   messages: { direction: string; kind: string; text: string | null; created_at: string }[];
   economics: { contractedCents: number | null; receivedCents: number; balanceCents: number | null; materialConsumptionCents: number; purchaseCashCents: number; expensesCents: number; economicResultBeforeOwnLaborCents: number | null; cashFlowCents: number };
-  overrides: { extraLabor: { description: string; hours: string }[]; specificExpenses: { description: string; amountCents: number; category: string }[]; specificRisk: { pct: string; reason: string } | null; areaM2Override: string | null };
+  overrides: { extraLabor: { description: string; hours: string }[]; specificExpenses: { description: string; amountCents: number; category: string }[]; specificRisk: { pct: string; reason: string } | null; areaM2Override: string | null; excludedMaterials?: string[] };
 }
 
 export function JobDetail({ id }: { id: string }) {

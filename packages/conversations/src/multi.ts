@@ -104,12 +104,12 @@ export function partOf(clause: string): "tampo" | "inteiro" | null {
 
 export function conditionOf(clause: string): { condition: ItemCondition; repairPart: string | null } | null {
   const n = normalizeText(clause);
-  if (!detectConditionStatement(clause) && !/\b(bom|boa|bons|boas)\b/.test(n)) return null;
+  if (!detectConditionStatement(clause) && !/\b(bom|boa|bons|boas|boazinha|bonzinho|bonzinha|razoavel|inteirinh[oa])\b/.test(n)) return null;
   const repairPart = /\b(tampo|perna|pernas|gaveta|gavetas|porta|portas|pe|pes|lateral|laterais|fundo|puxador)\b/.exec(n)?.[1] ?? null;
   if (/\b(melhor|melhores)\b/.test(n)) return { condition: "melhor_que_outros", repairPart: null };
   if (/\b(quebrad|podre|cupim|carcomid|muito estragad|bem estragad|detonad|pessim)\w*/.test(n)) return { condition: "danificado", repairPart };
   if (/\b(reparos?|conserto|consertos|ajuste|massa|cola|riscad|arranhad|descascand|desgastad|manchad|rachad|lascad|estragad|ruim|ruins)\w*/.test(n)) return { condition: "reparos", repairPart };
-  if (/\b(bom|boa|bons|boas|otim[oa]s?|conservad\w*|inteir[oa]s?|em bom estado)\b/.test(n)) return { condition: "bom", repairPart: null };
+  if (/\b(bom|boa|bons|boas|boazinha|bonzinho|bonzinha|razoavel|inteirinh[oa]|otim[oa]s?|conservad\w*|inteir[oa]s?|em bom estado)\b/.test(n)) return { condition: "bom", repairPart: null };
   return null;
 }
 

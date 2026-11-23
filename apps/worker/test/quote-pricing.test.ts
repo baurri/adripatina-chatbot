@@ -59,8 +59,10 @@ describe("Ajuste 1 — orçamento com preço ausente vira conversa com o artesã
     const done = await h.click(okButton(conf));
     const t = h.allText(done);
     expect(t).toMatch(/Atualizei o preço do verniz/);
-    expect(t).toMatch(/Vou refazer as contas/);
-    expect(t).toMatch(/Valor recomendado: R\$/); // 18. recalculado automaticamente
+    expect(t).toMatch(/usa algum outro material/); // pergunta final antes das contas
+    const calc = h.allText(await h.click("mp:noextra"));
+    expect(calc).toMatch(/Vou fazer as contas/);
+    expect(calc).toMatch(/Minha sugestão é cobrar R\$/); // 18. recalculado automaticamente
     const m = await price(h, "verniz");
     expect(m).toMatchObject({ replacement_price_cents: 9000, package_size: "0.9", origin: "telegram_quote_confirmed", calibrated: 0 }); // 20
     const hist = await h.ctx.db.first<{ source: string; previous_price_cents: number | null; package_size: string; message_id: string | null; job_id: string | null; quote_id: string | null; confidence: string }>(
@@ -73,7 +75,7 @@ describe("Ajuste 1 — orçamento com preço ausente vira conversa com o artesã
     expect(await count(h, "SELECT COUNT(*) AS n FROM audit_events WHERE action = 'material.price_from_quote'")).toBe(1);
     const q = await h.ctx.db.first<{ result_json: string; status: string }>("SELECT result_json, status FROM quotes");
     expect(JSON.parse(q!.result_json).blockers.map((b: { code: string }) => b.code)).not.toContain("MATERIAL_PRICE_MISSING");
-    expect(q!.status).toBe("AGUARDANDO_REVISAO");
+    expect(q!.status).toBe("ESTIMATIVA"); // D-070: espera a decisão do artesão (não vai mais para revisão)
     const after = await api(h, "GET", "/dashboard/summary");
     expect((after.json!.summary as { materialsWithoutPrice: number }).materialsWithoutPrice).toBe(0); // 19
   });
@@ -155,8 +157,8 @@ describe("Ajuste 1 — orçamento com preço ausente vira conversa com o artesã
     expect(h.allText(next)).toMatch(/Material 3 de 3/);
     conf = await h.send("a lata de 900 ml custa 25 reais");
     const done = await h.click(okButton(conf));
-    expect(h.allText(done)).toMatch(/Atualizei os 3 materiais\. Vou recalcular o orçamento/);
-    expect(h.allText(done)).toMatch(/Valor recomendado/);
+    expect(h.allText(done)).toMatch(/Atualizei os 3 materiais/);
+    expect(h.allText(await h.click("mp:noextra"))).toMatch(/Minha sugestão é cobrar/);
   });
 
   it("11. material já atualizado não é perguntado de novo", async () => {
@@ -166,7 +168,7 @@ describe("Ajuste 1 — orçamento com preço ausente vira conversa com o artesã
     await h.click(okButton(conf));
     const second = await varnishJobAndCalc(h, "dona Bia");
     expect(h.allText(second)).not.toMatch(/preço atual do verniz/);
-    expect(h.allText(second)).toMatch(/Valor recomendado/);
+    expect(h.allText(second)).toMatch(/Minha sugestão é cobrar/);
   });
 
   it("12. confirmação negativa permite corrigir o valor", async () => {
@@ -254,13 +256,14 @@ describe("Ajuste 1 — orçamento com preço ausente vira conversa com o artesã
     const conf = await h.send("a lata de 900 ml custa 90 reais");
     const original = await h.ctx.db.first<{ recipe_json: string }>("SELECT recipe_json FROM techniques WHERE key = 'verniz'");
     await h.ctx.db.run("UPDATE techniques SET recipe_json = 'quebrado' WHERE key = 'verniz'");
-    const fail = await h.click(okButton(conf));
+    await h.click(okButton(conf));
+    const fail = await h.click("mp:noextra");
     expect(h.allText(fail)).toMatch(/Tive um probleminha para refazer as contas/);
     expect(buttonsOf(fail.at(-1))).toEqual(["mp:retry"]);
     expect((await price(h, "verniz"))!.replacement_price_cents).toBe(9000); // preço já guardado
     await h.ctx.db.run("UPDATE techniques SET recipe_json = ? WHERE key = 'verniz'", original!.recipe_json);
     const retry = await h.click("mp:retry");
-    expect(h.allText(retry)).toMatch(/Valor recomendado/);
+    expect(h.allText(retry)).toMatch(/Minha sugestão é cobrar/);
   });
 
   it("24. o fluxo de compra existente continua funcionando e usa o mesmo serviço de preços", async () => {
@@ -271,5 +274,35 @@ describe("Ajuste 1 — orçamento com preço ausente vira conversa com o artesã
     await h.click("exp:confirm");
     expect((await price(h, "verniz"))!).toMatchObject({ replacement_price_cents: 9000, origin: "telegram_confirmed" });
     expect(await count(h, "SELECT COUNT(*) AS n FROM material_price_history WHERE source = 'telegram_confirmed' AND previous_price_cents IS NULL")).toBe(1);
+  });
+});
+
+describe("teste real 23/11/2026: material que ele não usa e material que faltou", () => {
+  it("'não vou usar solvente dessa vez' tira o material deste orçamento e segue", async () => {
+    const h = await setup(["verniz", "solvente"]);
+    await varnishJobAndCalc(h);
+    let conf = await h.send("a lata de 900 ml custa 90 reais");
+    const next = await h.click(okButton(conf));
+    expect(h.allText(next)).toMatch(/Material 2 de 2: solvente/);
+    const skip = await h.send("nao vou usar solvente dessa vez");
+    expect(h.allText(skip)).toMatch(/tirei o solvente.thinner desse orçamento/);
+    expect(h.allText(skip)).not.toMatch(/Não peguei o valor/);
+    expect(h.allText(skip)).toMatch(/usa algum outro material/);
+    expect((await price(h, "solvente"))!.replacement_price_cents).toBeNull(); // catálogo intacto
+    const job = (await h.ctx.db.first<{ summary_json: string }>("SELECT summary_json FROM jobs"))!;
+    expect(JSON.parse(job.summary_json).pricingOverrides.excludedMaterials).toEqual(["solvente"]);
+    const calc = await h.send("uso estopa também");
+    const t = h.allText(calc);
+    expect(t).toMatch(/Vou avisar pra incluir isso no cadastro/);
+    expect(t).toMatch(/Minha sugestão é cobrar/);
+    const q = (await h.ctx.db.first<{ result_json: string }>("SELECT result_json FROM quotes"))!;
+    const r = JSON.parse(q.result_json) as { materials: { lines: { materialKey: string }[] }; blockers: { code: string }[] };
+    expect(r.materials.lines.map((l) => l.materialKey)).not.toContain("solvente");
+    expect(r.blockers.map((b) => b.code)).not.toContain("MATERIAL_PRICE_MISSING");
+    const facts = (await h.ctx.db.first<{ value_json: string }>("SELECT value_json FROM job_facts WHERE field = 'details' ORDER BY rowid DESC"))!;
+    expect(facts.value_json).toMatch(/estopa/);
+    expect(await count(h, "SELECT COUNT(*) AS n FROM learning_observations WHERE kind = 'MATERIAL_USAGE'")).toBe(2);
+    void conf;
+    conf = [];
   });
 });

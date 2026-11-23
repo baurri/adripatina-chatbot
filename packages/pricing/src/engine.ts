@@ -131,6 +131,7 @@ export function priceJob(
   for (const d of dedupedSteps) {
     const step = d.chosen.step;
     for (const sm of step.materials) {
+      if (input.excludedMaterialKeys.includes(sm.materialKey)) continue;
       const mat = catalog.materials[sm.materialKey];
       if (!mat) {
         blockers.push({ code: "MATERIAL_UNKNOWN", message: `Material não cadastrado: ${sm.materialKey}`, ref: sm.materialKey });

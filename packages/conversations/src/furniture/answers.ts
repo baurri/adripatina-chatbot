@@ -155,6 +155,26 @@ const count = (re: RegExp) => (text: string): number | null => {
   return w !== null && w > 0 && w < 60 ? w : null;
 };
 
+/**
+ * Soma contagens de variações do mesmo item: "4 gavetas e 1 gavetão" → 5 (teste real
+ * 23/11/2026: anotava só 4). Só vale com duas ou mais menções; senão, null.
+ */
+export function sumCounts(text: string, nounRe: RegExp): number | null {
+  const tokens = normalizeText(text).replace(/[.,;]/g, " ").split(" ").filter(Boolean);
+  let total = 0;
+  let hits = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    if (!nounRe.test(tokens[i]!)) continue;
+    const prev = tokens[i - 1];
+    const n = prev === undefined ? null : /^\d+$/.test(prev) ? Number(prev) : wordsToNumber([prev]);
+    total += n !== null && n > 0 ? n : 1;
+    hits++;
+  }
+  return hits >= 2 && total < 60 ? total : null;
+}
+
+const DRAWER_NOUN = /^(gavetas?|gavetao|gavetoes|gavetinhas?|gavetonas?)$/;
+
 const art = (t: FurnitureTypeDef) => (t.feminine ? "ela" : "ele");
 const name = (t: FurnitureTypeDef) => t.name.toLowerCase().replace(/ de \d+ lugares$/, "");
 
@@ -168,7 +188,7 @@ export const ATTRIBUTES: Record<AttributeKey, AttributeSpec> = {
   drawers_count: {
     key: "drawers_count",
     question: (t) => `Quantas gavetas ${art(t)} tem?`,
-    parse: (x) => count(/^gavetas?$/)(x),
+    parse: (x) => sumCounts(x, DRAWER_NOUN) ?? count(DRAWER_NOUN)(x),
     why: "Gaveta dá trabalho extra (frente, laterais e corrediça).",
   },
   door_type: {

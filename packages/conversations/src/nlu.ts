@@ -78,6 +78,8 @@ const NAME_STOP = new Set([
 
 /** verbo conjugado no lugar do sobrenome ("Dona Jo trouxeram") */
 const VERB_LIKE = /(aram|eram|iram|ando|endo|indo|ou|eu)$/;
+/** verbos comuns logo depois de "cliente" ("cliente traz", "cliente quer", "cliente vai buscar") */
+const CLIENT_ACTION = /^(deix\w*|traz\w*|trouxe|busc\w*|peg\w*|retir\w*|lev\w*|vai|vem|vao|quer|queria|pediu|pede|mandou|manda|falou|fala|disse|ligou|pagou|paga|achou|acha|gostou|gosta|tem|tinha|precisa|ficou|esta|ta|e|eh|nao|ja|so|mesmo|mesma|chegou|aceitou|recusou|prefere|escolheu|marcou|combinou)$/;
 
 function titleCase(s: string): string {
   return s
@@ -122,7 +124,8 @@ export function detectProgress(text: string): ProgressKind | undefined {
   const mark = /\b(marca|marcar|marque|coloca|colocar|coloque|bota|botar|muda|mudar|pode marcar|pode colocar|deixa)\b/;
   if (/\b(ainda nao comecei|nao comecei|nem comecei|ainda nao iniciei|nao iniciei)\b/.test(raw)) return "nao_iniciado";
   // negação anula o verbo: "ainda não terminei", "não está pronta", "não entreguei" → sem transição
-  const n = raw.replace(NEGATED_PROGRESS, " ");
+  // condição futura não é andamento: "depois de pronto ele busca", "quando ficar pronta" (teste real 23/11/2026)
+  const n = raw.replace(NEGATED_PROGRESS, " ").replace(/\b(?:depois de|depois que|quando|qdo|qnd|assim que|ate)\s+(?:\w+\s+){0,2}?(?:pront|termin|acab)\w*/g, " ");
   // intenção futura não é andamento: "vou começar", "quis dizer que vou começar"
   if (/\b(vou|vamos|pretendo|quero|vai)\s+(comecar|iniciar|terminar|entregar|fazer)\b/.test(n) && !/\b(comecei|iniciei|terminei|entreguei)\b/.test(n)) return undefined;
   if (/\b(o (trabalho|servico) (esta|ta) parado|parei o (trabalho|servico))\b/.test(n)) return "parado";
@@ -142,7 +145,7 @@ export function detectConditionStatement(text: string): boolean {
   return (
     /\bprecis\w*\s+(de\s+)?(uns\s+|um\s+|alguns\s+|algum\s+|pequenos\s+|bastante\s+|muito\s+)?(reparos?|conserto|consertos|ajustes?|restauro|massa|cola)\b/.test(n) ||
     /\b(estragad|riscad|arranhad|quebrad|descascand|desgastad|manchad|rachad|lascad|empenad|podre|cupim|carcomid|conservad|judiad|detonad)\w*/.test(n) ||
-    /\b(esta|estao|ta|tao|ficou|ficaram)\s+(bem\s+|muito\s+|um pouco\s+)?(melhor|melhores|bo[ma]|bons|boas|ruim|ruins|otim[oa]s?|pessim[oa]s?|inteir[oa]s?)\b/.test(n) ||
+    /\b(esta|estao|ta|tao|ficou|ficaram)\s+(bem\s+|muito\s+|um pouco\s+)?(melhor|melhores|bo[ma]|boazinha|bonzinho|bonzinha|razoavel|bons|boas|ruim|ruins|otim[oa]s?|pessim[oa]s?|inteir[oa]s?)\b/.test(n) ||
     /\b(em bom estado|em mau estado|tampo (esta|ta) ruim|vai precisar lixar bastante|tem partes? quebradas?)\b/.test(n)
   );
 }
@@ -159,6 +162,8 @@ export function extractClientName(text: string): string | undefined {
     if (!m) continue;
     const honor = m.length > 2 ? m[1] : undefined;
     const nameRaw = (m.length > 2 ? m[2] : m[1]) ?? "";
+    // "cliente deixa comigo", "cliente traz": depois de "cliente" veio um verbo, não um nome (teste real 23/11/2026)
+    if (!honor && CLIENT_ACTION.test(nameRaw.split(" ")[0] ?? "")) continue;
     const tokens = nameRaw.split(" ").filter((t) => t && !NAME_STOP.has(t));
     // mantém apenas tokens iniciais consecutivos que não são stopwords
     const nameTokens: string[] = [];
@@ -190,7 +195,7 @@ function classify(norm: string, e: Entities): { intent: Intent; confidence: numb
   if (/^(voltar|volta|anterior)\b/.test(trimmed)) return { intent: "back", confidence: 0.95 };
   if (/\b(continuar depois|continuo depois|depois a gente continua|mais tarde|pausar|pausa)\b/.test(trimmed))
     return { intent: "pause", confidence: 0.9 };
-  if (/^(corrigir|corrige)\b|\b(na verdade|errei|me enganei|corrigindo|nao e .+ e )\b/.test(trimmed))
+  if (/^(corrigir|corrige)\b|\b(na verdade|errei|me enganei|corrigindo|nao e .+ e |(muda|mudar|troca|trocar) (pra|para|por)|melhor colocar|coloca .+ no lugar)\b/.test(trimmed))
     return { intent: "correction", confidence: 0.85 };
 
   const money = e.amountCents !== undefined;
@@ -254,9 +259,11 @@ export function interpretRules(text: string): NluResult {
   if (/\b(ja tenho|tenho (o|a) (material|tinta|verniz)|tenho sobrando|sobrou|tenho em casa|tenho tudo)\b/.test(norm)) e.materialStatus = "tem_tudo";
   if (/\b(tenho uma parte|tenho um pouco|tenho parte|falta um pouco)\b/.test(norm)) e.materialStatus = "tem_parte";
   if (/\b(preciso comprar|vou precisar comprar|vou ter que comprar|tenho que comprar|nao tenho)\b/.test(norm)) e.materialStatus = "precisa_comprar";
-  if (/\b(pincel|trincha)\b/.test(norm)) e.method = "pincel";
-  else if (/\brolo\b/.test(norm)) e.method = "rolo";
-  else if (/\b(pistola|compressor)\b/.test(norm)) e.method = "pistola";
+  // "não é pincel, é rolo": o método negado não conta (teste real 23/11/2026)
+  const mNorm = norm.replace(/\bnao (?:e |eh |vai ser |sera |uso |vou usar |quero )?(?:o |a |com )?(pincel|trincha|rolo|pistola|compressor)\b/g, " ");
+  if (/\b(pincel|trincha)\b/.test(mNorm)) e.method = "pincel";
+  else if (/\brolo\b/.test(mNorm)) e.method = "rolo";
+  else if (/\b(pistola|compressor)\b/.test(mNorm)) e.method = "pistola";
   if (/\b(por dentro|dentro e fora|interna|parte de dentro)\b/.test(norm)) e.surfaces = "interna_externa";
   else if (/\b(so por fora|so fora|parte de fora|externa)\b/.test(norm)) e.surfaces = "externa";
   const progress = detectProgress(text);

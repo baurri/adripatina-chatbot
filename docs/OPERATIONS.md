@@ -48,3 +48,9 @@ Ver `.env.example`. Segredos: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
 - Ativar: `wrangler secret put ANTHROPIC_API_KEY --config wrangler.jsonc` (a chave é digitada no terminal, nunca no código). Desativar: `wrangler secret delete ANTHROPIC_API_KEY --config wrangler.jsonc`.
 - Defina um limite de gasto mensal no Console da Anthropic. A tabela `ai_usage` registra `provider = anthropic` e o custo estimado por chamada (`estimated_cost_usd_micros`).
 - Privacidade: com a chave, o texto das mensagens (inclui nomes de clientes) é enviado à Anthropic.
+
+## Orçamento decidido pelo artesão (23/11/2026, D-070)
+
+- Aplicar a migration antes do deploy: `node node_modules/wrangler/bin/wrangler.js d1 migrations apply DB --remote --config wrangler.jsonc` (0007 só acrescenta a coluna `quotes.price_adjustment_json`).
+- O administrador recebe "Fulano fechou o orçamento S-000X por R$ ..." no Telegram, com desconto/acréscimo e aviso quando ficou abaixo do mínimo. A nota de aprovação do orçamento guarda o mesmo resumo.
+- Materiais que o Adriano disse não usar ficam em `pricingOverrides.excludedMaterials` do serviço (o painel preserva) e viram `learning_observations` (`MATERIAL_USAGE`, status `COLETADO`) para revisar a receita da técnica.
