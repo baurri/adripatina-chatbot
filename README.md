@@ -103,7 +103,7 @@ Mapa dos critérios de aceite → testes: [docs/TEST_PLAN.md](docs/TEST_PLAN.md)
 4. Gere um segredo longo para o webhook (ex.: `[guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")` no PowerShell).
 5. Após o deploy (seção 6), registre o webhook (substitua TOKEN, URL e SEGREDO):
 ```bash
-curl.exe -X POST "https://api.telegram.org/botTOKEN/setWebhook" -d "url=https://adripatina-chatbot.baurri.workers.dev/api/v1/telegram/webhook" -d "secret_token=SEGREDO" -d "allowed_updates=[\"message\",\"callback_query\"]" -d "drop_pending_updates=true"
+curl.exe -X POST "https://api.telegram.org/botTOKEN/setWebhook" -d "url=https://adripatina-chatbot.baurri.workers.dev/api/v1/telegram/webhook" -d "secret_token=SEGREDO" -d "allowed_updates=[\"message\",\"callback_query\"]" -d "drop_pending_updates=true" -d "max_connections=1"
 ```
 6. Confira: `https://api.telegram.org/botTOKEN/getWebhookInfo`.
 

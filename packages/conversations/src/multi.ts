@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { extractDateMention, normalizeText, wordsToNumber, type DateMention } from "@adripatina/shared";
 import { detectConditionStatement, extractClientNames } from "./nlu.js";
-import { FURNITURE, TECHNIQUES, findTechniques, furnitureLabel } from "./vocabulary.js";
+import { FURNITURE, TECHNIQUES, ambiguousFurnitureKind, findTechniques, furnitureLabel, normalizeFurnitureText } from "./vocabulary.js";
 
 /**
  * Representação intermediária de um pedido de orçamento com vários móveis e
@@ -36,6 +36,8 @@ export interface MentionedItem {
   services: string[];
   techniqueKeys: string[];
   sourceExcerpt: string;
+  /** nome ambíguo ("mesinha"): índice em AMBIGUOUS_FURNITURE da pergunta de esclarecimento */
+  typeQuestion?: number;
 }
 
 export type Ambiguity = "clients_relation" | "item_owner_mapping" | "other_furniture_types" | "quote_grouping" | "item_scope" | "item_condition";
@@ -69,7 +71,7 @@ export function parseClientsRelation(text: string): "couple" | "separate" | null
 }
 
 const COUNT = "(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|\\d+)";
-const WANTS_PRICE = /\b(quanto (eu )?(deveria |devo |vou |posso |preciso )?cobrar|quanto cobro|quanto (fica|sai|custa|vale|vou cobrar)|quanto (eu )?cobraria|fazer (um )?orcamento|orcamento|preco disso|qual o preco|qual preco)\b/;
+const WANTS_PRICE = /\b(quanto (eu )?(deveria |devo |vou |posso |preciso )?cobr(ar|o|aria)|quanto cobro|quanto (fica|sai|custa|vale|vou cobrar)|quanto (eu )?cobraria|fazer (um )?orcamento|orcamento|preco disso|qual o preco|qual preco)\b/;
 
 function toCount(raw: string | undefined): number | null {
   if (!raw) return null;
@@ -120,9 +122,27 @@ interface FurnitureHit {
   generic: boolean;
 }
 
+/**
+ * Móvel citado como DESCRIÇÃO de outro, não como peça: "mesa de oito cadeiras",
+ * "mesa redonda pra seis lugares". O trecho é apagado (mesmo comprimento) antes de procurar peças.
+ */
+function maskDescriptiveMentions(norm: string): string {
+  return norm.replace(new RegExp(`\\b(mes(?:a|inha)s?\\b(?:\\s+[a-z]+){0,3}?\\s+)((?:de|pra|para|com)\\s+${COUNT}\\s+(?:cadeiras?|lugares|pessoas|assentos))\\b`, "g"), (_m, head: string, tail: string) => head + " ".repeat(tail.length))
+    // "sofá que vira cama", "banco que abre em mesa": função do móvel, não outra peça
+    .replace(/\b(?:que\s+)?(?:vira|virar|abre em|transforma em|serve de|serve como)\s+(?:uma?\s+)?(?:cama|mesa|banco|bau)\b/g, (m) => " ".repeat(m.length));
+}
+
+/**
+ * ":" e "(" somem na normalização; viram vírgula ANTES, para que a enumeração explicativa
+ * ("três móveis: uma mesa, ...") seja reconhecida. Todas as posições usam este mesmo texto.
+ */
+export function prepForHits(text: string): string {
+  return text.replace(/[:(]/g, ",");
+}
+
 /** Encontra menções de móveis com quantidade, sem sobreposição. */
 export function findFurnitureHits(text: string): FurnitureHit[] {
-  const norm = normalizeText(text).replace(/[.,;!?]/g, " ");
+  const norm = maskDescriptiveMentions(normalizeFurnitureText(normalizeText(prepForHits(text)).replace(/[.,;!?]/g, " ")));
   const hits: FurnitureHit[] = [];
   // grupos genéricos: "outros dois móveis", "mais duas peças", "dois móveis"
   const genericRe = new RegExp(`\\b(?:(outr[oa]s?|mais)\\s+)?${COUNT}\\s+(moveis|movel|pecas|peca|itens)\\b`, "g");
@@ -149,35 +169,91 @@ export function findFurnitureHits(text: string): FurnitureHit[] {
   return hits.sort((a, b) => a.start - b.start);
 }
 
+/**
+ * Enumeração explicativa: "dois móveis da Dona Jo, acho que uma cômoda e um aparador",
+ * "três móveis: uma mesa, uma cômoda e um aparador". As peças nomeadas DETALHAM o grupo
+ * genérico, não se somam a ele. Só junta quando há conector de explicação (":", vírgula,
+ * "acho que", "que são", "sendo", "tipo", "no caso", "(") e as peças cabem no grupo; peças
+ * ligadas só por "e" ("dois móveis e duas cadeiras") ficam como foram ditas.
+ * Devolve, para cada peça que detalha um grupo, o índice do grupo.
+ */
+export function findAppositions(text: string, hits: FurnitureHit[], ownerConflict: (groupIdx: number, memberIdx: number) => boolean): Map<number, number> {
+  const norm = normalizeText(prepForHits(text)).replace(/[;!?]/g, " ");
+  const out = new Map<number, number>();
+  for (let g = 0; g < hits.length; g++) {
+    const group = hits[g]!;
+    if (!group.generic) continue;
+    const gap = norm.slice(group.end, hits[g + 1]?.start ?? group.end);
+    const connector = /^\s*(?:d[aeo]s?\s+[a-z]+(?:\s+[a-z]+)?\s*)?(?::|,|\(|-|\b(?:acho que|que sao|que seriam|que seria|sendo|tipo|no caso|seriam|sao eles|quais sejam|ou seja)\b)/.test(gap);
+    if (!connector) continue;
+    let sum = 0;
+    const members: number[] = [];
+    for (let k = g + 1; k < hits.length; k++) {
+      const h = hits[k]!;
+      if (h.generic) break;
+      // outro dono no meio ("... e uma cômoda do Roberto") = outra peça, não detalhe
+      if (ownerConflict(g, k)) break;
+      if (sum + h.quantity > group.quantity) break;
+      // longe demais / outra frase
+      if (h.start - (hits[k - 1]?.end ?? group.end) > 60 || /\.\s/.test(norm.slice(hits[k - 1]!.end, h.start))) break;
+      sum += h.quantity;
+      members.push(k);
+      if (sum === group.quantity) break;
+    }
+    if (members.length) for (const k of members) out.set(k, g);
+  }
+  return out;
+}
+
+/** Plural simples para rótulos de móvel: "cadeira" → "cadeiras", "aparador" → "aparadores". */
+export function pluralLabel(label: string, qty: number): string {
+  if (qty <= 1) return label;
+  const [head, ...rest] = label.split(" ");
+  const p = /[aeiouáéíóúâêô]$/.test(head!) ? `${head}s` : /[rzs]$/.test(head!) ? `${head}es` : /l$/.test(head!) ? `${head!.slice(0, -1)}is` : `${head}s`;
+  return [p, ...rest].join(" ");
+}
+
 function cleanDescription(desc: string): string {
   return desc.replace(/^(outr[oa]s?|mais)\s+/, "outros ").replace(/\bmoveis\b/, "móveis").replace(/\bpecas\b/, "peças").replace(/\bmesinha\b/, "mesinha");
 }
 
 /** Extração determinística do pedido completo. */
 export function extractQuoteRequest(text: string, now: Date): QuoteRequestDraft {
-  const norm = normalizeText(text).replace(/[.,;!?]/g, " ");
+  const norm = normalizeText(prepForHits(text)).replace(/[.,;!?]/g, " ");
   const names = extractClientNames(text);
   const clients: MentionedClient[] = names.map((n, i) => ({ ref: `c${i + 1}`, rawName: n, name: n, confidence: 0.9 }));
   const hits = findFurnitureHits(text);
   const globalTechniques = findTechniques(text);
   const globalServices = servicesOf(text);
-  const items: MentionedItem[] = hits.map((h, i) => {
-    const clause = norm.slice(h.start, hits[i + 1]?.start ?? norm.length);
+  const clauseOf = (i: number) => norm.slice(hits[i]!.start, hits[i + 1]?.start ?? norm.length);
+  // dono explícito na própria oração: "a mesinha do seu Roberto"
+  const explicitOwner = (i: number): string | null => (clients.length === 1 ? clients[0]!.ref : clients.find((c) => clauseOf(i).includes(normalizeText(c.name)))?.ref ?? null);
+  // peças que DETALHAM um grupo genérico ("dois móveis, acho que uma cômoda e um aparador")
+  const appositions = findAppositions(text, hits, (g, k) => {
+    const o = explicitOwner(k);
+    return o !== null && clients.length > 1 && o !== explicitOwner(g);
+  });
+  const detailedQty = new Map<number, number>();
+  for (const [k, g] of appositions) detailedQty.set(g, (detailedQty.get(g) ?? 0) + hits[k]!.quantity);
+  const items: MentionedItem[] = [];
+  hits.forEach((h, i) => {
+    const clause = clauseOf(i);
     const services = servicesOf(clause);
     const techniques = findTechniques(clause);
     const cond = conditionOf(clause);
-    let ownerRef: string | null = null;
-    if (clients.length === 1) ownerRef = clients[0]!.ref;
-    else {
-      // dono explícito na própria oração: "a mesinha do seu Roberto"
-      const explicit = clients.find((c) => clause.includes(normalizeText(c.name)));
-      if (explicit) ownerRef = explicit.ref;
+    let quantity = h.quantity;
+    if (h.generic && detailedQty.has(i)) {
+      quantity -= detailedQty.get(i)!;
+      if (quantity <= 0) return; // grupo inteiramente detalhado: as peças nomeadas o substituem
     }
-    return {
-      ref: `i${i + 1}`,
-      description: h.generic ? cleanDescription(h.description) : accentDescription(h.description, h.key),
+    const group = appositions.get(i);
+    const ownerRef = explicitOwner(i) ?? (group !== undefined ? explicitOwner(group) : null);
+    const description = h.generic ? (quantity === h.quantity ? cleanDescription(h.description) : quantity > 1 ? `outros ${quantity} móveis` : "outro móvel") : accentDescription(h.description, h.key);
+    items.push({
+      ref: `i${items.length + 1}`,
+      description,
       furnitureType: h.generic ? null : h.key,
-      quantity: h.quantity,
+      quantity,
       generic: h.generic,
       ownerRef,
       ownerConfirmed: clients.length === 1,
@@ -187,7 +263,8 @@ export function extractQuoteRequest(text: string, now: Date): QuoteRequestDraft 
       services: services.length ? services : globalServices,
       techniqueKeys: techniques.length ? techniques : globalTechniques,
       sourceExcerpt: clause.trim().slice(0, 160),
-    };
+      ...(!h.generic && h.key === "mesa" && ambiguousFurnitureKind(h.description) === 0 ? { typeQuestion: 0 } : {}),
+    });
   });
   const ambiguities: Ambiguity[] = [];
   const totalQty = items.reduce((a, i) => a + i.quantity, 0);
@@ -220,6 +297,7 @@ export function itemName(item: MentionedItem): string {
   if (item.generic) return /^outr/.test(item.description) ? `os ${item.description}` : item.description;
   const label = item.description || furnitureLabel(item.furnitureType);
   const fem = item.furnitureType ? FURNITURE[item.furnitureType]?.feminine : false;
+  if (item.quantity > 1) return `${fem ? "as" : "os"} ${item.quantity} ${pluralLabel(label, item.quantity)}`;
   return `${fem ? "a" : "o"} ${label}`;
 }
 
@@ -244,13 +322,17 @@ export interface ItemStatement {
  * Resolve referências numa resposta: "um deles, a mesinha de centro, está com o tampo
  * precisando de reparos; os outros estão melhores". `currentRefs` é o alvo da pergunta.
  */
-export function parseItemStatements(text: string, items: MentionedItem[], currentRefs: string[]): ItemStatement[] {
+/** "os outros" e variações faladas: "nos outros dois", "das outras", "as outra" (sem plural) */
+const OTHERS = String.raw`(?:n|d|pr)?os outros?|(?:n|d|pr)?as outras?|(?:n|d)?os demais|(?:n|d)?as demais|o resto`;
+
+export function parseItemStatements(text: string, items: MentionedItem[], currentRefs: string[], unresolved?: string[]): ItemStatement[] {
   const norm = normalizeText(text);
   // quebra em orações nos pontos de troca de referência
   const pieces = norm
-    .split(/(?:[.;!?]|,?\s+(?=(?:e\s+|mas\s+)?(?:os outros|as outras|o outro|a outra|os demais|as demais|o resto|os dois|as duas|o primeiro|a primeira|o segundo|a segunda|o terceiro|a terceira)\b)|,\s+(?:mas|e)\s+)/)
+    .split(new RegExp(String.raw`(?:[.;!?]|,?\s+(?=(?:e\s+|mas\s+)?(?:${OTHERS}|o outro|a outra|os dois|as duas|o primeiro|a primeira|o segundo|a segunda|o terceiro|a terceira)\b)|,\s+(?:mas|e)\s+)`))
     .map((p) => p.trim())
     .filter(Boolean);
+  const contrast = new RegExp(String.raw`\b(${OTHERS})\b`).test(norm);
   const out: ItemStatement[] = [];
   const mentioned = new Set<string>();
   for (const piece of pieces) {
@@ -261,15 +343,25 @@ export function parseItemStatements(text: string, items: MentionedItem[], curren
       if (match) refs.push(match.ref);
     }
     if (!refs.length) {
-      if (/\b(os outros|as outras|os demais|as demais|o resto|eles|elas)\b/.test(piece)) refs = items.filter((i) => !mentioned.has(i.ref)).map((i) => i.ref);
-      else if (/\b(o outro|a outra)\b/.test(piece)) refs = items.filter((i) => !mentioned.has(i.ref)).slice(0, 1).map((i) => i.ref);
+      const free = items.filter((i) => !mentioned.has(i.ref)).map((i) => i.ref);
+      if (new RegExp(String.raw`\b(${OTHERS}|eles|elas)\b`).test(piece)) {
+        // "os outros" sem ter dito antes qual é "o um": referência solta, não vale para todos
+        refs = mentioned.size || /\b(eles|elas)\b/.test(piece) ? free : [];
+      } else if (/\b(o outro|a outra)\b/.test(piece)) refs = free.slice(0, 1);
+      // "uma tá quebrada": uma unidade (o item já foi separado pelo chamador)
+      else if (/^(?:e\s+|mas\s+)?(?:uma|um)(?:\s+delas|\s+deles|\s+das|\s+dos)?\s/.test(piece) && items.length > 1) refs = free.slice(0, 1);
       else if (/\b(os dois|as duas)\b/.test(piece)) refs = items.filter((i) => !mentioned.has(i.ref)).slice(0, 2).map((i) => i.ref);
       else if (/\b(o primeiro|a primeira)\b/.test(piece)) refs = items.slice(0, 1).map((i) => i.ref);
       else if (/\b(o segundo|a segunda)\b/.test(piece)) refs = items.slice(1, 2).map((i) => i.ref);
       else if (/\b(o terceiro|a terceira)\b/.test(piece)) refs = items.slice(2, 3).map((i) => i.ref);
-      else refs = [...currentRefs];
+      // sem referente: vale para o alvo da pergunta, a menos que a frase contraste com "os outros"
+      // ("o tampo está ruim, os outros estão melhores" — qual tampo? perguntar, não adivinhar)
+      else refs = contrast && currentRefs.length !== 1 ? [] : [...currentRefs];
     }
-    if (!refs.length) continue;
+    if (!refs.length) {
+      if (conditionOf(piece) || partOf(piece)) unresolved?.push(piece);
+      continue;
+    }
     const st: ItemStatement = { refs, excerpt: piece };
     const cond = conditionOf(piece);
     if (cond) {
@@ -286,6 +378,39 @@ export function parseItemStatements(text: string, items: MentionedItem[], curren
   return out;
 }
 
+/**
+ * "uma tá quebrada, as outras estão boas" sobre um item com quantidade > 1: separa uma
+ * unidade do grupo para cada uma poder ter seu estado. Devolve true se separou.
+ */
+export function splitUnitForStatement(items: MentionedItem[], text: string, currentRefs: string[]): boolean {
+  const n = normalizeText(text);
+  if (!new RegExp(String.raw`(?:^|\s)(?:uma|um)(?:\s+delas|\s+deles)?\s.*\b(${OTHERS}|a outra|o outro)\b`).test(n)) return false;
+  const pool = items.filter((i) => i.quantity > 1 && !i.generic && (currentRefs.length === 0 || currentRefs.includes(i.ref)));
+  const named = findFurnitureHits(text).filter((h) => !h.generic).map((h) => h.key);
+  const target = pool.length === 1 ? pool[0] : pool.find((i) => named.includes(i.furnitureType ?? ""));
+  if (!target) return false;
+  const idx = items.indexOf(target);
+  const one: MentionedItem = { ...target, ref: `${target.ref}a`, quantity: 1, condition: null, repairPart: null };
+  const rest: MentionedItem = { ...target, ref: `${target.ref}b`, quantity: target.quantity - 1, condition: null, repairPart: null };
+  items.splice(idx, 1, one, rest);
+  const cr = currentRefs.indexOf(target.ref);
+  if (cr >= 0) currentRefs.splice(cr, 1, one.ref, rest.ref);
+  return true;
+}
+
+/** "não são duas, são três", "na verdade são 3" → nova quantidade (e a antiga, se dita). */
+export function parseQuantityCorrection(text: string): { from: number | null; to: number } | null {
+  const n = normalizeText(text).replace(/[.,!?;]/g, " ");
+  const m = new RegExp(String.raw`(?:\b(?:nao|nem)\s+(?:sao|e|eram|era)\s+${COUNT}\b\s*(?:nao\s+)?)?(?:\bna verdade\s+)?\b(?:sao|eram|e|serao)\s+${COUNT}\b(?!\s*(?:horas?|reais|real|dias?|cm|metros?|m|litros?|ml|latas?))`).exec(n);
+  if (!m) return null;
+  const to = toCount(m[2]);
+  if (!to || to > 50) return null;
+  // "é uma cômoda" não é correção de quantidade: exige número > 1 ou negação explícita
+  if (!m[1] && to < 2) return null;
+  if (!m[1] && !/\b(na verdade|nao|errei|corrig)\b/.test(n)) return null;
+  return { from: toCount(m[1]), to };
+}
+
 /** "uma cômoda e um aparador" → tipos para preencher um grupo genérico. */
 export function parseFurnitureList(text: string): { key: string; description: string; quantity: number }[] {
   return findFurnitureHits(text)
@@ -296,8 +421,28 @@ export function parseFurnitureList(text: string): { key: string; description: st
 export function parseGrouping(text: string): "agrupado" | "por_cliente" | null {
   const n = normalizeText(text);
   if (/\b(separad[oa]s?|um (pra|para) cada|cada (um|cliente)|dois orcamentos|por cliente)\b/.test(n)) return "por_cliente";
-  if (/\b(junto|juntos|um so|tudo junto|um orcamento so|so um|unico|agrupado)\b/.test(n)) return "agrupado";
+  if (/\b(junto|juntos|juntar|junta|um so|tudo junto|um orcamento so|num orcamento so|num so|so um|unico|agrupado)\b/.test(n)) return "agrupado";
   return null;
+}
+
+/**
+ * Correção de dono a qualquer momento: "a cômoda não é da Dona Jo não, é do Roberto",
+ * "o aparador é do Roberto". O nome negado nunca é escolhido. Exige peça e dono claros.
+ */
+export function parseOwnerStatement(text: string, items: MentionedItem[], clients: MentionedClient[]): { refs: string[]; clientRef: string } | null {
+  if (clients.length < 2) return null;
+  let n = normalizeText(text).replace(/[.,!?;]/g, " ");
+  // "não é da Dona Jo não, é do Roberto": o segundo "não" é enfático, não nega o Roberto
+  n = n.replace(/\b(?:nao|nem)\s+(?:e|eh|sao|era|eram)\s+d[aeo]s?\s+(?:(?:seu|dona|sr|sra|senhor|senhora)\s+)?[a-z]+(?:\s+nao\b)?/g, " ");
+  const affirmed = clients.filter((c) => matchClientInAnswer(n, [c]));
+  if (affirmed.length !== 1) return null;
+  if (!/\b(e|eh|sao|fica|ficam|vai|vao|pertence)\s+(?:pr[ao]|para|d[aeo]s?)\s/.test(n) && !/\bd[aeo]s?\s+(?:(?:seu|dona|sr|sra)\s+)?[a-z]+\s*$/.test(n.trim())) return null;
+  const refs: string[] = [];
+  for (const h of findFurnitureHits(text).filter((x) => !x.generic)) {
+    const it = items.find((i) => i.furnitureType === h.key && !refs.includes(i.ref));
+    if (it) refs.push(it.ref);
+  }
+  return refs.length ? { refs, clientRef: affirmed[0]!.ref } : null;
 }
 
 /** Associa uma resposta livre a um dos clientes citados ("é da dona Jo", "do Roberto"). */

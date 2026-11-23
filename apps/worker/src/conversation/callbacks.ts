@@ -47,6 +47,8 @@ const LABELS: Record<string, string> = {
   "qr:group_split": "escolheu um orçamento para cada cliente",
   "qr:group_all": "escolheu um orçamento só, tudo junto",
   "qr:resume": "pediu para continuar o orçamento",
+  "amb:0": "escolheu o tipo de mesinha",
+  "amb:1": "escolheu o tipo do móvel das louças",
   "cmd:continue": "pediu para continuar de onde parou",
   "cmd:other_subject": "disse que é outro assunto",
   "cmd:pause": "pediu para continuar depois",

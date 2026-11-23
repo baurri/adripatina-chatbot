@@ -34,6 +34,8 @@ export const QUESTION_ORDER: readonly ProjectField[] = [
   "techniques",
   "client_name",
   "condition",
+  // só para cama (cama toda × só a cabeceira) — ver nextQuestion
+  "scope",
   "dimensions",
   "surfaces",
   "repairs",
@@ -71,7 +73,7 @@ export interface FactValueMap {
   deadline: string;
   payment_terms: string;
   /** parte trabalhada: só o tampo ou a peça inteira (pedidos com vários móveis) */
-  scope: { part: "tampo" | "inteiro"; repairPart?: string | null };
+  scope: { part: "tampo" | "inteiro" | "cabeceira"; repairPart?: string | null };
 }
 
 export interface Fact<F extends ProjectField = ProjectField> {
@@ -110,6 +112,7 @@ export function nextQuestion(facts: FactSet, skip: readonly ProjectField[] = [])
     if (skip.includes(field)) continue;
     if (field === "dimensions" && facts.size_class) continue;
     if (field === "application_method" && !techniquesNeedMethod(facts)) continue;
+    if (field === "scope" && (facts.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined)?.type !== "cama") continue;
     if (!isFieldAnswered(facts, field)) return field;
   }
   return null;

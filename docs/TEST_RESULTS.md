@@ -45,3 +45,13 @@ Migration `0004_conversation_goals_pricing.sql` aplicada com sucesso no D1 local
 Novos testes: `apps/worker/test/intuitive.test.ts` (12 cenários do diálogo real: cama queen sem "por dentro", pergunta ao bot explicada, "quanto fica?", "Mas e o valor?" não gravado, repetição confirmada, logística parcial, respostas fora de hora, pagamento ≠ prazo, aprendizado só do material citado, IA validada para respostas e reescrita), `packages/conversations/test/intuitive.test.ts` (tamanhos de cama, perfis, validadores de IA, casal × dois clientes, nomes seguidos de verbo), `packages/pricing/test/bed.test.ts` (geometria da cama), 4 cenários de casal em `quote-request.test.ts` e 1 no roteador (intenção só da IA não interrompe).
 
 Diálogos reproduzidos localmente do início ao fim (cama queen da Dona Licele; Seu Roberto e Dona Jo como casal até o orçamento final) sem becos sem saída.
+
+## 22/11/2026 — Rodada de validação profunda (simulação do uso real)
+
+Detalhes, matriz de cenários e causas-raiz: [`VALIDATION_2026-11-22.md`](VALIDATION_2026-11-22.md).
+
+- Linha de base (commit `b1ddb35`): 253 ✅ e 1 ❌ (teste instável por texto sorteado).
+- Final: lint ✅ · typecheck ✅ · testes **313** ✅ (shared 24 · domain 7 · pricing 30 · pdf 7 · conversations 110 · worker 135; +2 exploratórios pulados) · build ✅ (painel 287,6 kB; Worker 1.569 KiB / 394 KiB gzip, dry-run).
+- Novos testes: `validation.test.ts` em shared, pricing, conversations e worker (cálculos comparados a fórmulas independentes); simulador `explore-validation.test.ts` (`EXPLORE=1`).
+- Migrations novas: nenhuma.
+- Não executado: Telegram/Workers AI/D1/R2 reais, painel em navegador, coleta proativa (não existe).

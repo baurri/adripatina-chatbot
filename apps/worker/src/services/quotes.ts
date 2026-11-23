@@ -1,8 +1,8 @@
 import { assertQuoteTransition, type FactValueMap, type QuoteStatus } from "@adripatina/domain";
-import { estimateArea, priceJob, type PricingInput, type PricingResult } from "@adripatina/pricing";
+import { estimateArea, priceJob, scaleArea, type PricingInput, type PricingResult } from "@adripatina/pricing";
 import { renderCommercialQuote, renderInternalQuote, findConfidentialTerms, type CommercialQuoteDoc } from "@adripatina/pdf";
 import { addDays, canonicalJson, formatBRL, newId, sha256Hex } from "@adripatina/shared";
-import { furnitureLabel, techniqueLabel } from "@adripatina/conversations";
+import { BED_SIZES, detectBedSize, furnitureLabel, techniqueLabel } from "@adripatina/conversations";
 import { z } from "zod";
 import type { Ctx } from "../context.js";
 import { nowIso } from "../context.js";
@@ -34,7 +34,16 @@ export const PricingOverridesSchema = z.object({
 });
 export type PricingOverrides = z.infer<typeof PricingOverridesSchema>;
 
-export type ServiceGap = { code: "REPAIRS_HOURS_MISSING" | "TRANSPORT_COST_MISSING" | "CLIENT_MISSING"; message: string };
+export type ServiceGap = { code: "REPAIRS_HOURS_MISSING" | "TRANSPORT_COST_MISSING" | "CLIENT_MISSING" | "DIMENSIONS_UNCONFIRMED" | "BED_NOMINAL_SIZE"; message: string };
+
+/** Tamanho padrão citado ("queen") → medida do COLCHÃO, usada só como referência. */
+function nominalBedFromDescriptors(descriptors: readonly string[]): { label: string; width: string; length: string } | null {
+  for (const d of descriptors) {
+    const key = detectBedSize(d);
+    if (key) return BED_SIZES[key]!;
+  }
+  return null;
+}
 
 export interface QuoteRecord {
   id: string;
@@ -152,13 +161,28 @@ export async function buildPricingInput(
   const dims = f.dimensions?.value as FactValueMap["dimensions"] | null | undefined;
   const size = f.size_class?.value as FactValueMap["size_class"] | null | undefined;
   const surfaces = f.surfaces?.value as FactValueMap["surfaces"] | null | undefined;
-  const area = overrides.areaM2Override
+  const ft = f.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined;
+  const isBed = ft?.type === "cama";
+  // cama com tamanho padrão e sem medida da estrutura: o colchão é só REFERÊNCIA (faixa, nunca exata)
+  const nominalBed = isBed && !dims ? nominalBedFromDescriptors(ft?.descriptors ?? []) : null;
+  const scopePart = (f.scope?.value as FactValueMap["scope"] | null | undefined)?.part ?? null;
+  const perPiece = overrides.areaM2Override
     ? ({ kind: "exact", m2: overrides.areaM2Override } as const)
-    : estimateArea({ width: dims?.width ?? null, height: dims?.height ?? null, depth: dims?.depth ?? null, surfaces: surfaces ?? null, sizeClass: size ?? null, part: (f.scope?.value as FactValueMap["scope"] | null | undefined)?.part ?? null, profile: (f.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined)?.type === "cama" ? "bed" : null }, settings.params);
+    : estimateArea({ width: dims?.width ?? null, height: dims?.height ?? null, depth: dims?.depth ?? null, surfaces: surfaces ?? null, sizeClass: size ?? null, part: scopePart, profile: isBed ? "bed" : null, nominalBed }, settings.params);
+  // várias peças iguais num mesmo serviço ("duas cadeiras"): área × quantidade
+  const quantity = !overrides.areaM2Override && ft?.quantity && ft.quantity > 1 ? ft.quantity : 1;
+  const area = perPiece && quantity > 1 ? scaleArea(perPiece, quantity) : perPiece;
   const techniques = (f.techniques?.value as string[] | null | undefined) ?? [];
   const method = (f.application_method?.value as string | null | undefined) ?? null;
 
   const gaps: ServiceGap[] = [];
+  // medida que veio de referência/estimativa e não foi confirmada nunca vira orçamento definitivo
+  if (f.dimensions?.value && f.dimensions.status !== "confirmed") {
+    gaps.push({ code: "DIMENSIONS_UNCONFIRMED", message: "A medida usada ainda não foi confirmada (é referência ou estimativa)." });
+  }
+  if (nominalBed) {
+    gaps.push({ code: "BED_NOMINAL_SIZE", message: `Usei a medida do colchão ${nominalBed.label} só como referência; a estrutura da cama ainda não foi medida.` });
+  }
   const repairs = f.repairs?.value as FactValueMap["repairs"] | null | undefined;
   if (repairs?.needed && overrides.extraLabor.length === 0 && !techniques.includes("restauracao")) {
     gaps.push({ code: "REPAIRS_HOURS_MISSING", message: "Precisa de conserto, mas as horas do conserto ainda não foram definidas." });

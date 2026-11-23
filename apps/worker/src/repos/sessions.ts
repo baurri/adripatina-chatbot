@@ -110,6 +110,10 @@ export interface QuoteRequestState {
   logistics?: { pickup: boolean; delivery: boolean };
   partialLogistics?: { pickup?: boolean; delivery?: boolean };
   unparsed?: number;
+  /** estado dito sem dizer de qual peça ("o tampo está ruim, os outros estão melhores"): perguntado depois, nunca descartado */
+  notes?: string[];
+  /** peças removidas pelo artesão ("esquece o aparador"), para auditoria e desfazer */
+  removed?: { ref: string; description: string; at: string; jobId?: string | null }[];
 }
 
 export interface PricingCurrent {
@@ -155,6 +159,8 @@ export interface SessionContext {
     materialKey?: string | null;
     packages?: number | null;
     packageSize?: string | null;
+    /** valor dito por embalagem ("150 cada"): o total é unitário × embalagens */
+    unitCents?: number;
     jobId?: string | null;
     step: "amount" | "package" | "job" | "confirm";
     sequence?: number;
@@ -214,16 +220,37 @@ export async function loadSession(ctx: Ctx, userId: string): Promise<Session> {
 }
 
 /** Autosave a cada passo. */
+/**
+ * Grava a sessão com controle otimista: se outra mensagem do mesmo usuário gravou no meio
+ * do caminho (entregas simultâneas do Telegram), o conflito é registrado (log + auditoria) e
+ * a gravação acontece mesmo assim — nunca se perde a mensagem atual. A prevenção é operacional:
+ * webhook com max_connections=1 (ver OPERATIONS.md), que entrega uma atualização por vez.
+ */
 export async function saveSession(ctx: Ctx, s: Session): Promise<void> {
   const now = nowIso(ctx);
+  const params = [s.flow, JSON.stringify(s.context), s.activeJobId, s.lastQuestion, now, now] as const;
+  const changed = await ctx.db.run(
+    "UPDATE conversation_sessions SET flow = ?, context_json = ?, active_job_id = ?, last_question = ?, last_activity_at = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?",
+    ...params,
+    s.id,
+    s.rowVersion,
+  );
+  if (changed > 0) {
+    s.rowVersion += 1;
+    return;
+  }
+  console.warn(JSON.stringify({ level: "warn", msg: "session_conflict", requestId: ctx.requestId, sessionId: s.id, expectedVersion: s.rowVersion }));
+  await ctx.db.run(
+    "INSERT INTO audit_events (id, actor, action, entity_type, entity_id, before_json, after_json, request_id, created_at) VALUES (?, 'system', 'session.conflict', 'conversation_session', ?, ?, NULL, ?, ?)",
+    newId(),
+    s.id,
+    JSON.stringify({ expectedVersion: s.rowVersion, flow: s.flow }),
+    ctx.requestId,
+    now,
+  );
   await ctx.db.run(
     "UPDATE conversation_sessions SET flow = ?, context_json = ?, active_job_id = ?, last_question = ?, last_activity_at = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ?",
-    s.flow,
-    JSON.stringify(s.context),
-    s.activeJobId,
-    s.lastQuestion,
-    now,
-    now,
+    ...params,
     s.id,
   );
 }

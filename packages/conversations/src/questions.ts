@@ -1,7 +1,7 @@
 import type { FactValueMap, ProjectField } from "@adripatina/domain";
 import { Dec, normalizeText } from "@adripatina/shared";
 import { interpretRules, extractClientName } from "./nlu.js";
-import { findFurniture, findTechniques, findDescriptors, TECHNIQUES } from "./vocabulary.js";
+import { findFurniture, findTechniques, findDescriptors, furnitureLabel, TECHNIQUES } from "./vocabulary.js";
 
 export interface Button {
   text: string;
@@ -146,6 +146,17 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
     }
     case "dimensions":
     case "size_class": {
+      // "1,20 por 50", "1,70 x 2,10": largura × fundura (na cama, largura × comprimento); > 10 = cm
+      const by = /^\D*?(\d+(?:[.,]\d+)?)\s*(?:m|cm|metros?)?\s*(?:por|x)\s*(\d+(?:[.,]\d+)?)\s*(?:m|cm|metros?)?\D*$/.exec(norm);
+      if (by) {
+        const toM = (raw: string) => {
+          const d = Dec.tryParse(raw.replace(",", "."));
+          return d && d.gt(0) ? (d.gt(10) ? d.div(100) : d).toString() : undefined;
+        };
+        const w = toM(by[1]!);
+        const dd = toM(by[2]!);
+        if (w && dd) return specific("dimensions", { width: w, depth: dd });
+      }
       if (e.lengthsM.length > 0) {
         const [a, b, c] = e.lengthsM;
         const dims: FactValueMap["dimensions"] = {};
@@ -215,7 +226,8 @@ export function parseAnswer(field: ProjectField, rawText: string): ParsedAnswer 
       return norm.length > 2 ? free(field, text.trim()) : { kind: "unparsed" };
     case "scope": {
       if (/\b(so|somente|apenas)( o| no)? tampo\b|\bso tampo\b/.test(norm)) return specific(field, { part: "tampo" });
-      if (/\b(inteir[oa]|tod[oa]|completa|completo)\b/.test(norm)) return specific(field, { part: "inteiro" });
+      if (/\b(so|somente|apenas)( a| na)? cabeceira\b|\bso cabeceira\b/.test(norm)) return specific(field, { part: "cabeceira" });
+      if (/\b(inteir[oa]|tod[oa]|completa|completo|tudo|cabeceira,? peseira)\b/.test(norm)) return specific(field, { part: "inteiro" });
       return { kind: "unparsed" };
     }
   }
@@ -260,7 +272,7 @@ export function describeFact(field: ProjectField, value: unknown): string {
   switch (field) {
     case "furniture_type": {
       const f = v as FactValueMap["furniture_type"];
-      return `móvel: ${f.type.replace(/_/g, " ")}${f.doors ? `, ${f.doors} portas` : ""}${f.descriptors?.length ? ` (${f.descriptors.join(", ")})` : ""}`;
+      return `móvel: ${f.quantity && f.quantity > 1 ? `${f.quantity}× ` : ""}${furnitureLabel(f.type)}${f.doors ? `, ${f.doors} portas` : ""}${f.descriptors?.length ? ` (${f.descriptors.join(", ")})` : ""}`;
     }
     case "techniques":
       return `trabalho: ${(v as string[]).map((t) => TECHNIQUES[t]?.label ?? t).join(", ")}`;
@@ -297,7 +309,7 @@ export function describeFact(field: ProjectField, value: unknown): string {
       return `detalhes: ${v as string}`;
     case "scope": {
       const sc = v as FactValueMap["scope"];
-      return sc.part === "tampo" ? "trabalho só no tampo" : "trabalho na peça inteira";
+      return sc.part === "tampo" ? "trabalho só no tampo" : sc.part === "cabeceira" ? "trabalho só na cabeceira" : "trabalho na peça inteira";
     }
   }
 }
@@ -369,6 +381,8 @@ export function naturalQuestion(field: ProjectField, c: QuestionContext): string
       );
     case "dimensions":
     case "size_class":
+      if (c.furnitureType === "cama")
+        return `E a medida da cama por fora (a estrutura, não o colchão)? Largura e comprimento já bastam, tipo "1,70 por 2,10". Se não tiver agora, diz "não sei" que eu estimo pelo tamanho e deixo como preliminar.`;
       return pick(
         [
           `Agora o tamanho, que mexe bastante no preço. Se tiver as medidas, fala assim: "1,80 de altura, 1 metro de largura e 40 de fundura". Se não, só pequeno, médio ou grande já serve.`,
@@ -422,6 +436,7 @@ export function naturalQuestion(field: ProjectField, c: QuestionContext): string
     case "details":
       return pick(["Tem algum detalhe especial, tipo entalhe, puxador ou vidro? Se não, só \"não\".", "Algum detalhe que dá mais trabalho, como entalhes ou vidros?"], c.seed);
     case "scope":
+      if (c.furnitureType === "cama") return "Você vai trabalhar a cama toda (cabeceira, peseira e laterais) ou só a cabeceira?";
       return pick([`Você vai trabalhar só no tampo ou ${nele} inteir${art}?`, `É só o tampo ou ${art} ${movel} inteir${art}?`], c.seed);
   }
 }

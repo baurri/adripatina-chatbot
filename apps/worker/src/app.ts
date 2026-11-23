@@ -69,7 +69,8 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
       return c.json({ ok: false }, 401);
     }
     const ctx = c.get("ctx");
-    if (rateLimited("telegram", 120, 60_000, ctx.clock().getTime())) return c.json({ ok: true, throttled: true });
+    // limite estourado: 429 faz o Telegram reenviar depois (antes respondia 200 e a mensagem se perdia)
+    if (rateLimited("telegram", 120, 60_000, ctx.clock().getTime())) return c.json({ ok: false, throttled: true }, 429);
     let body: unknown;
     try {
       body = await c.req.json();

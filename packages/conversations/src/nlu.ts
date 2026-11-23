@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { extractLengths, extractMoney, normalizeText, extractCount } from "@adripatina/shared";
+import { extractLengths, extractLooseMoney, extractMoney, normalizeText, extractCount } from "@adripatina/shared";
 import { findDescriptors, findFurniture, findTechniques } from "./vocabulary.js";
 
 export const INTENTS = [
@@ -70,6 +70,10 @@ const NAME_STOP = new Set([
   "por", "porque", "mas", "pediu", "falou", "disse", "tem", "tinha", "precisa", "aquela", "aquele", "grande", "pequena",
   "trouxeram", "querem", "pediram", "mandaram", "deixou", "deixaram", "vao", "tem", "comprou", "compraram", "ligou", "ligaram",
   "precisam", "levou", "levaram", "chegou", "chegaram", "sao", "estao", "ele", "ela", "eles", "elas", "tambem", "ai", "aqui",
+  // verbos de serviço no infinitivo nunca são sobrenome ("pra dona Ana lixar e pintar")
+  "lixar", "pintar", "envernizar", "restaurar", "reformar", "patinar", "decapar", "encerar", "dourar", "fazer", "consertar",
+  "arrumar", "limpar", "buscar", "entregar", "pegar", "levar", "trazer", "passar", "orcar", "cobrar", "ver", "olhar",
+  "nao", "so", "quanto", "acho", "tipo", "terca", "segunda", "quarta", "quinta", "sexta", "sabado", "domingo", "amanha",
 ]);
 
 /** verbo conjugado no lugar do sobrenome ("Dona Jo trouxeram") */
@@ -109,10 +113,18 @@ export type ProgressKind = "iniciado" | "em_execucao" | "concluido" | "entregue"
  * ou pedido explícito de marcação — palavras soltas ("reparo", "melhor", "pronto")
  * nunca bastam. Estado físico da peça não é andamento.
  */
+/** Verbos/estados de andamento que uma negação próxima anula ("ainda não terminei"). */
+const PROGRESS_WORDS = String.raw`(?:comecei|comecamos|iniciei|terminei|acabei|conclui|finalizei|entreguei|entregamos|levei|ficou pront\w*|(?:esta|ta) pront\w*|foi entregue|buscou|buscaram|estou fazendo|to fazendo|estou lixando|to lixando)`;
+const NEGATED_PROGRESS = new RegExp(String.raw`\b(?:nao|nem|ainda nao|nunca)\s+(?:\w+\s+){0,3}?${PROGRESS_WORDS}`, "g");
+
 export function detectProgress(text: string): ProgressKind | undefined {
-  const n = normalizeText(text);
+  const raw = normalizeText(text);
   const mark = /\b(marca|marcar|marque|coloca|colocar|coloque|bota|botar|muda|mudar|pode marcar|pode colocar|deixa)\b/;
-  if (/\b(ainda nao comecei|nao comecei ainda|nem comecei|ainda nao iniciei)\b/.test(n)) return "nao_iniciado";
+  if (/\b(ainda nao comecei|nao comecei|nem comecei|ainda nao iniciei|nao iniciei)\b/.test(raw)) return "nao_iniciado";
+  // negação anula o verbo: "ainda não terminei", "não está pronta", "não entreguei" → sem transição
+  const n = raw.replace(NEGATED_PROGRESS, " ");
+  // intenção futura não é andamento: "vou começar", "quis dizer que vou começar"
+  if (/\b(vou|vamos|pretendo|quero|vai)\s+(comecar|iniciar|terminar|entregar|fazer)\b/.test(n) && !/\b(comecei|iniciei|terminei|entreguei)\b/.test(n)) return undefined;
   if (/\b(o (trabalho|servico) (esta|ta) parado|parei o (trabalho|servico))\b/.test(n)) return "parado";
   if (/\b(entreguei|foi entregue|ja entreguei|levei de volta|o cliente (ja )?buscou|ja buscaram)\b/.test(n)) return "entregue";
   if (mark.test(n) && /\bentregue\b/.test(n)) return "entregue";
@@ -172,7 +184,8 @@ function classify(norm: string, e: Entities): { intent: Intent; confidence: numb
   if (/^(oi|ola|bom dia|boa tarde|boa noite|e ai)\b/.test(trimmed) && trimmed.split(" ").length <= 4)
     return { intent: "greeting", confidence: 0.9 };
   if (/^\/?(ajuda|help)\b|como (funciona|usa)/.test(trimmed)) return { intent: "help", confidence: 0.95 };
-  if (/^(cancelar|cancela|esquece|deixa pra la|desisto)\b/.test(trimmed)) return { intent: "cancel", confidence: 0.95 };
+  // "esquece o aparador" cancela UM item, não a conversa inteira: sem objeto → universal; com objeto → escopo
+  if (/^(cancelar|cancela|esquece|deixa pra la|desisto)\b/.test(trimmed)) return e.furnitureType ? { intent: "cancel", confidence: 0.6 } : { intent: "cancel", confidence: 0.95 };
   if (/^(voltar|volta|anterior)\b/.test(trimmed)) return { intent: "back", confidence: 0.95 };
   if (/\b(continuar depois|continuo depois|depois a gente continua|mais tarde|pausar|pausa)\b/.test(trimmed))
     return { intent: "pause", confidence: 0.9 };
@@ -199,6 +212,9 @@ function classify(norm: string, e: Entities): { intent: Intent; confidence: numb
   const jobVerb = /\b(peguei|recebi|vou pintar|vou fazer|vou restaurar|vou reformar|tenho (um|uma|aquela|aquele|a|o)|quer que eu|trouxe|chegou|pegar|precisa de|precisa)\b/.test(trimmed);
   if (e.furnitureType && (jobVerb || e.techniques.length > 0)) return { intent: "new_job", confidence: jobVerb ? 0.9 : 0.75 };
   if (e.furnitureType) return { intent: "new_job", confidence: 0.55 };
+  // móvel sem nome ("um móvel antigo que não sei o nome", "um negócio da dona Ana"): serviço novo, perguntar qual é
+  if (/\b(peguei|recebi|vou pintar|vou fazer|vou restaurar|vou reformar|trouxe|chegou)\b/.test(trimmed) && /\b(movel|moveis|peca|negocio|treco)\b/.test(trimmed))
+    return { intent: "new_job", confidence: 0.75 };
 
   if (DONT_KNOW.test(trimmed)) return { intent: "dont_know", confidence: 0.9 };
   if (YES.test(trimmed)) return { intent: "yes", confidence: 0.9 };
@@ -209,7 +225,8 @@ function classify(norm: string, e: Entities): { intent: Intent; confidence: numb
 /** Intérprete por regras (pt-BR). Funciona sem IA e é o fallback quando a IA falha. */
 export function interpretRules(text: string): NluResult {
   const norm = normalizeText(text);
-  const money = extractMoney(text);
+  // valor sem "reais" só quando vem logo depois de verbo de dinheiro ("por 150", "me pagou 85,90")
+  const money = extractMoney(text) ?? (/\b(comprei|paguei|gastei|pagou|me pagou|recebi|custou|deu)\b/.test(norm) ? extractLooseMoney(text) : null);
   const lengths = extractLengths(text).map((l) => l.meters.toString());
   const furnitureType = findFurniture(text);
   const techniques = findTechniques(text);

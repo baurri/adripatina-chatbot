@@ -1,7 +1,11 @@
 import {
   BED_SIZES,
   FIELD_EXPLANATION,
+  AMBIGUOUS_FURNITURE,
+  ambiguousFurnitureKind,
   asksForPrice,
+  findFurniture,
+  resolveAmbiguousFurniture,
   detectBedSize,
   findMethods,
   furnitureHasInterior,
@@ -24,7 +28,7 @@ import {
   type ProjectMention,
 } from "@adripatina/conversations";
 import { nextQuestion, QUESTION_ORDER, type FactValueMap, type JobStatus, type ProjectField, JOB_STATUS_LABEL, ACTIVE_JOB_STATUSES } from "@adripatina/domain";
-import { extractCount, formatBRL, formatDateBR, normalizeText } from "@adripatina/shared";
+import { extractCount, formatBRL, formatDateBR, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import { aiInterpretAnswer, aiRephrase, interpret } from "../ai/service.js";
 import type { OutgoingMessage } from "../ports.js";
@@ -116,6 +120,8 @@ const MATERIAL_WORDS: Record<string, string> = {
   fundo: "fundo_preparador",
   cola: "cola_mordente",
 };
+/** artigo de cada material na conversa ("a tinta", "o verniz") */
+const MATERIAL_ARTICLE: Record<string, string> = { tinta: "a", lixa: "a", massa: "a", cera: "a", "folha de ouro": "a", cola: "a" };
 const TRANSPORT_RE = /\b(gasolina|combustivel|frete|uber|taxi|estacionamento|pedagio|onibus|carreto)\b/;
 
 export class Conversation {
@@ -349,6 +355,11 @@ export class Conversation {
     if (nlu.intent === "query_status") return this.queryStatus(text, nlu);
     if (nlu.intent === "job_progress" && nlu.entities.progress) return this.startProgress(text, nlu);
     if (nlu.intent === "back") return this.back();
+    // "esquece o aparador" sem pedido aberto: nunca vira serviço novo nem apaga nada sem confirmação
+    if (nlu.intent === "cancel") {
+      this.say(`Não apaguei nada. 🙂 Se quiser cancelar um serviço que já está anotado, me diz qual é (por exemplo "${nlu.entities.furnitureType ? `o ${furnitureLabel(nlu.entities.furnitureType)} da dona Ana` : "a cômoda da dona Ana"}") que eu confirmo com você antes.`);
+      return;
+    }
 
     // pedido com vários móveis/clientes → objetivo persistente de orçamento
     if (nlu.intent === "new_job" || nlu.entities.furnitureType) {
@@ -653,6 +664,17 @@ ${GUIDE}`);
   // ---------------------------------------------------- novo projeto / dedupe
   async newJobMention(text: string, nlu: NluResult, extra: Partial<MentionSnapshot> = {}): Promise<void> {
     const mention = this.mention(text, nlu, extra);
+    // nome que não basta ("mesinha", "o móvel das louças"): pergunta antes de cadastrar, sem assumir
+    const amb = ambiguousFurnitureKind(text);
+    if (amb >= 0 && !mention.photoHash && (!mention.furnitureType || mention.furnitureType === "mesa")) {
+      delete mention.furnitureType;
+      this.session.flow = "intake";
+      this.session.context.mention = mention;
+      (this.session.context as { ambiguousKind?: number }).ambiguousKind = amb;
+      const q = AMBIGUOUS_FURNITURE[amb]!;
+      this.say(q.question, [q.options.map((o, i) => ({ text: o.label, data: `amb:${amb}:${i}` }))]);
+      return;
+    }
     if (!mention.furnitureType && !mention.photoHash) {
       // ainda não sabemos o móvel: perguntar antes de cadastrar
       this.session.flow = "intake";
@@ -668,6 +690,24 @@ ${GUIDE}`);
 
   async intakeText(text: string, nlu: NluResult): Promise<void> {
     const m = this.session.context.mention ?? this.mention(text, nlu);
+    const ambKind = (this.session.context as { ambiguousKind?: number }).ambiguousKind;
+    if (ambKind !== undefined) {
+      const r = resolveAmbiguousFurniture(ambKind, text) ?? (findFurniture(text) ? { key: findFurniture(text)! } : null);
+      if (r || nlu.intent === "dont_know") {
+        delete (this.session.context as { ambiguousKind?: number }).ambiguousKind;
+        // "não sei" na mesinha: fica mesa; no móvel das louças, pergunta o nome livre abaixo
+        const chosen = r ?? (ambKind === 0 ? { key: "mesa", descriptor: "mesinha" } : null);
+        if (chosen) {
+          m.furnitureType = chosen.key;
+          m.descriptors = [...new Set([...(m.descriptors ?? []), ...(chosen.descriptor ? [chosen.descriptor] : [])])];
+          if (nlu.entities.clientName) m.clientName = nlu.entities.clientName;
+          return this.matchOrCreate(m);
+        }
+      } else {
+        this.say(AMBIGUOUS_FURNITURE[ambKind]!.question);
+        return;
+      }
+    }
     const ans = parseAnswer("furniture_type", text);
     if (ans.kind === "value") {
       const ft = ans.value as FactValueMap["furniture_type"];
@@ -930,6 +970,8 @@ ${GUIDE}`);
     const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
     const skip: ProjectField[] = [];
     if (furnitureHasInterior(ft) === false) skip.push("surfaces");
+    // escopo só é perguntado na cama (cama toda × só a cabeceira) no fluxo de um móvel
+    if (ft !== "cama") skip.push("scope");
     return skip;
   }
 
@@ -1028,19 +1070,22 @@ ${GUIDE}`);
     );
   }
 
-  /** Cama com tamanho padrão (casal, queen, king...) → usa a medida padrão, sem perguntar. */
+  /**
+   * Cama com tamanho padrão (casal, queen, king...). A medida padrão é do COLCHÃO, não da
+   * estrutura: fica só como referência (descritor), nunca como medida da cama. O cálculo usa
+   * uma faixa conservadora e o orçamento continua preliminar até a estrutura ser medida.
+   */
   async applyBedSize(job: Job, text: string): Promise<string | null> {
     const ft = (job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined)?.type;
-    if (ft !== "cama" || job.facts.dimensions?.status === "confirmed") return null;
+    if (ft !== "cama") return null;
     const size = detectBedSize(text);
     if (!size) return null;
     const bed = BED_SIZES[size]!;
-    await setFact(this.ctx, job.id, "dimensions", { width: bed.width, depth: bed.length }, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, status: "unconfirmed", correction: true });
     const fv = job.facts.furniture_type!.value as FactValueMap["furniture_type"];
-    if (!fv.descriptors?.includes(bed.label)) {
-      await setFact(this.ctx, job.id, "furniture_type", { ...fv, descriptors: [...(fv.descriptors ?? []), bed.label] }, { actor: this.input.user.id, source: this.sourceKind(), correction: true });
-    }
-    return `Cama ${bed.label} tem medida padrão (colchão de ${bed.width.replace(".", ",")} × ${bed.length.replace(".", ",")} m), então já vou usar essa. Se a sua for diferente, é só me falar.`;
+    const others = (fv.descriptors ?? []).filter((d) => !detectBedSize(d));
+    if ((fv.descriptors ?? []).includes(bed.label)) return null;
+    await setFact(this.ctx, job.id, "furniture_type", { ...fv, descriptors: [...others, bed.label] }, { actor: this.input.user.id, source: this.sourceKind(), messageId: this.input.inboundMessageId, correction: true });
+    return `Anotei: cama ${bed.label}. 🛏️ O padrão ${bed.label} (${bed.width.replace(".", ",")} × ${bed.length.replace(".", ",")} m) é a medida do colchão — a cama por fora é maior. Uso só como referência até você medir a estrutura.`;
   }
 
   async collectingText(text: string, nlu: NluResult, resuming: boolean): Promise<void> {
@@ -1104,7 +1149,8 @@ ${GUIDE}`);
       if (!sameType || clientConflict || nlu.entities.explicitNew) {
         this.say(`Tudo bem, guardei ${jobPhrase(job)} para continuar depois.`);
         this.session.flow = "idle";
-        return this.newJobMention(text, nlu);
+        // pelo caminho global: um pedido com vários móveis/clientes vira objetivo de orçamento, não 1 serviço
+        return this.onGlobal(text, nlu);
       }
       if (resuming) {
         this.session.flow = "idle";
@@ -1164,6 +1210,12 @@ ${GUIDE}`);
       }
     }
     if (ans.kind === "unparsed") {
+      // "é uma cama queen" dito depois: tamanho padrão vira referência, nunca medida
+      const bedNote = await this.applyBedSize(job, text);
+      if (bedNote) {
+        this.ack = bedNote;
+        return this.askNext((await getJob(this.ctx, job.id))!);
+      }
       // informação nova do projeto dita fora de hora é guardada (sem repetir "já anotei" em looping)
       if (hasProjectInfo(nlu)) {
         const res = await this.applyMention(job.id, { ...this.mention(text, nlu), techniques: [] });
@@ -1313,6 +1365,14 @@ ${await this.questionText(job, field, 4)}`);
       if (this.session.flow === "intake") return this.intakeText(action === "nao_sei" ? "não sei" : action, await interpret(this.ctx, action));
       if (this.session.flow === "collecting" && this.session.activeJobId) return this.collectingText(`ans:${action}`, await interpret(this.ctx, action), false);
       if (this.session.flow === "disambiguate") return this.disambiguateText(action, await interpret(this.ctx, action));
+      this.say(`Essa pergunta já foi respondida, está tudo anotado. ${GUIDE}`);
+      return;
+    }
+    if (ns === "amb") {
+      // botão de "que mesinha é?": só vale enquanto a pergunta está aberta (botão antigo não faz nada)
+      const kind = Number(action);
+      const opt = AMBIGUOUS_FURNITURE[kind]?.options[Number(arg)];
+      if (this.session.flow === "intake" && (this.session.context as { ambiguousKind?: number }).ambiguousKind === kind && opt) return this.intakeText(opt.label, await interpret(this.ctx, opt.label));
       this.say(`Essa pergunta já foi respondida, está tudo anotado. ${GUIDE}`);
       return;
     }
@@ -1572,26 +1632,38 @@ ${await this.questionText(job, field, 4)}`);
   // ------------------------------------------------------------- gastos
   async startExpense(text: string, nlu: NluResult): Promise<void> {
     const norm = normalizeText(text);
-    const matWord = nlu.entities.materialMention;
+    // várias coisas numa compra só ("tinta, verniz e lixa por 300"): o total NUNCA vira preço de um material
+    const mats = [...new Set([...norm.matchAll(new RegExp(`\\b(${Object.keys(MATERIAL_WORDS).join("|")})\\b`, "g"))].map((m) => m[1]!))];
+    const mixed = mats.length > 1;
+    const matWord = mixed ? null : nlu.entities.materialMention;
     const materialKey = matWord ? (MATERIAL_WORDS[matWord] ?? null) : null;
     const packages = extractCount(text, /^(lata|latas|galao|galoes|pote|potes|frasco|frascos|caixa|caixas)$/) ?? (/\b(uma lata|um galao|um pote|um frasco)\b/.test(norm) ? 1 : null);
-    const description = matWord ? `${matWord}${packages ? ` (${packages} emb.)` : ""}` : TRANSPORT_RE.exec(norm)?.[1] ?? text.slice(0, 80);
+    const description = mixed ? humanList(mats) : matWord ? `${matWord}${packages ? ` (${packages} emb.)` : ""}` : TRANSPORT_RE.exec(norm)?.[1] ?? text.slice(0, 80);
     const packageSize = materialKey ? parsePackageSize(text, materialKey) : null;
     this.session.flow = "expense";
-    this.session.context.expense = {
-      ...(nlu.entities.amountCents ? { amountCents: nlu.entities.amountCents } : {}),
-      description,
-      materialKey,
-      packages,
-      packageSize,
-      step: "job",
-    };
+    this.session.context.expense = { description, materialKey, packages, packageSize, step: "job" };
+    if (nlu.entities.amountCents) this.setExpenseAmount(nlu.entities.amountCents, text);
     if (!nlu.entities.amountCents) {
       this.session.context.expense.step = "amount";
-      this.say(`Quanto foi ${matWord ? `o ${matWord}` : "esse gasto"}?`);
+      this.say(mixed ? `Quanto deu a compra toda (${description})?` : `Quanto foi ${matWord ? `${MATERIAL_ARTICLE[matWord] ?? "o"} ${matWord}` : "esse gasto"}?`);
       return;
     }
+    if (mixed) this.say(`Anotei como uma compra só de ${description}. Como o valor é do conjunto, não uso ele como preço de nenhum material sozinho.`);
     return this.askExpensePackage();
+  }
+
+  /** Valor dito com "cada"/"por lata" é por embalagem: total = unitário × embalagens (quando já sabidas). */
+  setExpenseAmount(cents: number, text: string): void {
+    const e = this.session.context.expense!;
+    const each = /\b(cada|cada uma|cada um|a unidade|por unidade|por lata|por galao|o litro)\b/.test(normalizeText(text));
+    if (each) {
+      e.unitCents = cents;
+      if (e.packages) e.amountCents = cents * e.packages;
+      else delete e.amountCents;
+    } else {
+      e.amountCents = cents;
+      delete e.unitCents;
+    }
   }
 
   async askExpensePackage(): Promise<void> {
@@ -1602,8 +1674,12 @@ ${await this.questionText(job, field, 4)}`);
     if (!e.packages || (needsSize && !e.packageSize)) {
       e.step = "package";
       const material = await getMaterialByKey(this.ctx, e.materialKey);
+      const name = material?.name.toLowerCase() ?? e.description;
+      // pergunta só o que falta (ele já disse "duas latas"? então só o tamanho)
       this.say(
-        `Só para eu aprender direitinho, ${this.firstName}: foram quantas embalagens de ${material?.name.toLowerCase() ?? e.description} e qual era o tamanho de cada uma?\n\nPor exemplo: “1 lata de 900 ml” ou “2 galões de 3,6 litros”.`,
+        e.packages
+          ? `Só para eu aprender direitinho, ${this.firstName}: ${e.packages > 1 ? `cada uma das ${e.packages} embalagens` : "a embalagem"} de ${name} era de que tamanho?\n\nPor exemplo: “900 ml” ou “3,6 litros”.`
+          : `Só para eu aprender direitinho, ${this.firstName}: foram quantas embalagens de ${name} e qual era o tamanho de cada uma?\n\nPor exemplo: “1 lata de 900 ml” ou “2 galões de 3,6 litros”.`,
       );
       return;
     }
@@ -1629,7 +1705,8 @@ ${await this.questionText(job, field, 4)}`);
     const e = this.session.context.expense!;
     e.step = "confirm";
     const job = e.jobId ? await getJob(this.ctx, e.jobId) : null;
-    this.say(`Vou anotar: compra de ${e.description}, ${formatBRL(e.amountCents!)} — ${job ? `para ${jobPhrase(job)}` : "estoque geral"}.
+    const breakdown = e.unitCents && e.packages && e.packages > 1 ? ` (${e.packages} × ${formatBRL(e.unitCents)})` : "";
+    this.say(`Vou anotar: compra de ${e.description}, ${formatBRL(e.amountCents!)}${breakdown} — ${job ? `para ${jobPhrase(job)}` : "estoque geral"}.
 
 Está certo? Pode responder "sim" ou "não".`, [
       [
@@ -1648,7 +1725,20 @@ Está certo? Pode responder "sim" ou "não".`, [
         this.say("Não entendi o valor. Pode dizer só o número, por exemplo: 90 reais.");
         return;
       }
-      e.amountCents = amount;
+      // compra mista com valor de só UM item ("a tinta foi 120, o resto eu não lembro"):
+      // registra só esse item; o resto fica sem valor (nunca rateado por chute)
+      const n = normalizeText(text);
+      const named = Object.keys(MATERIAL_WORDS).filter((w) => new RegExp(`\\b${w}\\b`).test(n));
+      if (!e.materialKey && named.length === 1 && /\b(resto|outros?|outras?|demais)\b/.test(n) && /\b(nao (sei|lembro)|esqueci|sei la)\b/.test(n)) {
+        const rest = (e.description ?? "").split(/,\s*|\s+e\s+/).filter((x) => x && x !== named[0]);
+        e.description = named[0]!;
+        e.materialKey = MATERIAL_WORDS[named[0]!] ?? null;
+        this.setExpenseAmount(amount, text);
+        this.say(`Certo: anoto só ${MATERIAL_ARTICLE[named[0]!] ?? "o"} ${named[0]} por ${formatBRL(amount)}.${rest.length ? ` ${capitalize(humanList(rest))} ${rest.length > 1 ? "ficam" : "fica"} sem valor por enquanto — se lembrar depois, é só me falar.` : ""}`);
+        return this.askExpensePackage();
+      }
+      this.setExpenseAmount(amount, text);
+      if (e.amountCents === undefined && !e.packages) return this.askExpensePackage();
       if (!e.description || e.description === "") {
         const mat = nlu.entities.materialMention;
         e.description = mat ?? (TRANSPORT_RE.exec(normalizeText(text))?.[1] ?? "material");
@@ -1661,6 +1751,11 @@ Está certo? Pode responder "sim" ou "não".`, [
       const size = e.materialKey ? parsePackageSize(text, e.materialKey) : null;
       if (count) e.packages = count;
       if (size) e.packageSize = size;
+      // "foi 150 cada" dito depois: o valor anterior era por embalagem
+      const lateAmount = nlu.entities.amountCents ?? parseLooseAmount(text.replace(/\d+(?:[.,]\d+)?\s*(ml|l|litros?|kg|g|folhas?)\b/gi, " "));
+      if (lateAmount && /\b(cada|por lata|por galao|a unidade)\b/.test(normalizeText(text))) this.setExpenseAmount(lateAmount, text);
+      // valor era "cada": agora que sabemos quantas embalagens, fecha o total
+      if (e.unitCents && e.packages) e.amountCents = e.unitCents * e.packages;
       const needsSize = !!e.materialKey && !["lixa", "folha_ouro"].includes(e.materialKey);
       if (!e.packages || (needsSize && !e.packageSize)) {
         this.say(`Ainda faltou ${!e.packages ? "a quantidade de embalagens" : "o tamanho da embalagem"}. Pode me dizer, por exemplo: “1 lata de 900 ml”.`);
@@ -1855,6 +1950,14 @@ Está certo? Pode responder "sim" ou "não".`, [
     const progress = nlu.entities.progress;
     // nunca presumir andamento: sem evidência explícita, não há transição
     if (!progress) return this.endSideAction();
+    // andamento de uma peça que ainda está no orçamento sendo montado: não existe serviço para marcar;
+    // reconhece, não cria nada e volta ao orçamento (o objetivo não se perde)
+    const suspended = this.session.context.goalStack?.at(-1);
+    const qrDraft = suspended?.flow === "quote_request" ? suspended.context.quoteRequest : undefined;
+    if (qrDraft && !qrDraft.jobByRef && (!nlu.entities.furnitureType || qrDraft.draft.items.some((i) => i.furnitureType === nlu.entities.furnitureType))) {
+      this.say(`Que bom, anotei que você já começou${nlu.entities.furnitureType ? ` ${furnitureArticleOf(nlu.entities.furnitureType)} ${furnitureLabel(nlu.entities.furnitureType)}` : ""} 👍 A peça ainda está no orçamento que estamos montando — quando virar serviço, eu registro o andamento.`);
+      return this.endSideAction();
+    }
     const job = await this.findJobFromMention(text, nlu);
     if (!job) return;
     if (progress === "nao_iniciado" || progress === "parado") {
@@ -2211,14 +2314,9 @@ function stockExplanation(status: string, material?: string): string {
   return "Certo, vamos considerar a compra do material.";
 }
 
+/** Valor solto ("90", "1.000", "85,90"): parser único pt-BR, sem ponto flutuante ("1.000" era lido como R$ 1). */
 function parseLooseAmount(text: string): number | null {
-  const m = /(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[,.]\d{1,2})?)/.exec(text);
-  if (!m) return null;
-  const raw = m[1]!;
-  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
-  const n = Number(normalized);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.round(n * 100);
+  return parseBareAmountCents(text);
 }
 
 function parseHours(text: string): string | null {

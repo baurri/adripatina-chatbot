@@ -1,7 +1,14 @@
 import {
+  AMBIGUOUS_FURNITURE,
   FURNITURE,
   conditionOf,
   extractQuoteRequest,
+  furnitureHasTop,
+  parseOwnerStatement,
+  parseQuantityCorrection,
+  pluralLabel,
+  resolveAmbiguousFurniture,
+  splitUnitForStatement,
   itemName,
   labelDimensions,
   matchClientInAnswer,
@@ -18,13 +25,13 @@ import {
   type NluResult,
   type QuoteRequestDraft,
 } from "@adripatina/conversations";
-import { Dec, allocateCents, formatBRL, isoToBR, newId, normalizeText } from "@adripatina/shared";
+import { Dec, allocateCents, formatBRL, isoToBR, newId, normalizeText, parseBareAmountCents } from "@adripatina/shared";
 import type { FactValueMap } from "@adripatina/domain";
 import type { Conversation } from "./engine.js";
 import { nowIso } from "../context.js";
 import { auditStmt } from "../repos/audit.js";
 import { getActiveSettings } from "../repos/catalog.js";
-import { createJob, getJob, setFact } from "../repos/jobs.js";
+import { createJob, getJob, setFact, transitionJob } from "../repos/jobs.js";
 import { recordMaterialSourceObservation } from "../services/learning.js";
 import { missingPriceKeys } from "../services/material-pricing.js";
 import { approveQuote, calculateQuote, getOverrides, saveOverrides, submitForReview, type QuoteRecord } from "../services/quotes.js";
@@ -135,10 +142,19 @@ export async function startQuoteRequest(c: Conversation, draft: QuoteRequestDraf
   c.session.context.quoteRequest = state;
 
   const pieces = totalPieces(draft);
-  const itemsText = humanList(draft.items.map((i) => (i.generic ? `mais ${i.description.replace(/^outros /, "")}` : `${i.quantity > 1 ? `${i.quantity} ` : "um" + (FURNITURE[i.furnitureType ?? ""]?.feminine ? "a " : " ")}${i.description}`)));
+  const itemsText = humanList(
+    draft.items.map((i) =>
+      i.generic
+        ? `${draft.items.length > 1 ? "mais " : ""}${i.description.replace(/^outros /, "")}`
+        : `${i.quantity > 1 ? `${i.quantity} ${pluralLabel(i.description, i.quantity)}` : `${FURNITURE[i.furnitureType ?? ""]?.feminine ? "uma" : "um"} ${i.description}`}`,
+    ),
+  );
   const services = humanList([...new Set(draft.items.flatMap((i) => i.services))]);
   const who = draft.clients.length ? ` para ${humanList(draft.clients.map((x) => (normalizeText(x.name).startsWith("dona") ? `a ${x.name}` : `o ${x.name}`)))}` : "";
-  const date = draft.date ? ` A retirada fica para ${draft.date.expression.replace("terca", "terça").replace(/-feira$/, "-feira")} (${isoToBR(draft.date.isoDate)}).` : "";
+  // a data citada pode ser de retirada ou de entrega: não presumir; datas ambíguas pedem confirmação
+  const date = draft.date
+    ? ` Anotei a data: ${draft.date.expression.replace("terca", "terça")} (${isoToBR(draft.date.isoDate)})${draft.date.ambiguous ? " — se for outro dia, me avisa" : ""}.`
+    : "";
   const goal = draft.wantsPrice ? " Você quer saber quanto cobrar." : "";
   c.say(`Entendi: ${pieces === 1 ? "um móvel" : `são ${pieces} móveis`}${services ? ` para ${services}` : ""} — ${itemsText}${who}.${goal}${date}`);
   await nextQuoteRequestStep(c);
@@ -183,9 +199,12 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
     });
     qr.ownerProposal = proposal;
     qr.step = "owner_confirm";
-    const parts = d.items.map((it) => `${itemName(it)} ${it.generic || it.quantity > 1 ? "são" : "é"} ${deOf(clientName(d, proposal[it.ref]!)!)}`);
+    // agrupa por dono: "a mesinha é do Seu Roberto; a cômoda e o aparador são da Dona Jo"
+    const byOwner = new Map<string, MentionedItem[]>();
+    for (const it of d.items) byOwner.set(proposal[it.ref]!, [...(byOwner.get(proposal[it.ref]!) ?? []), it]);
+    const parts = [...byOwner].map(([owner, its]) => `${humanList(its.map(itemName))} ${its.length > 1 || its[0]!.generic || its[0]!.quantity > 1 ? "são" : "é"} ${deOf(clientName(d, owner)!)}`);
     c.setPending({ type: "item_owner", entity: { kind: "quote_request", id: qr.id, refs: d.items.map((i) => i.ref) } });
-    c.say(`Só preciso organizar de quem é cada peça: ${parts.join(" e ")}?`, [
+    c.say(`Só preciso organizar de quem é cada peça: ${parts.join("; ")}?`, [
       [
         { text: "Isso", data: "qr:owner_yes" },
         { text: "Não", data: "qr:owner_no" },
@@ -207,10 +226,23 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
     qr.step = "identity";
     qr.currentRefs = [generic.ref];
     c.setPending({ type: "item_identity", entity: { kind: "item", refs: [generic.ref] } });
-    c.say(`${qr.ownerProposal ? "Ótimo. " : ""}Quais são ${generic.description.replace(/^outros /, "os outros ")}? Por exemplo: "uma cômoda e um aparador".`);
+    const which = generic.quantity > 1 ? `Quais são ${/^outros /.test(generic.description) ? generic.description.replace(/^outros /, "os outros ") : `esses ${generic.description}`}?` : "Qual é o outro móvel?";
+    c.say(`${qr.ownerProposal ? "Ótimo. " : ""}${which} Por exemplo: "uma cômoda e um aparador".`);
     return persist(c);
   }
-  // 3) escopo (só tampo x peça inteira)
+  // 2b) nome ambíguo ("mesinha"): de centro, lateral, cabeceira, apoio?
+  const vague = d.items.find((i) => i.typeQuestion !== undefined);
+  if (vague) {
+    qr.step = "identity";
+    qr.currentRefs = [vague.ref];
+    const amb = AMBIGUOUS_FURNITURE[vague.typeQuestion!]!;
+    c.setPending({ type: "item_identity", entity: { kind: "item", refs: [vague.ref] } });
+    const owner = d.clients.length > 1 ? clientName(d, vague.ownerRef) : null;
+    c.say(owner ? amb.question.replace("Essa mesinha", `A mesinha ${deOf(owner)}`) : amb.question);
+    return persist(c);
+  }
+  // 3) escopo (só tampo x peça inteira) — só para móveis com tampo; cadeira, cama, sofá: peça inteira
+  for (const it of d.items) if (!it.affectedPart && !it.generic && !furnitureHasTop(it.furnitureType)) it.affectedPart = "inteiro";
   const noScope = d.items.find((i) => !i.affectedPart);
   if (noScope) {
     qr.step = "scope";
@@ -227,10 +259,14 @@ export async function nextQuoteRequestStep(c: Conversation): Promise<void> {
     qr.currentRefs = noCond.map((i) => i.ref);
     qr.askedCondition = true;
     c.setPending({ type: "item_condition", entity: { kind: "item", refs: qr.currentRefs } });
+    // o que ele já tinha dito sem dizer de qual peça volta aqui, para não se perder
+    const note = qr.notes?.length ? `Você tinha comentado: “${qr.notes.join("; ")}”. ` : "";
     c.say(
-      noCond.length === 1
-        ? `E como está ${itemName(noCond[0]!)} hoje? Precisa de algum reparo ou está boa?`
-        : `E como estão ${humanList(noCond.map(itemName))}? Algum precisa de reparo?`,
+      noCond.length === 1 && noCond[0]!.quantity > 1
+        ? `${note}E como estão ${itemName(noCond[0]!)} hoje? ${FURNITURE[noCond[0]!.furnitureType ?? ""]?.feminine ? "Alguma" : "Algum"} precisa de reparo?`
+        : noCond.length === 1
+        ? `${note}E como está ${itemName(noCond[0]!)} hoje? Precisa de algum reparo ou está ${FURNITURE[noCond[0]!.furnitureType ?? ""]?.feminine ? "boa" : "bom"}?`
+        : `${note}${note ? "De qual peça era? E" : "E"} como estão ${humanList(noCond.map(itemName))}? Algum precisa de reparo?`,
     );
     return persist(c);
   }
@@ -458,12 +494,23 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
     return persist(c);
   };
 
+  // correções e decisões ditas a QUALQUER momento (não só na pergunta certa)
+  const global = await applyGlobalChanges(c, qr, text, nlu);
+  if (global === "handled") return;
+  if (global === "changed") return askQuoteRequestAgain(c);
+
   // informação útil dita fora de hora (ex.: estado das peças) é guardada, nunca descartada
   const answersItself = ["condition", "review_fix", "scope", "identity", "review"].includes(qr.step);
   let captured = false;
   if (!answersItself && nlu.intent !== "yes" && nlu.intent !== "no") {
+    const notesBefore = qr.notes?.length ?? 0;
     captured = applyStatements(qr, text, []);
     if (captured) c.ack = `Anotei: ${statementsSummary(qr, text)}.`;
+    else if ((qr.notes?.length ?? 0) > notesBefore) {
+      // estado sem dizer a peça: não aplica a todas, guarda e avisa que vai perguntar
+      c.ack = "Anotei o que você falou do estado 👍 Já já te pergunto de qual peça é.";
+      captured = true;
+    }
   }
 
   switch (qr.step) {
@@ -499,6 +546,17 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
     case "identity": {
       const group = d.items.find((i) => i.ref === qr.currentRefs[0]);
       if (!group) return nextQuoteRequestStep(c);
+      if (group.typeQuestion !== undefined) {
+        // "de centro", "a de cabeceira", "lateral"
+        const r = resolveAmbiguousFurniture(group.typeQuestion, text);
+        if (!r && !dontKnow) return retry(AMBIGUOUS_FURNITURE[group.typeQuestion]!.question);
+        if (r) {
+          group.furnitureType = r.key;
+          group.description = r.key === "mesa" ? `mesinha${r.descriptor ? ` ${r.descriptor}` : ""}` : FURNITURE[r.key]?.label ?? group.description;
+        }
+        delete group.typeQuestion;
+        return nextQuoteRequestStep(c);
+      }
       if (dontKnow) {
         group.generic = false;
         group.description = group.quantity > 1 ? "móveis" : "móvel";
@@ -513,13 +571,15 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
     }
     case "scope": {
       const it = d.items.find((i) => i.ref === qr.currentRefs[0]);
+      // primeiro o que foi dito por peça ("na mesa é inteira, nos outros dois só o tampo"); só então a frase toda
+      const st = applyStatements(qr, text, [...qr.currentRefs]);
       const part = partOf(text);
-      if (it && part) it.affectedPart = part;
-      const st = applyStatements(qr, text, qr.currentRefs);
+      if (it && part && !it.affectedPart) it.affectedPart = part;
       if (it && !it.affectedPart) {
+        const na = `${FURNITURE[it.furnitureType ?? ""]?.feminine ? "Na" : "No"} ${itemName(it).replace(/^(a|o|as|os) /, "")}`;
         if (dontKnow) it.affectedPart = "inteiro";
-        else if (!st) return retry(`Na ${itemName(it).replace(/^(a|o) /, "")}, é só o tampo ou a peça inteira?`);
-        else it.affectedPart = "inteiro";
+        // falou do estado em vez do escopo: anota o estado e pergunta de novo (não presume "inteira")
+        else return retry(`${st ? "Anotei o estado 👍 " : ""}${na}, é só o tampo ou a peça inteira?`);
       }
       return nextQuoteRequestStep(c);
     }
@@ -642,11 +702,8 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
     }
     case "transport_cost": {
       qr.transportAsked = true;
-      const amount = nlu.entities.amountCents ?? (() => {
-        const m = /\b(\d+(?:[.,]\d{1,2})?)\b/.exec(text);
-        const v = m ? Dec.tryParse(m[1]!.replace(",", ".")) : null;
-        return v && v.gt(0) ? v.toCents() : undefined;
-      })();
+      // parser único pt-BR ("1.000" = mil, "60,50")
+      const amount = nlu.entities.amountCents ?? parseBareAmountCents(text) ?? undefined;
       if (amount && !dontKnow) {
         const jobIds = Object.values(qr.jobByRef ?? {});
         const parts = allocateCents(amount, jobIds.map(() => 1));
@@ -660,6 +717,120 @@ export async function quoteRequestText(c: Conversation, text: string, nlu: NluRe
     default:
       return nextQuoteRequestStep(c);
   }
+}
+
+/** "esquece o aparador", "tira a cômoda", "ela não vai mais fazer o aparador" */
+const DROP_ITEM = /^(esquece|cancela|cancelar|tira|tirar|remove|remover|deixa de fora|pode tirar)\b|\b(nao vai mais (fazer|querer)|desistiu d[aeo]|nao quer mais)\b/;
+/** agrupamento só vale fora da pergunta própria quando fala de orçamento ("busco tudo junto" não é agrupamento) */
+const GROUPING_CONTEXT = /\b(orcamentos?|separad[oa]s?|cada cliente|por cliente|um (pra|para) cada)\b/;
+
+/**
+ * Correções e decisões que o artesão pode dizer a QUALQUER momento do pedido, não só na
+ * pergunta certa: tirar uma peça, trocar o dono, juntar/separar orçamentos, corrigir
+ * quantidade. Nada é apagado de verdade: peças tiradas ficam em `removed` (auditoria).
+ */
+async function applyGlobalChanges(c: Conversation, qr: QuoteRequestState, text: string, nlu: NluResult): Promise<"none" | "changed" | "handled"> {
+  const d = qr.draft;
+  const n = normalizeText(text);
+  const acks: string[] = [];
+  let changed = false;
+  const actor = c.input.user.id;
+  const factOpts = { actor, source: c.sourceKind(), messageId: c.input.inboundMessageId, correction: true };
+
+  // 1) tirar uma peça (só a citada; nunca o pedido inteiro)
+  if (DROP_ITEM.test(n) || (nlu.intent === "cancel" && nlu.confidence < 0.9)) {
+    const targets: MentionedItem[] = [];
+    for (const h of parseFurnitureList(text)) {
+      const it = d.items.find((i) => i.furnitureType === h.key && !targets.includes(i));
+      if (it) targets.push(it);
+    }
+    if (targets.length && targets.length >= d.items.length) {
+      c.say(`Assim não sobra nenhuma peça no orçamento. Se quiser cancelar o pedido todo, é só dizer "cancelar".`);
+      await persist(c);
+      return "handled";
+    }
+    if (targets.length) {
+      for (const it of targets) {
+        const jobId = qr.jobByRef?.[it.ref] ?? null;
+        if (jobId) {
+          try {
+            await transitionJob(c.ctx, jobId, "CANCELADO", actor, `Retirado do pedido pelo artesão: "${text.slice(0, 120)}"`);
+          } catch {
+            /* status que não permite cancelar: só sai do pedido */
+          }
+          delete qr.jobByRef![it.ref];
+        }
+        qr.removed = [...(qr.removed ?? []), { ref: it.ref, description: it.description, at: nowIso(c.ctx), jobId }];
+        d.items.splice(d.items.indexOf(it), 1);
+      }
+      qr.currentRefs = qr.currentRefs.filter((r) => d.items.some((i) => i.ref === r));
+      await c.ctx.db.batch([auditStmt(c.ctx, actor, "quote_request.item_removed", "quote_request", qr.id, targets.map((t) => ({ ref: t.ref, description: t.description, quantity: t.quantity })), null)]);
+      acks.push(`Combinado, tirei ${humanList(targets.map(itemName))} do orçamento. O resto continua.`);
+      changed = true;
+    }
+  }
+
+  // 2) dono corrigido ("a cômoda não é da Dona Jo, é do Roberto")
+  if (qr.step !== "clients_relation") {
+    const os = parseOwnerStatement(text, d.items, d.clients);
+    if (os) {
+      const moved: MentionedItem[] = [];
+      for (const ref of os.refs) {
+        const it = d.items.find((i) => i.ref === ref);
+        if (!it) continue;
+        if (it.ownerRef === os.clientRef && it.ownerConfirmed) continue;
+        it.ownerRef = os.clientRef;
+        it.ownerConfirmed = true;
+        moved.push(it);
+        const jobId = qr.jobByRef?.[it.ref];
+        if (jobId) await setFact(c.ctx, jobId, "client_name", clientName(d, os.clientRef)!, factOpts);
+      }
+      if (moved.length) {
+        delete qr.ownerProposal;
+        acks.push(`Corrigi: ${humanList(moved.map(itemName))} ${moved.length > 1 ? "são" : "é"} ${deOf(clientName(d, os.clientRef)!)}.`);
+        changed = true;
+      }
+    }
+  }
+
+  // 3) juntar/separar orçamentos dito antes da hora (ou mudando de ideia)
+  if (d.clients.length > 1 && qr.step !== "grouping" && qr.step !== "clients_relation" && GROUPING_CONTEXT.test(n)) {
+    const g = parseGrouping(text);
+    if (g && g !== qr.grouping) {
+      qr.grouping = g;
+      acks.push(g === "agrupado" ? "Certo, junto tudo num orçamento só." : "Certo, faço um orçamento para cada cliente.");
+      changed = true;
+    }
+  }
+
+  // 4) quantidade corrigida ("não são duas, são três")
+  const qc = parseQuantityCorrection(text);
+  if (qc) {
+    const named = parseFurnitureList(text).map((h) => h.key);
+    const pool = d.items.filter((i) => !i.generic);
+    const target = pool.find((i) => named.includes(i.furnitureType ?? "")) ?? pool.find((i) => qc.from !== null && i.quantity === qc.from) ?? (pool.length === 1 ? pool[0] : undefined);
+    if (target && target.quantity !== qc.to) {
+      target.quantity = qc.to;
+      const jobId = qr.jobByRef?.[target.ref];
+      if (jobId) {
+        const job = await getJob(c.ctx, jobId);
+        const fv = job?.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined;
+        if (fv) await setFact(c.ctx, jobId, "furniture_type", { ...fv, quantity: qc.to }, factOpts);
+      }
+      acks.push(`Corrigi: são ${qc.to} ${pluralLabel(target.description, qc.to)}.`);
+      changed = true;
+    }
+  }
+
+  // 5) "são dois clientes" respondido na confirmação de quem é cada peça
+  if (qr.step === "owner_confirm" && !qr.clientsRelation && parseClientsRelation(text) === "separate" && !changed) {
+    qr.clientsRelation = "separate";
+    acks.push("Certo, são dois clientes.");
+    changed = true;
+  }
+
+  if (acks.length) c.ack = [c.ack, ...acks].filter(Boolean).join("\n");
+  return changed ? "changed" : "none";
 }
 
 function applyOwnerStatements(qr: QuoteRequestState, text: string): boolean {
@@ -718,7 +889,14 @@ function statementsSummary(qr: QuoteRequestState, text: string): string {
 
 /** Aplica condições/escopo ditos na resposta, resolvendo "um deles", "os outros" etc. */
 function applyStatements(qr: QuoteRequestState, text: string, currentRefs: string[]): boolean {
-  const statements = parseItemStatements(text, qr.draft.items, currentRefs);
+  // "uma tá quebrada, as outras estão boas" sobre "2 cadeiras": separa uma unidade
+  // (só antes de criar os serviços: depois, cada peça já tem o seu)
+  if (!qr.jobByRef) splitUnitForStatement(qr.draft.items, text, currentRefs);
+  const unresolved: string[] = [];
+  const statements = parseItemStatements(text, qr.draft.items, currentRefs, unresolved);
+  // estado dito sem a peça: guarda a frase e pergunta depois (nunca aplica a todas, nunca descarta)
+  if (unresolved.length) qr.notes = [...new Set([...(qr.notes ?? []), ...unresolved])].slice(-3);
+  if (statements.length && qr.step === "condition") delete qr.notes;
   for (const st of statements) {
     for (const ref of st.refs) {
       const it = qr.draft.items.find((i) => i.ref === ref);
@@ -823,7 +1001,9 @@ async function materializeJobs(c: Conversation): Promise<void> {
     const job = await createJob(c.ctx, { actor, description: `${it.description} — ${it.sourceExcerpt}`.slice(0, 900) });
     map[it.ref] = job.id;
     const opts = { actor, source, messageId };
-    if (it.furnitureType) await setFact(c.ctx, job.id, "furniture_type", { type: it.furnitureType, descriptors: [] }, opts);
+    // a quantidade vai junto: "2 cadeiras" num serviço é precificado como 2 peças
+    const descriptors = it.description.replace(/^\S+\s*/, "").trim();
+    if (it.furnitureType) await setFact(c.ctx, job.id, "furniture_type", { type: it.furnitureType, descriptors: descriptors ? [descriptors] : [], ...(it.quantity > 1 ? { quantity: it.quantity } : {}) }, opts);
     if (it.techniqueKeys.length) await setFact(c.ctx, job.id, "techniques", it.techniqueKeys, opts);
     const owner = clientName(d, it.ownerRef);
     if (owner) await setFact(c.ctx, job.id, "client_name", owner, opts);

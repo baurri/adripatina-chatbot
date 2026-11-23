@@ -7,10 +7,47 @@ export interface GeometryInput {
   depth?: string | null;
   surfaces?: "externa" | "interna_externa" | null;
   sizeClass?: "pequeno" | "medio" | "grande" | null;
-  /** "tampo": só a face superior é trabalhada */
-  part?: "tampo" | "inteiro" | null;
+  /** "tampo": só a face superior; "cabeceira": só a cabeceira da cama */
+  part?: "tampo" | "inteiro" | "cabeceira" | null;
   /** perfil do móvel: cama não é uma caixa (cabeceira, peseira e laterais) */
   profile?: "bed" | null;
+  /** medida PADRÃO do colchão (queen, casal...): referência, nunca medida da estrutura */
+  nominalBed?: { width: string; length: string; label: string } | null;
+}
+
+/**
+ * Margem da estrutura sobre o colchão (cada lado), hipótese NÃO CALIBRADA: a cama é
+ * sempre maior que o colchão, quanto depende do modelo. A faixa vai do colchão nu
+ * até colchão + 2 × margem.
+ */
+const BED_FRAME_MARGIN_M = "0.10";
+
+/** Área de várias peças iguais (quantidade inteira ≥ 1). */
+export function scaleArea(a: AreaInput, quantity: number): AreaInput {
+  if (!Number.isInteger(quantity) || quantity < 1) throw new RangeError("Quantidade inválida");
+  if (quantity === 1) return a;
+  return a.kind === "exact"
+    ? { kind: "exact", m2: Dec.from(a.m2).mul(quantity).round(3).toString() }
+    : { kind: "range", minM2: Dec.from(a.minM2).mul(quantity).round(3).toString(), maxM2: Dec.from(a.maxM2).mul(quantity).round(3).toString(), source: `${a.source}_x${quantity}` };
+}
+
+function bedHeadboardOnly(w: Dec): Dec {
+  return w.mul(BED_FACTORS.headboard).mul(BED_FACTORS.sides);
+}
+
+/** Cama só com o tamanho padrão: faixa entre o colchão e colchão + margem (NÃO CALIBRADA). */
+function estimateNominalBed(g: GeometryInput): AreaInput | null {
+  const nb = g.nominalBed;
+  if (!nb) return null;
+  const w = Dec.from(nb.width);
+  const l = Dec.from(nb.length);
+  const m2 = Dec.from(BED_FRAME_MARGIN_M).mul(2);
+  const calc = (ww: Dec, ll: Dec): Dec => {
+    if (g.part === "cabeceira") return bedHeadboardOnly(ww);
+    const a = estimateBedArea({ width: ww.toString(), depth: ll.toString() });
+    return a && a.kind === "exact" ? Dec.from(a.m2) : bedHeadboardOnly(ww);
+  };
+  return { kind: "range", minM2: calc(w, l).round(3).toString(), maxM2: calc(w.add(m2), l.add(m2)).round(3).toString(), source: `referencia_colchao_${nb.label}_nao_calibrado` };
 }
 
 /**
@@ -59,8 +96,15 @@ function estimateTopArea(g: GeometryInput, s: PricingSettings): AreaInput | null
 export function estimateArea(g: GeometryInput, s: PricingSettings): AreaInput | null {
   if (g.part === "tampo") return estimateTopArea(g, s);
   if (g.profile === "bed") {
-    const bed = estimateBedArea(g);
-    if (bed) return bed;
+    if (g.part === "cabeceira") {
+      const w = Dec.tryParse(g.width ?? null);
+      if (w && w.gt(0)) return { kind: "exact", m2: bedHeadboardOnly(w).round(3).toString() };
+    } else {
+      const bed = estimateBedArea(g);
+      if (bed) return bed;
+    }
+    const nominal = estimateNominalBed(g);
+    if (nominal) return nominal;
   }
   const w = Dec.tryParse(g.width ?? null);
   const h = Dec.tryParse(g.height ?? null);

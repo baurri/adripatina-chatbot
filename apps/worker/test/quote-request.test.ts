@@ -93,7 +93,7 @@ describe("Ajuste 2 — fluxo conversacional do pedido com vários itens", () => 
     const h = await setup();
     await h.send(REAL);
     const r = await h.click("qr:separate");
-    expect(h.allText(r)).toMatch(/a mesinha de centro é do Seu Roberto e os outros dois móveis são da Dona Jo\?/);
+    expect(h.allText(r)).toMatch(/a mesinha de centro é do Seu Roberto; os outros dois móveis são da Dona Jo\?/);
     expect(buttonsOf(r.at(-1))).toEqual(["qr:owner_yes", "qr:owner_no"]);
     const next = await h.send("Isso.");
     expect(h.allText(next)).toMatch(/Quais são os outros dois móveis/);

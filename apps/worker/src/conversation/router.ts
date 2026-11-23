@@ -54,7 +54,8 @@ export function isStrongInterruption(nlu: NluResult, pending: PendingQuestion | 
       return e.amountCents !== undefined && nlu.confidence >= 0.85 && pending?.type !== "material_purchase_price" && pending?.type !== "material_package_size";
     case "job_progress":
       // andamento exige evidência operacional explícita e nunca é só estado físico
-      return !!e.progress && !(e.conditionStatement && (e.progress === "iniciado" || e.progress === "em_execucao") && pending?.type === "item_condition");
+      // "ainda não comecei" não muda nada: não interrompe o objetivo
+      return !!e.progress && e.progress !== "nao_iniciado" && !(e.conditionStatement && (e.progress === "iniciado" || e.progress === "em_execucao") && pending?.type === "item_condition");
     case "list_jobs":
     case "agenda":
       return nlu.confidence >= 0.85;

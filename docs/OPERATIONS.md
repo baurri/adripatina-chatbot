@@ -27,3 +27,8 @@
 
 ## Variáveis e segredos
 Ver `.env.example`. Segredos: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
+
+## Concorrência do webhook (22/11/2026)
+- Configure o webhook com `max_connections=1` (ver README): o Telegram entrega uma atualização por vez, em ordem, e duas mensagens rápidas do mesmo usuário não disputam a sessão.
+- Se mesmo assim houver disputa, o Worker registra `session_conflict` no log e `session.conflict` em `audit_events` (a mensagem atual é gravada; a anterior pode ter o contexto sobrescrito). Consulta: `SELECT * FROM audit_events WHERE action='session.conflict' ORDER BY created_at DESC`.
+- Acima de 120 atualizações/minuto o webhook responde **429** e o Telegram reenvia depois (antes respondia 200 e a mensagem se perdia).

@@ -47,9 +47,22 @@ export function parseNumericBR(raw: string): Dec | null {
   const s = raw.trim();
   if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) return Dec.tryParse(s.replace(/\./g, "").replace(",", "."));
   if (/^\d+,\d+$/.test(s)) return Dec.tryParse(s.replace(",", "."));
+  // ponto com 1 ou 2 casas ("1000.50", "85.9") é decimal, nunca separador de milhar
+  if (/^\d+\.\d{1,2}$/.test(s)) return Dec.tryParse(s);
+  // "1.000", "12.500" (sem vírgula): milhar
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) return Dec.tryParse(s.replace(/\./g, ""));
   if (/^\d+(\.\d+)?$/.test(s)) return Dec.tryParse(s);
   return null;
 }
+
+/**
+ * Número monetário pt-BR sem pegar pedaço de outro número:
+ * "1.000,50", "1.000", "1000.50" (ponto decimal), "85,90", "85".
+ */
+const MONEY_NUMBER = String.raw`\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?(?!\d)|\d+[.,]\d{1,2}(?!\d)|\d+`;
+/** limites do número: vírgula/ponto só "colam" quando seguidos de dígito ("foi 120, o resto..." é 120) */
+const NUM_START = String.raw`(?<!\d|\d[.,])`;
+const NUM_END = String.raw`(?!\d|[.,]\d)`;
 
 export interface MoneyMention {
   cents: number;
@@ -64,13 +77,13 @@ export interface MoneyMention {
 export function extractMoney(text: string): MoneyMention | null {
   const norm = normalizeText(text);
   // R$ 1.234,56 | R$90
-  const rs = /r\$\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/.exec(norm);
+  const rs = new RegExp(String.raw`r\$\s*(${MONEY_NUMBER})${NUM_END}`).exec(norm);
   if (rs) {
     const d = parseNumericBR(rs[1]!);
     if (d) return { cents: d.toCents(), raw: rs[0] };
   }
   // 90 reais | 90,50 reais | 200 conto
-  const num = /(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\s*(reais|real|conto|contos|pila|pilas)\b/.exec(norm);
+  const num = new RegExp(String.raw`${NUM_START}(${MONEY_NUMBER})\s*(reais|real|conto|contos|pila|pilas)\b`).exec(norm);
   if (num) {
     const d = parseNumericBR(num[1]!);
     if (d) return { cents: d.toCents(), raw: num[0] };
@@ -100,6 +113,35 @@ export function extractMoney(text: string): MoneyMention | null {
     return { cents, raw: tokens.slice(j + 1, i + 1).join(" ") };
   }
   return null;
+}
+
+/**
+ * Valor dito SEM "reais" logo depois de um verbo de dinheiro ("comprei duas latas por 150",
+ * "me pagou 85,90", "custou uns 90"). Ignora quantidades e tamanhos ("2 latas", "900 ml").
+ * Serve só para PRÉ-PREENCHER uma quantia que sempre é confirmada pelo usuário.
+ */
+export function extractLooseMoney(text: string): MoneyMention | null {
+  const strict = extractMoney(text);
+  if (strict) return strict;
+  const norm = normalizeText(text);
+  const re = new RegExp(
+    String.raw`\b(por|foi|foram|deu|custou|custa|custando|sai|saiu|paguei|pagou|pago|recebi|valor de)\s+(?:uns\s+|umas\s+|mais ou menos\s+|cerca de\s+|r\$\s*)?(${MONEY_NUMBER})${NUM_END}(?!\s*(?:ml|l|lt|litros?|kg|g|gr|gramas?|cm|m|mm|metros?|folhas?|latas?|galao|galoes|potes?|unidades?|pecas?|moveis|horas?|h|dias?|%|x|vezes)\b)`,
+  );
+  const m = re.exec(norm);
+  if (!m) return null;
+  const d = parseNumericBR(m[2]!);
+  if (!d || !d.gt(0)) return null;
+  return { cents: d.toCents(), raw: m[0] };
+}
+
+/** Valor solto ("90", "1.000", "85,90", "1000.50") como resposta a "quanto foi?". */
+export function parseBareAmountCents(text: string): number | null {
+  const money = extractMoney(text);
+  if (money) return money.cents;
+  const m = new RegExp(String.raw`${NUM_START}(${MONEY_NUMBER})${NUM_END}`).exec(normalizeText(text));
+  if (!m) return null;
+  const d = parseNumericBR(m[1]!);
+  return d && d.gt(0) ? d.toCents() : null;
 }
 
 export interface LengthMention {
