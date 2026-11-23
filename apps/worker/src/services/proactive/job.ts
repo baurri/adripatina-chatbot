@@ -11,6 +11,7 @@ import {
   rankNeeds,
   validateContextRephrase,
   waitingDecision,
+  ignoredByOtherInteraction,
   type ComposedQuestion,
   type GateReason,
   type Need,
@@ -365,9 +366,14 @@ async function runForUser(ctx: Ctx, user: User, allNeeds: Need[], settings: Proa
       }
       continue;
     }
-    if (WAITING_STATUSES.includes(open.status) && waitingDecision(settings, { attempts: open.attempts, lastSentAt: open.last_sent_at }, now) === "expire") {
-      await updateRequest(ctx, open.id, { status: "expired", close_reason: "sem resposta após o número máximo de tentativas" });
-      await addEvent(ctx, { requestId: open.id, userId: user.id, correlationId, kind: "expired", actor: "proactive_job" });
+    if (!WAITING_STATUSES.includes(open.status)) continue;
+    const pointing = (await loadSession(ctx, user.id)).context.dataCollection?.requestId === open.id;
+    const lastIn = await ctx.db.first<{ created_at: string }>("SELECT created_at FROM conversation_messages WHERE user_id = ? AND direction = 'in' ORDER BY created_at DESC LIMIT 1", user.id);
+    const ignored = ignoredByOtherInteraction({ lastSentAt: open.last_sent_at }, lastIn?.created_at ?? null, pointing);
+    if (ignored || waitingDecision(settings, { lastSentAt: open.last_sent_at }, now) === "expire") {
+      const reason = ignored ? "sem resposta: seguiu com outro assunto no bot" : "sem resposta e sem nenhuma interação no prazo";
+      await updateRequest(ctx, open.id, { status: "expired", close_reason: reason });
+      await addEvent(ctx, { requestId: open.id, userId: user.id, correlationId, kind: "expired", actor: "proactive_job", data: { reason: ignored ? "outra_interacao" : "prazo" } });
       await releaseSessionIfPointing(ctx, user.id, open.id);
       rep.expired++;
     }
@@ -376,18 +382,12 @@ async function runForUser(ctx: Ctx, user: User, allNeeds: Need[], settings: Proa
   // 3) limites, horário e contexto
   const { state, waiting, dayStart } = await sendState(ctx, user.id, settings);
   let candidate: RequestRow | null = null;
-  if (waiting && waitingDecision(settings, { attempts: waiting.attempts, lastSentAt: waiting.last_sent_at }, now) === "resend") {
-    // reenvio gentil da mesma pergunta (conta nos limites; não dispara outra)
-    const gate = canSendNow(settings, { ...state, waitingRequest: false }, now);
-    rep.gate = gate.ok ? { ok: true } : { ok: false, reason: gate.reason, label: GATE_LABEL[gate.reason] };
-    if (gate.ok) candidate = waiting;
-  } else {
-    const gate = canSendNow(settings, state, now);
-    rep.gate = gate.ok ? { ok: true } : { ok: false, reason: gate.reason, label: GATE_LABEL[gate.reason] };
-    if (gate.ok) {
-      const pool = (await listOpenForUser(ctx, user.id)).filter((r) => ["queued", "identified", "failed", "snoozed"].includes(r.status) && (!r.next_allowed_at || Date.parse(r.next_allowed_at) <= now.getTime()));
-      candidate = pool.sort((a, b) => b.priority - a.priority || a.created_at.localeCompare(b.created_at))[0] ?? null;
-    }
+  // pergunta ainda aguardando: o gate "waitingRequest" impede qualquer envio (nunca repete)
+  const gate = canSendNow(settings, state, now);
+  rep.gate = gate.ok ? { ok: true } : { ok: false, reason: gate.reason, label: GATE_LABEL[gate.reason] };
+  if (gate.ok && !waiting) {
+    const pool = (await listOpenForUser(ctx, user.id)).filter((r) => ["queued", "identified", "failed", "snoozed"].includes(r.status) && (!r.next_allowed_at || Date.parse(r.next_allowed_at) <= now.getTime()));
+    candidate = pool.sort((a, b) => b.priority - a.priority || a.created_at.localeCompare(b.created_at))[0] ?? null;
   }
   if (!candidate) return rep;
 

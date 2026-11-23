@@ -430,3 +430,57 @@ describe("IA, simulação e painel", () => {
     expect(await count(h, "SELECT COUNT(*) AS n FROM audit_events WHERE action IN ('proactive.cancel','proactive.settings')")).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("pergunta sem resposta: nunca repete; expira quando ele segue com outro assunto (23/11/2026)", () => {
+  const THU_10 = "2026-11-19T13:00:00Z";
+  async function twoStalePrices(): Promise<Harness> {
+    const h = await base();
+    await h.ctx.db.run("UPDATE materials SET price_updated_at = '2026-01-01T00:00:00Z' WHERE key IN ('verniz', 'cera')");
+    return h;
+  }
+  const waitingCount = (h: Harness) => count(h, "SELECT COUNT(*) AS n FROM data_collection_requests WHERE status IN ('sent','waiting_response')");
+
+  it("sem nenhuma interação: não repete a pergunta nem manda outra, dias depois", async () => {
+    const h = await twoStalePrices();
+    at(h, MON_10);
+    expect((await runProactiveCollection(h.ctx)).users[0]!.sent).toBe(true);
+    const first = (await h.ctx.db.first<{ id: string }>("SELECT id FROM data_collection_requests WHERE status = 'waiting_response'"))!.id;
+    const n = messages(h).length;
+    for (const day of [TUE_10, WED_10, THU_10]) {
+      at(h, day);
+      const rep = await runProactiveCollection(h.ctx);
+      expect(rep.users[0]!.sent).toBe(false);
+    }
+    expect(messages(h).length).toBe(n);
+    expect((await h.ctx.db.first<{ status: string; attempts: number }>("SELECT status, attempts FROM data_collection_requests WHERE id = ?", first))).toMatchObject({ status: "waiting_response", attempts: 1 });
+  });
+
+  it("ele usa o bot para outra coisa: a pergunta expira e a próxima pode ser enviada", async () => {
+    const h = await twoStalePrices();
+    at(h, MON_10);
+    await runProactiveCollection(h.ctx);
+    const first = (await h.ctx.db.first<{ id: string; entity_label: string }>("SELECT id, entity_label FROM data_collection_requests WHERE status = 'waiting_response'"))!;
+    at(h, "2026-11-16T15:00:00Z");
+    await h.send("Peguei uma cadeira do seu João para pintar");
+    at(h, TUE_10);
+    const rep = await runProactiveCollection(h.ctx);
+    const old = await h.ctx.db.first<{ status: string; close_reason: string }>("SELECT status, close_reason FROM data_collection_requests WHERE id = ?", first.id);
+    expect(old).toMatchObject({ status: "expired", close_reason: "sem resposta: seguiu com outro assunto no bot" });
+    expect(rep.users[0]!.sent).toBe(true);
+    expect(rep.users[0]!.selected!.requestId).not.toBe(first.id);
+    expect(await waitingCount(h)).toBe(1);
+  });
+
+  it("resposta à própria pergunta não conta como 'outro assunto'", async () => {
+    const h = await twoStalePrices();
+    at(h, MON_10);
+    await runProactiveCollection(h.ctx);
+    const first = (await h.ctx.db.first<{ id: string }>("SELECT id FROM data_collection_requests WHERE status = 'waiting_response'"))!.id;
+    at(h, "2026-11-16T15:00:00Z");
+    await h.send("uns 85 reais");
+    at(h, TUE_10);
+    await runProactiveCollection(h.ctx);
+    const st = (await h.ctx.db.first<{ status: string }>("SELECT status FROM data_collection_requests WHERE id = ?", first))!.status;
+    expect(st).not.toBe("expired");
+  });
+});

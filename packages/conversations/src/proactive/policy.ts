@@ -27,6 +27,7 @@ export const ProactiveSettingsSchema = z.object({
   quietAfterActivityMinutes: z.number().int().min(0).max(1440).default(30),
   /** objetivo (ex.: orçamento pausado) sem mensagem dele há N horas não conta como conversa ativa */
   staleGoalHours: z.number().min(1).max(720).default(12),
+  /** sem uso (ver resendAfterDays) */
   maxAttempts: z.number().int().min(1).max(10).default(3),
   snoozeDays: z.number().min(0.5).max(60).default(3),
   dontKnowCooldownDays: z.number().min(1).max(120).default(14),
@@ -180,10 +181,19 @@ export function cooldownUntil(settings: ProactiveSettings, kind: CooldownKind, f
   return new Date(from.getTime() + days * 86_400_000).toISOString();
 }
 
-/** Uma pergunta aguardando resposta deve ser reenviada, expirar ou continuar esperando? */
-export function waitingDecision(settings: ProactiveSettings, req: { attempts: number; lastSentAt: string | null }, now: Date): "wait" | "resend" | "expire" {
-  if (!req.lastSentAt) return "resend";
-  const since = now.getTime() - Date.parse(req.lastSentAt);
-  if (since < settings.resendAfterDays * 86_400_000) return "wait";
-  return req.attempts >= settings.maxAttempts ? "expire" : "resend";
+/**
+ * Pergunta aguardando resposta: NUNCA é repetida. Fica esperando até ele responder ou
+ * interagir com outro assunto (ver `ignoredByOtherInteraction`); por segurança, uma
+ * pergunta esquecida expira depois de `expireAfterDays` (não fica travando a fila
+ * nem é lida como resposta semanas depois).
+ */
+export function waitingDecision(settings: ProactiveSettings, req: { lastSentAt: string | null }, now: Date): "wait" | "expire" {
+  if (!req.lastSentAt) return "wait";
+  return now.getTime() - Date.parse(req.lastSentAt) >= settings.expireAfterDays * 86_400_000 ? "expire" : "wait";
+}
+
+/** Ele mandou mensagem depois da pergunta e a conversa já não está nela → a pergunta foi deixada de lado. */
+export function ignoredByOtherInteraction(req: { lastSentAt: string | null }, lastInboundAt: string | null, sessionPointsToRequest: boolean): boolean {
+  if (!req.lastSentAt || !lastInboundAt || sessionPointsToRequest) return false;
+  return Date.parse(lastInboundAt) > Date.parse(req.lastSentAt);
 }

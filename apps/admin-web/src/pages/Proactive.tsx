@@ -157,7 +157,6 @@ export function Proactive() {
               <Field label="Por dia"><input type="number" min={0} max={10} defaultValue={s.maxPerDay} onBlur={(e) => save({ maxPerDay: Number(e.target.value) })} /></Field>
               <Field label="Por semana"><input type="number" min={0} max={30} defaultValue={s.maxPerWeek} onBlur={(e) => save({ maxPerWeek: Number(e.target.value) })} /></Field>
               <Field label="Intervalo mínimo (h)"><input type="number" min={0} max={168} defaultValue={s.minIntervalHours} onBlur={(e) => save({ minIntervalHours: Number(e.target.value) })} /></Field>
-              <Field label="Tentativas"><input type="number" min={1} max={10} defaultValue={s.maxAttempts} onBlur={(e) => save({ maxAttempts: Number(e.target.value) })} /></Field>
             </div>
             <div className="form-row">
               {WEEKDAYS.map((d, i) => (
