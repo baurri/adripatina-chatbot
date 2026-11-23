@@ -24,7 +24,7 @@ function buildCtx(env: Env, requestId: string): Ctx {
     clock: () => new Date(),
     telegram,
     storage: env.FILES,
-    ai: createAiProviders(config, env.AI),
+    ai: createAiProviders(config, env.AI, env.ANTHROPIC_API_KEY),
     requestId,
   };
 }

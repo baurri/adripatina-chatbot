@@ -18,6 +18,16 @@ const NEURONS_PER_M_TOKENS: Record<string, [number, number]> = {
   "@cf/meta/llama-3.3-70b-instruct-fp8-fast": [26668, 204805],
 };
 const USD_PER_1000_NEURONS = 0.011;
+/** Claude (API Anthropic): US$ por milhão de tokens [entrada, saída], tabela de 03/11/2026. Estimativa local. */
+const CLAUDE_USD_PER_M_TOKENS: Record<string, [number, number]> = {
+  "claude-haiku-5-5": [0.1, 0.5],
+  "claude-sonnet-5-5": [2, 10],
+  "claude-opus-5-5": [4, 20],
+};
+
+function providerOf(model: string): string {
+  return model.startsWith("claude-") ? "anthropic" : "workers-ai";
+}
 
 export class AiBudgetExceeded extends Error {
   constructor() {
@@ -58,14 +68,17 @@ export async function logUsage(ctx: Ctx, u: AiUsageLog): Promise<void> {
     if (rates) neurons = (rates[0] * u.inputUnits + rates[1] * (u.outputUnits ?? 0)) / 1_000_000;
   }
   const id = newId();
-  const cost = neurons === null ? null : Math.round((neurons / 1000) * USD_PER_1000_NEURONS * 1_000_000);
+  let cost = neurons === null ? null : Math.round((neurons / 1000) * USD_PER_1000_NEURONS * 1_000_000);
+  const claude = CLAUDE_USD_PER_M_TOKENS[u.model];
+  if (claude && u.inputUnits !== undefined) cost = Math.round(claude[0] * u.inputUnits + claude[1] * (u.outputUnits ?? 0));
+  const provider = providerOf(u.model);
   if (u.purpose !== undefined) {
     try {
       await ctx.db.run(
         `INSERT INTO ai_usage (id, provider, model, task, input_units, output_units, unit_kind, estimated_neurons, estimated_cost_usd_micros, success, latency_ms, error_code, created_at, purpose, schema_name, fallback_used, confidence, decision_json, correlation_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
-        "workers-ai",
+        provider,
         u.model,
         u.task,
         u.inputUnits ?? null,
@@ -82,29 +95,35 @@ export async function logUsage(ctx: Ctx, u: AiUsageLog): Promise<void> {
         u.fallbackUsed === undefined ? null : u.fallbackUsed ? 1 : 0,
         u.confidence ?? null,
         u.decision === undefined ? null : JSON.stringify(u.decision).slice(0, 2000),
-        ctx.requestId,
+        ctx.requestId ?? null,
       );
       return;
-    } catch {
-      /* migration 0006 ainda não aplicada: grava no formato antigo */
+    } catch (err) {
+      // antes era engolido em silêncio: as chamadas da IA de conversa sumiam da auditoria
+      console.error(JSON.stringify({ level: "error", msg: "ai_usage_insert_failed", purpose: u.purpose, error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));
     }
   }
-  await ctx.db.run(
+  try {
+    await ctx.db.run(
     `INSERT INTO ai_usage (id, provider, model, task, input_units, output_units, unit_kind, estimated_neurons, estimated_cost_usd_micros, success, latency_ms, error_code, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
-    "workers-ai",
+    provider,
     u.model,
     u.task,
     u.inputUnits ?? null,
     u.outputUnits ?? null,
     u.unitKind ?? null,
     neurons,
-    neurons === null ? null : Math.round((neurons / 1000) * USD_PER_1000_NEURONS * 1_000_000),
+    cost,
     u.success ? 1 : 0,
     u.latencyMs,
     u.errorCode ?? null,
     nowIso(ctx),
-  );
+    );
+  } catch (err) {
+    // telemetria nunca derruba a conversa
+    console.error(JSON.stringify({ level: "error", msg: "ai_usage_insert_failed", error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));
+  }
 }
 
 export async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {

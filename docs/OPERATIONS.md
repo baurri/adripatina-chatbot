@@ -40,3 +40,11 @@ Ver `.env.example`. Segredos: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
 - Variável `PROACTIVE_MODE`: `dry_run` (local/staging: nunca envia sozinho), `live` (produção: envia só se ligada no painel), `off`.
 - Cada solicitação tem linha do tempo (enviada, resposta, confirmação, dado salvo, orçamento retomado). O administrador pode adiar, cancelar, reabrir, fixar prioridade e impedir novas perguntas sobre um item.
 - Logs estruturados: `proactive_run`, `proactive_sent`, `proactive_send_failed`, `proactive_failed` (com `correlationId`).
+
+## IA de texto com Claude (23/11/2026)
+
+- Sem `ANTHROPIC_API_KEY`: tudo como antes (texto e áudio no Workers AI).
+- Com a chave: interpretação e reescrita de mensagens vão para o Claude (`AI_CLAUDE_MODEL`, padrão `claude-haiku-5-5`); o áudio continua no Whisper do Workers AI. Se o Claude falhar (rede, chave, recusa, tempo), o Workers AI responde no lugar, sem o artesão perceber.
+- Ativar: `wrangler secret put ANTHROPIC_API_KEY --config wrangler.jsonc` (a chave é digitada no terminal, nunca no código). Desativar: `wrangler secret delete ANTHROPIC_API_KEY --config wrangler.jsonc`.
+- Defina um limite de gasto mensal no Console da Anthropic. A tabela `ai_usage` registra `provider = anthropic` e o custo estimado por chamada (`estimated_cost_usd_micros`).
+- Privacidade: com a chave, o texto das mensagens (inclui nomes de clientes) é enviado à Anthropic.

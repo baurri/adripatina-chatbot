@@ -24,9 +24,13 @@ export interface Env {
   PHRASING_VARIETY?: string;
   /** coleta proativa: off | dry_run | live (live ainda exige ativação no painel) */
   PROACTIVE_MODE?: string;
+  /** modelo Claude para texto quando ANTHROPIC_API_KEY existe (padrão claude-haiku-5-5) */
+  AI_CLAUDE_MODEL?: string;
   // segredos
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
+  /** com a chave, a parte de TEXTO da IA vai para o Claude (o áudio segue no Workers AI) */
+  ANTHROPIC_API_KEY?: string;
 }
 
 const intStr = (def: number) =>
@@ -55,6 +59,8 @@ export const ConfigSchema = z.object({
   phrasingVariety: z.boolean(),
   /** coleta proativa: off (nada), dry_run (só simula), live (envia, se ligada no painel) */
   proactiveMode: z.enum(["off", "dry_run", "live"]),
+  /** modelo Claude para texto (usado só se houver ANTHROPIC_API_KEY; a chave fica fora da Config) */
+  claudeModel: z.string(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
@@ -79,6 +85,7 @@ export function loadConfig(env: Partial<Env>): Config {
     dailySummaryHour: intStr(7).parse(env.DAILY_SUMMARY_HOUR),
     phrasingVariety: env.PHRASING_VARIETY !== "false",
     // fora de produção o padrão é só simular — nunca enviar mensagens reais automaticamente
+    claudeModel: env.AI_CLAUDE_MODEL || "claude-haiku-5-5",
     proactiveMode: (["off", "dry_run", "live"].includes(env.PROACTIVE_MODE ?? "") ? env.PROACTIVE_MODE : environment === "production" ? "live" : "dry_run") as "off" | "dry_run" | "live",
   });
 }

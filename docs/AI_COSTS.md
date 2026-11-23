@@ -30,3 +30,7 @@ Hipótese: 30 áudios/dia × 40 s, 40 mensagens/dia que precisam de IA (~800 tok
 
 ## Outros custos (Workers Paid já contratado)
 D1, R2 e Workers têm franquias generosas para o volume de uma oficina; verifique a página de preços atual antes de produção. R2 cobra armazenamento e operações (sem egress). Nada foi criado.
+
+## Claude para texto (23/11/2026)
+
+Preços (US$ por milhão de tokens, entrada/saída, tabela de 03/11/2026): Claude Haiku 5.5 0,10/0,50; Claude Sonnet 5.5 2/10; Claude Opus 5.5 4/20. Premissa de uso: ~3 mil chamadas/mês, ~1.000 tokens de entrada e ~150 de saída cada (a reflexão adaptativa soma saída). Estimativa: Haiku 5.5 ≈ US$ 0,50–2/mês; Sonnet 5.5 ≈ US$ 10–30/mês. O Whisper (áudio) continua no Workers AI, dentro da cota gratuita no volume atual.

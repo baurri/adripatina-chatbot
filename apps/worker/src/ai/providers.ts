@@ -1,6 +1,7 @@
 import { EXTRACTION_JSON_SCHEMA, EXTRACTION_SYSTEM_PROMPT, QUOTE_REQUEST_SYSTEM_PROMPT, REPHRASE_SYSTEM_PROMPT, answerJsonSchema, answerSystemPrompt } from "@adripatina/conversations";
 import type { ProjectField } from "@adripatina/domain";
 import type { Config } from "../env.js";
+import { ClaudeExtraction, FallbackExtraction } from "./claude.js";
 import type { AiProviders, ExtractionProvider, GenerateRequest, SpeechToText, SttResult, VisionProvider } from "../ports.js";
 
 /**
@@ -165,12 +166,18 @@ export class WorkersAiVision implements VisionProvider {
   }
 }
 
-export function createAiProviders(config: Config, ai: Ai | undefined): AiProviders {
-  if (!config.aiEnabled || !ai) return { stt: null, extraction: null, vision: null };
+/**
+ * Áudio sempre no Workers AI. Texto: Claude quando há ANTHROPIC_API_KEY (com o Workers AI
+ * como plano B automático); sem a chave, só Workers AI como antes.
+ */
+export function createAiProviders(config: Config, ai: Ai | undefined, anthropicApiKey?: string): AiProviders {
+  if (!config.aiEnabled) return { stt: null, extraction: null, vision: null };
+  const workersText = ai && config.extractionModel ? new WorkersAiExtraction(ai, config.extractionModel) : null;
+  const extraction: ExtractionProvider | null = anthropicApiKey ? new FallbackExtraction(new ClaudeExtraction(anthropicApiKey, config.claudeModel), workersText, QUOTE_REQUEST_JSON_SCHEMA) : workersText;
   return {
-    stt: config.sttModel ? new WorkersAiStt(ai, config.sttModel) : null,
-    extraction: config.extractionModel ? new WorkersAiExtraction(ai, config.extractionModel) : null,
-    vision: config.visionModel ? new WorkersAiVision(ai, config.visionModel) : null,
+    stt: ai && config.sttModel ? new WorkersAiStt(ai, config.sttModel) : null,
+    extraction,
+    vision: ai && config.visionModel ? new WorkersAiVision(ai, config.visionModel) : null,
   };
 }
 
