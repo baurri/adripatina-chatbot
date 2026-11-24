@@ -140,3 +140,29 @@ Avaliação com 10 cenários diversos (guarda-roupa decapê, estátua com folha 
 - "Leva de 3 a 5 dias" é prazo/referência, não muda a conta (antes virava 3 dias inteiros de trabalho e o valor quase dobrava).
 - Se o Claude terminar sem texto, a chamada extra agora proíbe ferramentas (`tool_choice: none`), para sempre sair uma resposta.
 - Avaliação completa (24 cenários): todas as conferências passam, menos uma oscilação (um dos aparadores "só o tampo" às vezes fica "inteiro").
+
+## D-080 — Link do PDF pro WhatsApp e valores sempre iguais (2026-11-24)
+
+- Depois do PDF vem um botão "📲 Mandar no WhatsApp" com mensagem e link prontos (`/p/:token`, token aleatório de 128 bits, 30 dias), mais a dica de compartilhar o arquivo.
+- "Me manda o orçamento" reenvia o PDF que já existe (`reenviar_orcamento`), sem recalcular; avisa se a configuração mudou desde então.
+- A conta é determinística: mesmos dados + mesmas configurações = mesmo valor. Se o valor mudou desde o último PDF, o bot diz o motivo (valor da hora, horas, material, extras). Material de várias peças é contado uma vez.
+
+## D-081 — Excelência no caminho até o valor (2026-11-24)
+
+Motivo: o fechamento já era bom; o que pesava era o caminho (perguntas repetidas, foto pedida toda hora, coisas inventadas, prazo sem olhar a fila, conversa que acaba no PDF).
+
+- **Revisão do rascunho** (uma volta a mais, com ferramentas): o bot não manda pergunta sobre algo já anotado ou que ele acabou de dizer (estado, método, transporte, por dentro, tampo, conserto, medidas); não afirma transporte, prazo ou estado que ele não disse; não repete a mesma mensagem; não pergunta o material uma terceira vez.
+- **Peça duplicada**: criar a mesma peça do mesmo cliente que já está aberta é recusado e devolve o servico_id (`outra_peca: true` quando é outra de verdade).
+- **Fotos**: álbum (várias fotos juntas) vira UMA resposta olhando todas. Foto é pedida uma vez, quando entra peça nova sem foto; o pedido sai das outras mensagens.
+- **Fila**: o bot vê os serviços aceitos/em execução com a previsão de entrega e propõe o início ("o último fica pronto lá pelo 15/12; começa esse lá pelo 16/12?"). Prazo aceita data ("16/12", "dia 16").
+- **Depois do PDF**: 3 dias depois o bot pergunta "o cliente respondeu?" (Fechou / Não fechou / Ainda não). Fechou → aceito, vai pra fila. Ainda não → pergunta de novo 4 dias depois, uma vez. No máximo uma pergunta por dia, nunca no meio de conversa (2 h). O bot não pede mais pra ele avisar.
+- **PDF novo substitui o antigo**: propostas anteriores sem resposta das mesmas peças viram CANCELADO ("substituído pelo PDF X").
+- Texto: sem markdown (Telegram mostrava os asteriscos); "não cobre seus custos" no lugar de "prejuízo".
+- Avaliação: mede falas do Adriano até o PDF e pedidos de foto; roda em paralelo (`EVAL_PAR`); 4 cenários novos do jeito real dele (texto curto, um dado por mensagem, medidas com ponto, fila).
+- Rodada completa (28 cenários) + correções do que ela mostrou:
+  - Valor já aceito ("Concordo", tocado ou escrito) fica marcado: com o prazo, o bot fecha direto, sem reconfirmar.
+  - Só o que mexe no preço reabre o valor (prazo, observação, cliente e descrição não). Se o valor muda depois de mostrado, a conta diz o que mudou ("Antes deu R$ 790; mudou porque anotei: ...").
+  - Extras (material/trabalho a mais) ditos com outras palavras substituem em vez de somar (puxadores entravam 3 vezes).
+  - Horas da peça toda = horas_artesao, nunca horas_extra; conserto em dias não vira dias × 8 h.
+  - "Ainda tô vendo a agenda": o bot oferece "prazo a combinar" em vez de travar o PDF.
+  - Resultado: falas do Adriano até o PDF caíram de ~10 para ~6 nos casos reais; casos que travavam (porta, oratório, puxadores) fecham em 3–7 falas.

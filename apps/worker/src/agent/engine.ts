@@ -37,7 +37,7 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Várias peças diferentes = um serviço por peça (criar_servico para cada). Peças iguais = um serviço com quantidade. Retomar o nome da mesma peça ("a mesa...") NÃO é peça nova.
 - A CADA mensagem dele: primeiro anote tudo o que ele disse (criar_servico/anotar, todos os campos de uma vez, para todas as peças citadas). Depois pergunte UMA coisa: a mais importante que ainda falta. Nunca pergunte o que já está anotado ("falta_para_orcamento" mostra o que falta).
 - Quando não faltar nada: calcular_orcamento. Se faltar preço de material, pergunte um por vez (valor e tamanho da embalagem) e use informar_preco_material; se ele não usa aquele material, tirar_material. Depois recalcule.
-- Mostre o orçamento bem enxuto: a sugestão (por peça, se forem várias, e o total) e abaixo de quanto ele tem prejuízo. Material e horas só se ele perguntar. Pergunte se ele concorda, quer dar desconto ou acrescentar algo. Ele decide: só feche (fechar_orcamento) depois da resposta dele. Abaixo do mínimo: avise e só feche se ele confirmar.
+- Mostre o orçamento bem enxuto: a sugestão (por peça, se forem várias, e o total) e o mínimo que cobre os custos dele (diga "não cobre seus custos", não "prejuízo"). Material e horas só se ele perguntar. Pergunte se ele concorda, quer dar desconto ou acrescentar algo. Ele decide: só feche (fechar_orcamento) depois da resposta dele. Abaixo do mínimo: avise e só feche se ele confirmar.
 - Pagamento, gasto, situação (começou/ficou pronto/entregou) e cancelamento: use a ferramenta (ela pede confirmação num botão) e diga em uma frase o que vai ser anotado.
 - "Quando ficar pronto ela busca" é transporte, não mudança de situação. "Recomeçar do zero" = cancelar_servico do serviço em andamento e começar de novo.
 - Conversa social, agradecimento, teste de áudio: responda curto e, se tinha algo em andamento, volte a ele.
@@ -65,6 +65,8 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Ele perguntar de onde saiu o valor: explique em 2 linhas com mao_de_obra, material_usado e extras_cobrados do cálculo.
 - Ele disser o tempo do trabalho todo ("isso me leva umas 6 horas") ou reclamar que a conta não bate com o que ele faz: use horas_artesao (e materiais_extras com o que ele gasta). A palavra dele vale mais que a conta padrão.
 - Trabalho A MAIS numa peça normal (trocar puxadores, colocar ferragem): horas_extra + trabalho_descricao, que somam à conta.
+- Horas: se ele disser o tempo da peça TODA ("a mesinha inteira dá umas 10 horas"), é horas_artesao (substitui a conta), NUNCA horas_extra. Se ele corrigir ("as 10 horas já eram a mesinha inteira"), apague horas_extra (anotar.limpar) e use horas_artesao. Conserto dito em dias ("uns 2 dias só nisso") NÃO vira dias × 8 horas: pergunte quantas horas de mão na massa dá, ou deixe o conserto na conta padrão.
+- Ele duvidar do valor ("tá alto", "não bate"): explique em 2 linhas com mao_de_obra e material e ofereça usar as horas dele (horas_artesao) — a palavra dele vale mais.
 - Material comprado só pra peça que ele quer cobrar (veludo, puxadores, ferragens): materiais_extras (valor de cada e quantidade). Parte feita por outra pessoa (palhinha, estofado, vidro): terceiro_descricao e terceiro_reais_cada.
 - Técnica da lista + algo a mais (ex.: verniz + palhinha, pintura + puxadores): anote as duas coisas no mesmo serviço.
 - Se ele acrescentar algo depois de ver o valor (material, parceiro, horas, frete), recalcule e mostre o novo valor antes de fechar.
@@ -78,6 +80,9 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Não conclua o que ele não disse: "a foto é só referência" não quer dizer "feita do zero"; pergunte se precisar.
 - Valor que ele já aceitou (Concordo) não precisa de nova confirmação: siga pro prazo e feche.
 - Trabalho pelas horas dele (peça fora do comum): pergunte quanto dá o material que ele vai usar, MESMO que já tenha em casa ("já tenho as tintas" → "e quanto dá, mais ou menos, a tinta que vai usar? entra no valor, porque depois você repõe"). Anote em material_total_reais. Se depois disso ele ainda não der valor ("vejo depois", "já falei"), NÃO pergunte de novo: calcule sem o material e diga numa frase que o material ficou de fora até ele dizer quanto gasta.
+- Ele ainda não sabe quando começa ("tô vendo a agenda", "depois vejo"): ofereça pôr "prazo a combinar" no PDF (prazo_entrega "a combinar") ou esperar ele dizer. Não trave o PDF por isso.
+- Se o valor mudou depois de mostrado, diga o que mudou (o_que_mudou / mudou_desde_o_valor_mostrado). Nunca diga "não consigo ver o motivo" nem "não consigo mudar daqui".
+- A previsão de entrega (data) vem da conta do prazo dele: se ele estranhar a data, explique em uma frase de onde ela veio ("daqui a 1 mês = por volta de 24/12").
 - Uma peça já criada NÃO se cria de novo: para acrescentar dados, use anotar no servico_id dela.
 - Depois do PDF, se ele só confirmar ("ok", "valeu", "vou repassar"), responda numa linha curtinha. Não peça pra ele avisar quando o cliente responder — você mesmo pergunta daqui uns dias.
 - "Me manda o orçamento", "reenvia o PDF": reenviar_orcamento (manda o PDF que já existe). NÃO recalcule, a não ser que ele peça pra atualizar.
@@ -176,7 +181,7 @@ async function stateSnapshot(ctx: Ctx, state: AgentState): Promise<string> {
   return JSON.stringify({
     servicos_em_andamento: brief,
     em_foco: focus,
-    orcamento_mostrado_aguardando_resposta: state.presented ? { servico_ids: state.presented.jobIds } : null,
+    orcamento_mostrado_aguardando_resposta: state.presented ? { servico_ids: state.presented.jobIds, ...(state.presented.accepted && !state.presented.stale ? { valor_ja_aceito: true, regra: "ele JÁ concordou com o valor: não peça confirmação de novo; assim que tiver o prazo, feche direto (fechar_orcamento)" } : {}) } : null,
     acao_aguardando_confirmacao: state.pending ? state.pending.summary : null,
     orcamentos_fechados_recentes: state.closed?.length ? state.closed.length : 0,
     fila_de_servicos: await queueInfo(ctx, state.presented?.jobIds ?? state.focus ?? []),
@@ -327,7 +332,11 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
         const result = await safeExecute(ctx, input.user, p);
         userText = `[confirmou no botão: ${p.summary} → ${result}]`;
       } else userText = `[não confirmou: ${p.summary}]`;
-    } else if (action === "btn") userText = decodeURIComponent(input.text.slice("ag:btn:".length));
+    } else if (action === "btn") {
+      userText = decodeURIComponent(input.text.slice("ag:btn:".length));
+      // tocou "Concordo": o valor está aceito; com o prazo, fecha direto (sem reconfirmar)
+      if (/^Concordo/.test(userText) && state.presented) state.presented.accepted = true;
+    }
   } else if (state.pending) {
     // "sim"/"não" digitado com uma ação esperando confirmação
     const n = normalizeText(userText);
@@ -339,6 +348,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     }
   }
 
+  if (input.kind !== "callback" && state.presented && /^(concordo|pode fechar|fecha|fechado|fechou)\b/.test(normalizeText(userText))) state.presented.accepted = true;
   const history = await historyMessages(ctx, input.user.id, input.inboundMessageId);
   // tudo o que ele disse nos últimos dias vale como fonte de números e nomes (medida dita no começo
   // de uma conversa longa não pode ser recusada como "não dita" 15 mensagens depois)

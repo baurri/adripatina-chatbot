@@ -497,3 +497,44 @@ describe("excelência: texto pro Telegram", () => {
     expect(stripMarkdown("💰 Sugestão: **R$ 156,00**, pelas *3 horas*.")).toBe("💰 Sugestão: R$ 156,00, pelas 3 horas.");
   });
 });
+
+describe("excelência: valor aceito e o que mudou", () => {
+  it("anotar prazo ou observação depois do valor mostrado não reabre o valor; mudar o método reabre e diz o que mudou", async () => {
+    let jobId = "";
+    let closeTry: Record<string, unknown> = {};
+    let recalc: Record<string, unknown> = {};
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false } }),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      () => say("Concorda? 🤝"),
+      () => tool("anotar", { servico_id: jobId, campos: { observacao: "verniz fica de fora até a nota", metodo: "pistola" } }),
+      () => tool("fechar_orcamento", { servico_ids: [jobId] }),
+      (m) => {
+        closeTry = lastToolResult(m);
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      (m) => {
+        recalc = lastToolResult(m);
+        return say("ok");
+      },
+    ]);
+    await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca");
+    await h.click(`ag:btn:${encodeURIComponent("Concordo com o valor")}`);
+    expect(JSON.stringify(closeTry.o_que_mudou)).toMatch(/pistola|m[eé]todo/i);
+    expect(JSON.stringify(closeTry.o_que_mudou)).not.toMatch(/observa/i);
+    if (recalc.mudou_desde_o_valor_mostrado) expect(String(recalc.mensagem_pronta)).toMatch(/Antes deu/);
+  });
+});
+
+describe("excelência: extras não duplicam", () => {
+  it("o mesmo material/trabalho dito com outras palavras substitui", async () => {
+    const { sameItem } = await import("../src/agent/tools.js");
+    expect(sameItem("Puxadores novos (8 un.)", "puxador de latão")).toBe(true);
+    expect(sameItem("Trocar puxadores", "Troca dos puxadores")).toBe(true);
+    expect(sameItem("veludo", "cola de contato")).toBe(false);
+    expect(sameItem("Trabalho extra", "trabalho de entalhe")).toBe(false);
+  });
+});

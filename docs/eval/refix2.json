@@ -1,0 +1,359 @@
+[
+  {
+    "id": "div-porta-macica",
+    "title": "Porta de entrada maciça, dos dois lados, tirar verniz velho",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, beleza? Olha, o seu Paulo me procurou pra reformar uma porta de entrada, madeira maciça, uns 2,10 de altura por 90 de largura. Ele quer tirar o verniz velho, que tá descascando, e envernizar de novo dos dois lados. A madeira tá boa, só o verniz que tá ruim. Eu vou fazer com pincel. Ele busca e leva de volta, paga 120 de frete. Pode ser daqui a um mês. Consegue me ajudar a montar o orçamento?",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, beleza? Olha, o seu Paulo me procurou pra reformar uma porta de entrada, madeira maciça, uns 2,10 de altura por 90 de largura. Ele quer tirar o verniz velho, que tá descascando, e envernizar de novo dos dois lados. A madeira tá boa, só o verniz que tá ruim. Eu vou fazer com pincel. Ele busca e leva de volta, paga 120 de frete. Pode ser daqui a um mês. Consegue me ajudar a montar o orçamento?\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Só pra confirmar: a porta precisa de algum conserto, ou é só o verniz mesmo? 🛠️\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "É só o verniz mesmo, a madeira tá boa. Não tem conserto nenhum, só tirar o verniz velho (decapê), lixar e envernizar de novo dos dois lados. Foto eu não tenho agora, mas se precisar eu tiro depois.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"É só o verniz mesmo, a madeira tá boa. Não tem conserto nenhum, só tirar o verniz velho (decapê), lixar e envernizar de novo dos dois lados. Foto eu não tenho agora, mas se precisar eu tiro depois.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Quantas horas você acha que dá o trabalho todo, contando decapê, lixa e as demãos dos dois lados? ⏱️",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Acho que dá uns 3 dias de trabalho, umas 20 horas no total. Decapê é o mais demorado, porque a porta é grande e tem que tirar tudo dos dois lados. Depois lixa, e aí dou umas 3 demãos de verniz de cada lado, com calma pra secar entre elas.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Acho que dá uns 3 dias de trabalho, umas 20 horas no total. Decapê é o mais demorado, porque a porta é grande e tem que tirar tudo dos dois lados. Depois lixa, e aí dou umas 3 demãos de verniz de cada lado, com calma pra secar entre elas.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: 20 horas no total, pelo decapê, lixa e 3 demãos dos dois lados ✅\n\nAntes de calcular, quanto dá, mais ou menos, o material que vai usar (verniz, removedor, lixa)? Entra no valor, porque depois você repõe.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, o material eu não sei cravado agora. Acho que uns 2 litros de verniz, uns 3 litros de removedor pra decapê dos dois lados e umas 8 folhas de lixa, mais ou menos. Pode botar isso aí, depois eu confiro quando for comprar.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, o material eu não sei cravado agora. Acho que uns 2 litros de verniz, uns 3 litros de removedor pra decapê dos dois lados e umas 8 folhas de lixa, mais ou menos. Pode botar isso aí, depois eu confiro quando for comprar.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei os 2 L de verniz, 3 L de removedor e 8 folhas de lixa ✅\n\nPra fechar a conta, quanto dá mais ou menos esse material todo em reais?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, o preço do material eu não sei de cabeça, ainda não fui comprar. Pode usar os preços que você tem aí no sistema, e se não tiver nada, eu confiro quando for comprar e te falo. Depois a gente põe o frete de 120 e fecha.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, o preço do material eu não sei de cabeça, ainda não fui comprar. Pode usar os preços que você tem aí no sistema, e se não tiver nada, eu confiro quando for comprar e te falo. Depois a gente põe o frete de 120 e fecha.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Ainda falta o valor do material pra fechar a conta. 🎨 Posso seguir sem ele e deixar avisado no orçamento que o material ficou de fora? Pode ser?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Pode sim, deixa o material de fora e avisa no orçamento que ainda falta confirmar. Quando eu for comprar eu te falo o preço e a gente completa. Pode seguir com o frete de 120 e fechar a conta.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Pode sim, deixa o material de fora e avisa no orçamento que ainda falta confirmar. Quando eu for comprar eu te falo o preço e a gente completa. Pode seguir com o frete de 120 e fechar a conta.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, a conta da porta do Seu Paulo saiu ✅\n\n- Sugestão: R$ 1.158,00 (já com o frete de R$ 120)\n- Mínimo pra cobrir seus custos: R$ 923,00\n- Fora da conta: o material, que ainda falta confirmar na compra. Vou deixar avisado no PDF.\n\nVocê concorda com R$ 1.158,00 pra fechar?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado ✅ O PDF da porta do Seu Paulo tá aqui no Telegram pra você repassar. Valor de R$ 1.158,00, com o material ainda a confirmar e o prazo de 1 mês anotado.",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "peça anotada com o nome que ele usou"
+      },
+      {
+        "ok": true,
+        "name": "chegou num valor"
+      },
+      {
+        "ok": true,
+        "name": "PDF gerado"
+      },
+      {
+        "ok": true,
+        "name": "sem travar nem falar de sistema"
+      }
+    ],
+    "metrics": {
+      "falas": 7,
+      "falas_ate_pdf": 7,
+      "pedidos_de_foto": 1
+    },
+    "judge": {
+      "notas": {
+        "entendimento": 4,
+        "naturalidade": 3,
+        "acessibilidade": 4,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 3,
+        "eficiencia": 3,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 2,
+          "gravidade": "media",
+          "classe": "texto_longo",
+          "descricao": "Eco 'Ouvi' repete a transcrição inteira do áudio em todos os turnos, poluindo o chat e alongando a conversa."
+        },
+        {
+          "turno": 3,
+          "gravidade": "baixa",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou se havia conserto, mas ele já tinha dito que a madeira estava boa e só o verniz estava ruim."
+        },
+        {
+          "turno": 6,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "Pediu o valor do material sem usar os preços do sistema, como ele sugeriu, e voltou a insistir no turno 15."
+        },
+        {
+          "turno": 15,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Voltou a cobrar o valor do material, embora ele já tivesse dito que não sabia e pedido para usar os preços do sistema ou confirmar depois. Ignorou a opção dele."
+        },
+        {
+          "turno": 18,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Termos como 'Mínimo pra cobrir seus custos' e 'Sugestão' soam técnicos. O valor fecha sem o material, e o frete de 120 é somado ao valor sem explicar como a conta foi feita."
+        },
+        {
+          "turno": 22,
+          "gravidade": "baixa",
+          "classe": "inventou",
+          "descricao": "Diz 'prazo de 1 mês anotado', mas o prazo dele era 'pode ser daqui a um mês', uma flexibilidade, não um compromisso firme."
+        }
+      ],
+      "resumo": "Chegou ao valor e ao PDF com poucas travas, e os fatos principais foram mantidos. Mas os ecos longos dos áudios deixam a conversa pesada, o bot perguntou duas vezes o que ele já tinha respondido (conserto e preço do material) e ignorou o pedido de usar os preços do sistema. O resultado foi um orçamento sem o material, com termos um pouco técnicos."
+    },
+    "ms": 102167
+  },
+  {
+    "id": "div-comoda-puxadores",
+    "title": "Cômoda: pintura lisa + troca de puxadores comprados",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, beleza? Tenho um serviço aqui pra fazer: é uma cômoda da dona Vera, 4 gavetas, 90 de largura, 80 de altura, 45 de fundura. Ela quer pintar de branco liso, só por fora, e trocar os puxadores. Eu que compro os puxadores, uns 15 reais cada, são 8 no total, dá 120. Ela traz a peça e busca depois. Dá pra fazer em umas 3 semanas. Quero ver quanto fica o orçamento com os puxadores incluídos.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, beleza? Tenho um serviço aqui pra fazer: é uma cômoda da dona Vera, 4 gavetas, 90 de largura, 80 de altura, 45 de fundura. Ela quer pintar de branco liso, só por fora, e trocar os puxadores. Eu que compro os puxadores, uns 15 reais cada, são 8 no total, dá 120. Ela traz a peça e busca depois. Dá pra fazer em umas 3 semanas. Quero ver quanto fica o orçamento com os puxadores incluídos.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: cômoda da Dona Vera, 4 gavetas, pintura branca lisa por fora, 8 puxadores a R$ 15 e ela busca depois ✅\n\nComo tá a peça hoje? Boa, com reparos ou danificada? 🪵\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Tá boa, sem defeito grande. Só precisa de um rolo na pintura, nada de reparo. Não tenho foto agora, depois eu mando se precisar.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Tá boa, sem defeito grande. Só precisa de um rolo na pintura, nada de reparo. Não tenho foto agora, depois eu mando se precisar.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fiz as contas da cômoda da Dona Vera 🪵\n\n💰 Sugestão: R$ 400,00 (já com os 8 puxadores)\n⚠️ Menos que R$ 346,00 não cobre seus custos.\n⏱️ Umas 5 horas de trabalho, 2 dias.\n\nVocê concorda, quer dar um desconto ou acrescentar algo?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "Show, anotei as 3 semanas ✅ Quando você consegue começar essa cômoda?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Começo daqui uns dias, depois que eu terminar uns serviços que já estão na oficina. Dá pra começar na semana que vem sem problema.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Começo daqui uns dias, depois que eu terminar uns serviços que já estão na oficina. Dá pra começar na semana que vem sem problema.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado! ✅ Anotei: começa semana que vem e leva umas 3 semanas. Te mandei o PDF aqui de R$ 400,00 pra repassar pra Dona Vera.",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "peça anotada com o nome que ele usou"
+      },
+      {
+        "ok": true,
+        "name": "chegou num valor"
+      },
+      {
+        "ok": true,
+        "name": "PDF gerado"
+      },
+      {
+        "ok": true,
+        "name": "sem travar nem falar de sistema"
+      },
+      {
+        "ok": true,
+        "name": "puxadores anotados"
+      }
+    ],
+    "metrics": {
+      "falas": 4,
+      "falas_ate_pdf": 4,
+      "pedidos_de_foto": 1
+    },
+    "judge": {
+      "notas": {
+        "entendimento": 4,
+        "naturalidade": 4,
+        "acessibilidade": 4,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 4,
+        "eficiencia": 5,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 6,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "A mensagem diz que 'menos que R$ 346,00 não cobre seus custos', um aviso seco que mistura custo com piso. Também não deixa claro como os R$ 120 dos puxadores entram no total."
+        },
+        {
+          "turno": 8,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Depois do 'Concordo', o bot diz 'anotei as 3 semanas' como se fosse resposta nova e pergunta quando ele começa. A ordem fica estranha e o prazo já tinha sido dito. O bot não confirma o valor fechado nesse momento."
+        },
+        {
+          "turno": 13,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "O fechamento 'Anotei: começa semana que vem' resume a fala vaga dele ('daqui uns dias... semana que vem sem problema') como se fosse data certa. O 'Fechado!' soa um pouco firme demais para algo que ainda não tem data marcada."
+        },
+        {
+          "turno": 3,
+          "gravidade": "baixa",
+          "classe": "perdeu_informacao",
+          "descricao": "O resumo não cita as medidas (90x80x45) nem 'só por fora' de forma clara. Elas não foram perdidas nas contas, mas a confirmação ficou incompleta."
+        },
+        {
+          "turno": 11,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "O PDF foi enviado logo depois de ele falar da data de início, sem aviso. Foi só no fim que o bot explicou o que tinha feito."
+        }
+      ],
+      "resumo": "A conversa chegou ao objetivo em poucas trocas: orçamento de R$ 400 com os puxadores, PDF gerado e instrução de envio. Os pontos fracos são o aviso de custo com tom meio técnico, o 'anotei as 3 semanas' fora de hora e o fechamento que trata 'semana que vem' como data certa."
+    },
+    "ms": 42699
+  }
+]

@@ -36,7 +36,7 @@ export interface AgentState {
   /** fotos recebidas que ainda não foram ligadas a um serviço (ids de attachments) */
   photos?: string[];
   /** último orçamento mostrado (para fechar só num turno seguinte) */
-  presented?: { jobIds: string[]; quoteIds: string[]; turn: number; baseCents: number; floorCents: number | null; stale?: boolean };
+  presented?: { jobIds: string[]; quoteIds: string[]; turn: number; baseCents: number; floorCents: number | null; stale?: boolean; changed?: string[]; accepted?: boolean };
   /** contador de turnos (mensagens do usuário) — o orçamento mostrado num turno só fecha num seguinte */
   turn?: number;
   pending?: PendingAction | null;
@@ -358,10 +358,23 @@ async function clearFields(t: ToolContext, job: Job, keys: unknown): Promise<str
   return cleared;
 }
 
+const ITEM_STOP = new Set(["trabalho", "extra", "extras", "troca", "trocar", "colocar", "coloca", "novos", "novas", "novo", "nova", "material", "peca", "pecas", "unidade", "unidades", "cada"]);
+/** Mesmo item com outras palavras ("trocar puxadores" = "puxadores novos (8 un.)"): partilham uma palavra-chave. */
+export function sameItem(a: string, b: string): boolean {
+  const keys = (x: string) => new Set(normalizeText(x).split(/[^a-z]+/).filter((w) => w.length >= 4 && !ITEM_STOP.has(w)).map((w) => w.slice(0, 5)));
+  const ka = keys(a);
+  return [...keys(b)].some((k) => ka.has(k));
+}
+
 async function applyFields(t: ToolContext, job: Job, fields: Fields, correction: boolean): Promise<{ saved: string[]; rejected: string[] }> {
   const r = await applyFieldsInner(t, job, fields, correction);
   const p = t.state.presented;
-  if (p && p.jobIds.includes(job.id) && r.saved.some((x) => !/^prazo/.test(x))) p.stale = true;
+  // só o que mexe no preço reabre o valor (prazo, observação, cliente e descrição não mexem)
+  const priced = r.saved.filter((x) => !/^(prazo|observa[cç][aã]o|cliente|trabalho:|apagado: prazo)/i.test(x));
+  if (p && p.jobIds.includes(job.id) && priced.length) {
+    p.stale = true;
+    p.changed = [...(p.changed ?? []), ...priced];
+  }
   return r;
 }
 
@@ -453,7 +466,7 @@ async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correc
     // trabalho a mais que soma à conta normal
     const ov = await getOverrides(t.ctx, job.id);
     const description = cap(desc ?? "Trabalho extra");
-    await saveOverrides(t.ctx, job.id, { ...ov, extraLabor: [...ov.extraLabor.filter((x) => normalizeText(x.description) !== normalizeText(description)), { description, hours: String(extra) }] }, t.user.id);
+    await saveOverrides(t.ctx, job.id, { ...ov, extraLabor: [...ov.extraLabor.filter((x) => normalizeText(x.description) !== normalizeText(description) && !sameItem(x.description, description)), { description, hours: String(extra) }] }, t.user.id);
     saved.push(`${description}: ${extra} h a mais`);
   } else if (horas || (desc && realTechs.length === 0)) {
     // conta pelas horas dele (trabalho todo)
@@ -483,7 +496,8 @@ async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correc
       }
       const qty = typeof m.quantidade === "number" && m.quantidade > 0 && m.quantidade <= 200 ? m.quantidade : 1;
       const label = `${m.descricao.trim().slice(0, 60)}${qty > 1 ? ` (${qty} un.)` : ""}`;
-      expenses = [...expenses.filter((e) => !(e.category === "outros" && normalizeText(e.description).startsWith(normalizeText(m.descricao as string).slice(0, 12)))), { description: label, amountCents: Math.round(m.valor_unitario_reais * 100 * qty), category: "outros" }];
+      // o mesmo material dito de novo SUBSTITUI (antes os puxadores entravam 3 vezes)
+      expenses = [...expenses.filter((e) => !(e.category === "outros" && sameItem(e.description, m.descricao as string))), { description: label, amountCents: Math.round(m.valor_unitario_reais * 100 * qty), category: "outros" }];
       saved.push(`material: ${label} ${formatBRL(Math.round(m.valor_unitario_reais * 100 * qty))}`);
       // material da conta padrão ainda sem preço (ex.: lixa avulsa a 2 reais): o preço unitário vale pro catálogo também
       const all = await listMaterials(t.ctx);
@@ -1019,6 +1033,8 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         const base = quotes.reduce((acc, q) => acc + (q.recommendedCents ?? 0), 0);
         const floors = quotes.map((q) => q.floorCents);
         const floor = floors.every((x) => x !== null) ? floors.reduce((acc, x) => acc! + x!, 0) : null;
+        // valor já mostrado dessas peças e diferente agora: diz o que mudou (antes: "não consigo ver o motivo")
+        const shown = t.state.presented && t.state.presented.jobIds.join() === ids.join() && t.state.presented.baseCents !== base ? t.state.presented : null;
         t.state.presented = { jobIds: ids, quoteIds: quotes.map((q) => q.id), turn: t.turn, baseCents: base, floorCents: floor };
         t.effects.presentedQuote = true;
         const jobs = await Promise.all(ids.map((id) => getJob(t.ctx, id)));
@@ -1039,7 +1055,11 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         if (changes.length) {
           lines.splice(lines.length - 2, 0, "", ...changes.map((c) => `🔄 ${c.peca}: era ${c.antes} no último PDF, agora ${c.agora} — ${c.motivo}.`));
         }
-        return { itens: items, total_sugerido: reais(base), material_a_comprar_total: reais(buy), mudou_desde_o_ultimo_pdf: changes, mensagem_pronta: lines.join("\n"), proximo_passo: "Responda com a mensagem_pronta (pode trocar uma palavra ou outra, mas sem tirar nem pôr números e sem outra pergunta)." };
+        const sinceShown = shown ? { antes: formatBRL(shown.baseCents), agora: formatBRL(base), o_que_mudou: [...new Set(shown.changed ?? [])].slice(0, 6) } : null;
+        if (sinceShown) {
+          lines.splice(lines.length - 2, 0, "", `🔄 Antes deu ${sinceShown.antes}; mudou porque ${sinceShown.o_que_mudou.length ? `anotei: ${sinceShown.o_que_mudou.join("; ")}` : "a conta foi refeita"}.`);
+        }
+        return { itens: items, total_sugerido: reais(base), material_a_comprar_total: reais(buy), mudou_desde_o_ultimo_pdf: changes, ...(sinceShown ? { mudou_desde_o_valor_mostrado: sinceShown } : {}), mensagem_pronta: lines.join("\n"), proximo_passo: "Responda com a mensagem_pronta (pode trocar uma palavra ou outra, mas sem tirar nem pôr números e sem outra pergunta)." };
       }
       return { itens: items, proximo_passo: "Ainda falta informação: pergunte UMA coisa por vez." };
     }
@@ -1116,7 +1136,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       if (!p || !ids.length || ids.some((id) => !p.jobIds.includes(id))) return { erro: "calcule e mostre o orçamento antes (calcular_orcamento)" };
       if (p.turn >= t.turn) return { erro: "ele ainda não respondeu ao valor: mostre e pergunte se concorda; feche só depois da resposta" };
-      if (p.stale) return { erro: "depois do valor mostrado ele acrescentou ou mudou coisas", proximo_passo: "Calcule de novo (calcular_orcamento), mostre o NOVO valor com o que ele acrescentou e pergunte se fecha assim." };
+      if (p.stale) return { erro: "depois do valor mostrado ele acrescentou ou mudou coisas", o_que_mudou: [...new Set(p.changed ?? [])].slice(0, 6), proximo_passo: "Calcule de novo (calcular_orcamento), mostre o NOVO valor dizendo numa frase o que mudou (o_que_mudou) e pergunte se fecha assim." };
       // prazo é crítico (ele tem fila de serviços): nunca vai pro PDF um prazo que ele não deu
       for (const id of ids) {
         const j = await getJob(t.ctx, id);
