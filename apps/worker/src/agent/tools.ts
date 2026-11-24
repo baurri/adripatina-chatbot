@@ -233,7 +233,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: "informar_preco_material",
-    description: "Guarda o preço de um material que ele informou (preço de UMA embalagem e o tamanho dela). Ex.: 'duas latas de 900 ml por 150' → preco_embalagem_reais 75, tamanho 900, unidade ml. Tamanhos de lata no Brasil: 'lata de 1/4', 'quartinho' ou 'quarto' = 1/4 de GALÃO = 900 ml; 'galão' = 3,6 l; 'lata grande'/'18 litros' = 18 l. Não pergunte '1/4 de quê'.",
+    description: "Guarda o preço de um material que ele informou (preço de UMA embalagem e o tamanho dela). Ex.: 'duas latas de 900 ml por 150' → preco_embalagem_reais 75, tamanho 900, unidade ml. Lixa avulsa '2 reais a folha' → preco 2, tamanho 1, unidade folha. Tamanhos de lata no Brasil: 'lata de 1/4', 'quartinho' ou 'quarto' = 1/4 de GALÃO = 900 ml; 'galão' = 3,6 l; 'lata grande'/'18 litros' = 18 l. Não pergunte '1/4 de quê'.",
     input_schema: {
       type: "object",
       properties: {
@@ -582,6 +582,34 @@ async function jobClosed(t: ToolContext, jobId: string): Promise<boolean> {
   return (r?.n ?? 0) > 0;
 }
 
+/**
+ * Método e transporte são combinados por cliente: se a peça ainda não tem e TODAS as outras peças
+ * do mesmo cliente (recentes) dizem a mesma coisa, copia — ele não precisa responder de novo.
+ */
+async function inheritFromSiblings(t: ToolContext, jobId: string): Promise<string[]> {
+  const job = await getJob(t.ctx, jobId);
+  if (!job) return [];
+  const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
+  const me = clientOf(job);
+  if (!me) return [];
+  const sibs = (await listActiveJobs(t.ctx, 12)).filter((j) => j.id !== jobId && clientOf(j) === me);
+  if (!sibs.length) return [];
+  const out: string[] = [];
+  for (const [field, label] of [
+    ["application_method", "método"],
+    ["logistics", "transporte"],
+  ] as const) {
+    if (job.facts[field]?.value) continue;
+    const vals = sibs.map((j) => j.facts[field]?.value).filter((v) => v !== undefined && v !== null);
+    if (!vals.length || new Set(vals.map((v) => JSON.stringify(v))).size !== 1) continue;
+    await setFact(t.ctx, jobId, field, vals[0] as never, { ...opts(t), status: "confirmed" });
+    const v = vals[0] as unknown;
+    const shown = field === "logistics" ? ((v as { pickup?: boolean; delivery?: boolean }).pickup || (v as { delivery?: boolean }).delivery ? "você busca/entrega" : "o cliente leva e busca") : String(v);
+    out.push(`${label}: ${shown} (igual às outras peças)`);
+  }
+  return out;
+}
+
 /** Peças abertas (sem orçamento fechado) do mesmo cliente das peças pedidas, fora delas. */
 async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
   const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
@@ -672,11 +700,12 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const fresh = (await getJob(t.ctx, job.id))!;
       const r = await applyFields(t, fresh, fields, false);
       focus(t, job.id);
+      const inherited = await inheritFromSiblings(t, job.id);
       const done = (await getJob(t.ctx, job.id))!;
       const fotos = await attachPhotos(t, job.id);
       const hasPhoto = fotos > 0 || !!(await t.ctx.db.first("SELECT 1 FROM attachments WHERE job_id = ? AND deleted_at IS NULL LIMIT 1", job.id));
       if (!hasPhoto) t.effects.askPhoto = true;
-      return { criado: describeJob(done), anotado: r.saved, recusado: r.rejected, ...(fotos ? { fotos_guardadas: fotos } : {}), ...(!hasPhoto ? { sem_foto: "peça uma foto desta peça nesta mensagem, uma vez, sem obrigar" } : {}) };
+      return { criado: describeJob(done), anotado: [...r.saved, ...inherited], recusado: r.rejected, ...(inherited.length ? { igual_as_outras_pecas: inherited, aviso: "Diga numa frase que usou o mesmo esquema das outras peças (sem perguntar de novo)." } : {}), ...(fotos ? { fotos_guardadas: fotos } : {}), ...(!hasPhoto ? { sem_foto: "peça uma foto desta peça nesta mensagem, uma vez, sem obrigar" } : {}) };
     }
     case "anotar": {
       const job = await loadJob(t, a.servico_id);
@@ -686,7 +715,8 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       if (cleared.length) r.saved.push(`apagado: ${cleared.join(", ")}`);
       focus(t, job.id);
       const fotos = await attachPhotos(t, job.id);
-      return { anotado: r.saved, recusado: r.rejected, servico: describeJob((await getJob(t.ctx, job.id))!), ...(fotos ? { fotos_guardadas: fotos } : {}) };
+      const inherited = await inheritFromSiblings(t, job.id);
+      return { anotado: [...r.saved, ...inherited], recusado: r.rejected, servico: describeJob((await getJob(t.ctx, job.id))!), ...(inherited.length ? { igual_as_outras_pecas: inherited, aviso: "Diga numa frase que usou o mesmo esquema das outras peças (sem perguntar de novo)." } : {}), ...(fotos ? { fotos_guardadas: fotos } : {}) };
     }
     case "guardar_foto": {
       const job = await loadJob(t, a.servico_id);
