@@ -39,7 +39,7 @@ export default {
       defer: (p) => execCtx.waitUntil(p),
     });
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/api/")) return app.fetch(request, env, execCtx);
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/p/")) return app.fetch(request, env, execCtx);
     // painel estático (Workers Static Assets)
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response("Painel não compilado. Rode: pnpm build", { status: 404 });
