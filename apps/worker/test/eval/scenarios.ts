@@ -262,7 +262,7 @@ export const SCENARIOS: Scenario[] = [
       const said = h.telegram.sent.map((s) => s.text ?? "").join("\n");
       return [
         check(!!j, "mesa de centro anotada"),
-        check(!/voc[eê] (vai )?busca|voc[eê] vai pegar a mesa/i.test(said), "não disse que ele vai buscar a peça"),
+        check(!said.split(/(?<=[.!?\n])/).some((x) => /voc[eê] (vai )?busca|voc[eê] vai pegar a mesa/i.test(x) && !x.includes("?")), "não afirmou que ele vai buscar a peça"),
         check(!has(v(j, "logistics"), /"pickup":true/), "não anotou que ele busca", v(j, "logistics")),
         check(has(v(j, "deadline"), /2 meses/), "prazo dele anotado (2 meses)", v(j, "deadline")),
         check(/foto/i.test(said), "pediu foto"),
@@ -292,5 +292,106 @@ export const SCENARIOS: Scenario[] = [
       await seedJob(h, "mesa", "Seu João", ["verniz"]);
     },
     checks: async () => [],
+  },
+];
+
+// ---------------------------------------------------------------- cenários diversos (23/11/2026)
+// Peças e trabalhos fora do comum: o bot precisa anotar o que ele falou, chegar num valor e no PDF.
+
+async function common(h: Harness, piece: RegExp): Promise<Check[]> {
+  const js = await jobs(h);
+  const said = h.telegram.sent.map((s) => s.text ?? "").filter((x) => !x.startsWith("🎧")).join("\n");
+  const stuck = said.match(/.{0,60}(sistema|marca[cç][aã]o|reconhe[cç]o|n[aã]o consigo).{0,60}/i)?.[0];
+  return [
+    check(js.length >= 1 && js.some((j) => piece.test(JSON.stringify(j.facts))), "peça anotada com o nome que ele usou", js.map((j) => JSON.stringify(j.facts).slice(0, 160))),
+    check((await quoteStatuses(h)).length >= 1, "chegou num valor", await quoteStatuses(h)),
+    check((await docs(h)) >= 1, "PDF gerado"),
+    check(!stuck, "sem travar nem falar de sistema", stuck),
+  ];
+}
+
+const factsText = async (h: Harness) => JSON.stringify((await jobs(h)).map((j) => j.facts));
+
+export const DIVERSE: Scenario[] = [
+  {
+    id: "div-guarda-roupa-decape",
+    title: "Decapê num guarda-roupa grande, por dentro e por fora, com frete",
+    opening: "conte por áudio que a dona Rita quer fazer decapê num guarda-roupa antigo.",
+    brief: "Guarda-roupa da Dona Rita, decapê. 2 portas e 3 gavetas. 1,80 m de altura, 1,20 de largura, 55 de fundura. Por dentro e por fora. Uma dobradiça solta (conserto, ele acha que leva 1 hora). Pincel. Ele busca e entrega, frete de 80 reais. Prazo: começa daqui a 1 mês, leva umas 2 semanas. Preços se perguntarem: invente preços razoáveis de loja (ex.: removedor 60 reais o litro).",
+    goal: "Chegar ao valor, concordar e receber o PDF.",
+    checks: (h) => common(h, /guarda/),
+  },
+  {
+    id: "div-estatua-folha-ouro",
+    title: "Folha de ouro numa estátua de santo (peça que não é móvel)",
+    opening: "conte que o seu Jorge trouxe uma estátua de madeira de Santo Antônio pra aplicar folha de ouro no manto.",
+    brief: "Estátua de madeira de Santo Antônio do Seu Jorge, uns 60 cm de altura. Folha de ouro só no manto (uma parte). Tem um dedinho lascado pra arrumar com massa. Ele aplica com pincel. O cliente traz e busca. Prazo: daqui a 3 semanas. Preços se perguntarem: caderno de folha de ouro com 25 folhas 120 reais; cola mordente 40 reais o frasco de 100 ml. Acha que leva umas 6 horas de trabalho.",
+    goal: "Chegar a um valor e receber o PDF.",
+    checks: (h) => common(h, /est[aá]tua|santo/i),
+  },
+  {
+    id: "div-faqueiro-veludo",
+    title: "Encapar faqueiro com veludo (trabalho que não é pintura)",
+    opening: "conte que a dona Lúcia quer encapar por dentro um faqueiro com veludo vinho.",
+    brief: "Faqueiro (caixa de talheres) da Dona Lúcia, 40 por 30 cm e 8 de altura. Encapar o interior com veludo vinho. Por fora está bom, não mexe. Ele acha que leva umas 4 horas. Material: meio metro de veludo por 35 reais e uma cola de contato de 20 reais. Ela traz e busca. Prazo: semana que vem.",
+    quirks: "Se perguntarem pincel/rolo/pistola, diz que não é pintura, é colar o tecido.",
+    goal: "Chegar a um valor e receber o PDF.",
+    checks: (h) => common(h, /faqueiro/i),
+  },
+  {
+    id: "div-cadeiras-palhinha",
+    title: "6 cadeiras: verniz + palhinha terceirizada",
+    opening: "conte que a dona Neide tem 6 cadeiras iguais pra envernizar e trocar a palhinha do assento.",
+    brief: "6 cadeiras iguais da Dona Neide. Envernizar (só por fora, inteiras). A palhinha do assento ele não faz: manda pro Seu Zé, que cobra 90 reais por cadeira. Estão boas, só gastas. Pincel. Ele busca e entrega, frete 100 reais. Prazo: daqui a 2 meses. Medidas: cadeira normal, tamanho médio.",
+    goal: "Chegar ao valor com a palhinha incluída e receber o PDF.",
+    checks: async (h) => [...(await common(h, /cadeira/i)), check(/palhinha|z[eé]/i.test(await factsText(h)), "palhinha/terceirizado anotado")],
+  },
+  {
+    id: "div-porta-macica",
+    title: "Porta de entrada maciça, dos dois lados, tirar verniz velho",
+    opening: "conte que o seu Paulo quer reformar a porta de entrada de madeira maciça.",
+    brief: "Porta de entrada maciça do Seu Paulo, 2,10 de altura por 90 cm. Tirar o verniz velho (decapê) e envernizar de novo, dos dois lados. Estado: verniz descascando, madeira boa. Pincel. Ele busca e leva de volta, frete 120. Prazo: daqui a 1 mês.",
+    goal: "Chegar ao valor e receber o PDF.",
+    checks: (h) => common(h, /porta/i),
+  },
+  {
+    id: "div-oratorio-cupim",
+    title: "Oratório com cupim: restauração + pátina + detalhes em folha de ouro",
+    opening: "conte que a dona Cida trouxe um oratório antigo com cupim.",
+    brief: "Oratório antigo da Dona Cida, 50 de altura, 30 de largura, 20 de fundura. Tem cupim: precisa tratar e restaurar (ele acha 3 horas de conserto). Depois pátina por fora e uns detalhes em folha de ouro nos frisos. Por dentro também (tem o nicho). Pincel. Ela traz e busca. Prazo: 1 mês.",
+    goal: "Chegar ao valor e receber o PDF.",
+    checks: (h) => common(h, /orat[oó]rio/i),
+  },
+  {
+    id: "div-bandeja-flores",
+    title: "Pintura artística à mão numa bandeja (técnica fora da lista)",
+    opening: "conte que a dona Bete quer que você pinte flores à mão numa bandeja de madeira.",
+    brief: "Bandeja de madeira da Dona Bete, 45 por 30 cm. Pintar fundo branco e flores à mão (pintura artística). Ele acha que leva umas 5 horas por causa dos detalhes. Usa tinta acrílica que ele já tem, só precisa de um verniz spray de 30 reais. Pincel. Ela traz e busca. Prazo: 10 dias.",
+    goal: "Chegar a um valor e receber o PDF.",
+    checks: (h) => common(h, /bandeja/i),
+  },
+  {
+    id: "div-comoda-puxadores",
+    title: "Cômoda: pintura lisa + troca de puxadores comprados",
+    opening: "conte que a dona Vera quer pintar uma cômoda de branco e trocar os puxadores.",
+    brief: "Cômoda da Dona Vera, pintura lisa branca. 4 gavetas. 90 de largura, 80 de altura, 45 de fundura. Só por fora. Está boa. Rolo. Trocar os 8 puxadores: ele compra puxadores novos a 15 reais cada (120 no total) e quer cobrar isso. Ela traz e busca. Prazo: daqui a 3 semanas.",
+    goal: "Chegar ao valor com os puxadores incluídos e receber o PDF.",
+    checks: async (h) => [...(await common(h, /c[oô]moda/i)), check(/puxador/i.test(await factsText(h)), "puxadores anotados")],
+  },
+  {
+    id: "div-banco-jardim",
+    title: "Banco de jardim (fica no tempo) com verniz marítimo",
+    opening: "conte que o seu Antônio quer envernizar um banco de jardim que fica no sol e na chuva.",
+    brief: "Banco de madeira de jardim do Seu Antônio, 1,50 de comprimento, 45 de fundura, 85 de altura com encosto. Verniz marítimo (fica exposto ao tempo). Está meio cinza do sol, precisa lixar bem, sem conserto. Pincel. Ele busca e entrega, frete 70. Prazo: daqui a 2 semanas.",
+    goal: "Chegar ao valor e receber o PDF.",
+    checks: (h) => common(h, /banco/i),
+  },
+  {
+    id: "div-bau-e-espelho",
+    title: "Duas peças diferentes: baú (pátina) e moldura de espelho redonda (folha de ouro)",
+    opening: "conte que a dona Fátima tem um baú pra patinar e uma moldura de espelho redonda pra dourar.",
+    brief: "Dona Fátima. (1) Baú: pátina azul envelhecida, 80 x 45 x 50 de altura, por dentro e por fora, bom estado, pincel. (2) Moldura de espelho redonda, 80 cm de diâmetro, folha de ouro na moldura toda, bom estado, pincel. Ela traz e busca as duas. Prazo: as duas daqui a 1 mês.",
+    goal: "Chegar ao valor das duas e receber o PDF.",
+    checks: async (h) => [...(await common(h, /ba[uú]/i)), check(/moldura|espelho/i.test(await factsText(h)), "moldura anotada")],
   },
 ];

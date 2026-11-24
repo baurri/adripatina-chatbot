@@ -9,7 +9,7 @@ import { ClaudeAgentModel } from "../../src/ai/claude-agent.js";
 import { QUOTE_REQUEST_JSON_SCHEMA } from "../../src/ai/providers.js";
 import { resetAiBreaker } from "../../src/ai/service.js";
 import type { SentRecord } from "../../src/telegram/client.js";
-import { SCENARIOS, type Scenario } from "./scenarios.js";
+import { DIVERSE, SCENARIOS, type Scenario } from "./scenarios.js";
 
 /**
  * AVALIAÇÃO COM O CLAUDE DE VERDADE (D-074). Não roda nos testes normais: `EVAL=1`.
@@ -230,7 +230,7 @@ function report(results: Result[]): string {
 describe.skipIf(!KEY)("avaliação com Claude real (EVAL=1)", () => {
   it("roda os cenários e grava o relatório", { timeout: 60 * 60 * 1000 }, async () => {
     const only = process.env.EVAL_ONLY?.split(",").map((s) => s.trim()).filter(Boolean);
-    const list = SCENARIOS.filter((s) => !only?.length || only.includes(s.id));
+    const list = [...SCENARIOS, ...DIVERSE].filter((s) => !only?.length || only.includes(s.id));
     const results: Result[] = [];
     for (const s of list) {
       const r = await runScenario(s, KEY!);
@@ -239,7 +239,8 @@ describe.skipIf(!KEY)("avaliação com Claude real (EVAL=1)", () => {
     }
     const dir = join(ROOT, "docs/eval");
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "latest.md"), report(results));
-    writeFileSync(join(dir, "latest.json"), JSON.stringify(results, null, 2));
+    const out = process.env.EVAL_OUT ?? "latest";
+    writeFileSync(join(dir, `${out}.md`), report(results));
+    writeFileSync(join(dir, `${out}.json`), JSON.stringify(results, null, 2));
   });
 });

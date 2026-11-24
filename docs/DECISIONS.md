@@ -120,3 +120,15 @@ Valores inventados para testes estão no catálogo **demo_only / calibrated=fals
 - `anotar.limpar` apaga um campo anotado errado (transporte, método, prazo...). Antes não havia como apagar e o bot dizia que "não conseguia tirar a marcação do sistema".
 - "Tenho um serviço pra pegar lá na casa dela" é pegar o trabalho / ir orçar, não buscar a peça.
 - Peça nova sem foto: o pedido de foto vai na mensagem (o código acrescenta se o Claude esquecer). Respostas com "sistema", "marcação" ou "ferramenta" voltam para reescrita.
+
+## D-078 — Peças e trabalhos fora do comum (2026-11-23)
+
+Avaliação com 10 cenários diversos (guarda-roupa decapê, estátua com folha de ouro, faqueiro com veludo, cadeiras com palhinha terceirizada, porta maciça, oratório com cupim, bandeja pintada à mão, cômoda com puxadores, banco de jardim, baú + moldura). Antes: estátua, faqueiro e bandeja travavam (0/4) e vários não chegavam ao PDF. Depois: 10/10 cenários com valor e PDF.
+
+- Peça fora do catálogo vira `type: "outro"` com `label` = o nome que ele usou ("estátua de Santo Antônio"); só nome vago ("outros dois móveis", "tampo", "sem nome") é recusado e perguntado.
+- Conta pelas horas dele (`horas_artesao` / `dias_artesao` → `overrides.artisanTotal`): substitui a receita das técnicas (sem horas nem materiais padrão). Técnica `sob_medida` marca esses serviços (sem medida/método obrigatórios).
+- Trabalho a mais que soma à conta: `horas_extra` + `trabalho_descricao`. Material comprado só pra peça: `materiais_extras`. Material total dito por ele: `material_total_reais` (substitui os materiais padrão). Parceiro (palhinha, estofado): `terceiro_descricao` + `terceiro_reais_cada` → `subcontract_quotes`.
+- Motor de preço: sem técnica mas com horas/parceiro, calcula sem exigir área.
+- Algo acrescentado depois de mostrar o valor obriga recalcular antes de fechar. O cálculo devolve materiais, mão de obra e extras para ele perguntar "o que entrou na conta".
+- Se o Claude terminar sem texto, uma chamada extra pede a resposta (antes caía em "me perdi").
+- Pendente: orçamento de várias peças ainda gera um PDF por peça e se confunde com quantidade de peças iguais.

@@ -1,10 +1,10 @@
-import { FURNITURE, TECHNIQUES, findFurniture, findTechniques, furnitureLabel, grounded, groundNumbers, parseFurnitureList, techniqueLabel } from "@adripatina/conversations";
+import { FURNITURE, TECHNIQUES, findFurniture, findTechniques, grounded, groundNumbers, parseFurnitureList, pieceLabel, techniqueLabel } from "@adripatina/conversations";
 import { OPTIONAL_FIELDS, type FactValueMap, type JobStatus, type ProjectField } from "@adripatina/domain";
 import { allocateCents, formatBRL, normalizeText } from "@adripatina/shared";
 import { findConfidentialTerms } from "@adripatina/pdf";
 import type { Ctx } from "../context.js";
 import type { AgentTool } from "../ports.js";
-import { getMaterialByKey, listMaterials } from "../repos/catalog.js";
+import { getActiveSettings, getMaterialByKey, listMaterials } from "../repos/catalog.js";
 import { createJob, getJob, jobPhrase, listActiveJobs, setFact, transitionJob, computePending, jobBalance, type Job } from "../repos/jobs.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { applyConfirmedPrice, missingPriceKeys } from "../services/material-pricing.js";
@@ -36,7 +36,7 @@ export interface AgentState {
   /** fotos recebidas que ainda não foram ligadas a um serviço (ids de attachments) */
   photos?: string[];
   /** último orçamento mostrado (para fechar só num turno seguinte) */
-  presented?: { jobIds: string[]; quoteIds: string[]; turn: number; baseCents: number; floorCents: number | null };
+  presented?: { jobIds: string[]; quoteIds: string[]; turn: number; baseCents: number; floorCents: number | null; stale?: boolean };
   /** contador de turnos (mensagens do usuário) — o orçamento mostrado num turno só fecha num seguinte */
   turn?: number;
   pending?: PendingAction | null;
@@ -82,8 +82,12 @@ const REQUIRED_LABEL: Partial<Record<ProjectField, string>> = {
 };
 
 function missingFor(job: Job): string[] {
+  const techs = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
+  // trabalho só sob medida (tecido, pintura artística...): cobra pelas horas, não precisa de medida nem método
+  const hoursOnly = techs.includes("sob_medida");
+  const skip: ProjectField[] = hoursOnly ? ["dimensions", "application_method", "surfaces", "scope"] : [];
   return computePending(job.facts)
-    .filter((f) => !OPTIONAL_FIELDS.includes(f) && f !== "details" && f !== "size_class")
+    .filter((f) => !OPTIONAL_FIELDS.includes(f) && f !== "details" && f !== "size_class" && !skip.includes(f))
     .filter((f) => !(f === "dimensions" && (job.facts.size_class?.value || job.facts.dimensions?.value)))
     .map((f) => REQUIRED_LABEL[f] ?? f);
 }
@@ -96,7 +100,7 @@ function describeJob(job: Job): Record<string, unknown> {
     servico_id: job.id,
     nome: jobPhrase(job),
     situacao: job.status,
-    movel: ft ? { tipo: furnitureLabel(ft.type), quantidade: ft.quantity ?? 1, gavetas: ft.drawers ?? ft.attributes?.drawers_count ?? null, portas: ft.doors ?? ft.attributes?.doors_count ?? null, detalhes: ft.descriptors ?? [] } : null,
+    movel: ft ? { tipo: pieceLabel(ft), quantidade: ft.quantity ?? 1, gavetas: ft.drawers ?? ft.attributes?.drawers_count ?? null, portas: ft.doors ?? ft.attributes?.doors_count ?? null, detalhes: ft.descriptors ?? [] } : null,
     tecnicas: ((v("techniques") as string[] | null) ?? []).map(techniqueLabel),
     cliente: v("client_name"),
     medidas_m: v("dimensions"),
@@ -159,6 +163,18 @@ const FIELDS_SCHEMA = {
     quantidade: n("quantas peças iguais neste serviço"),
     cliente: s("nome do dono com tratamento: 'Dona Carla', 'Seu Luiz'"),
     prazo: s("quando fica pronto para o cliente, do jeito que ele falou, incluindo quando ele consegue começar: 'começo daqui a 2 meses, fica pronto em uns 10 dias', 'daqui a 6 meses', 'sem prazo'"),
+    trabalho_descricao: s("o que vai ser feito quando NÃO é uma das técnicas (ex.: 'encapar o interior com veludo vinho', 'pintar flores à mão', 'trocar os puxadores'). Vai no PDF."),
+    horas_artesao: n("horas que ELE diz para o TRABALHO TODO desta peça (incluindo conserto). A conta passa a ser pelas horas dele + materiais_extras, sem a conta padrão. Use quando ele disser o tempo total, ou quando a peça/trabalho foge do comum (estátua, peça artística, tecido)."),
+    dias_artesao: n("se ele falar o tempo do trabalho todo em DIAS de trabalho ('leva uns 7 dias'): use isto em vez de horas_artesao (não peça horas)"),
+    material_total_reais: n("quanto ELE diz que gasta de material no total nesta peça ('de material dá uns 70'): substitui os materiais da conta padrão"),
+    horas_extra: n("horas de um trabalho A MAIS que soma à conta normal (ex.: trocar os puxadores = 1 h). Vai junto com trabalho_descricao."),
+    materiais_extras: {
+      type: ["array", "null"],
+      description: "material comprado só pra esta peça que ele quer cobrar (veludo, puxadores, ferragens, folha de ouro em caderno...)",
+      items: { type: "object", properties: { descricao: { type: "string" }, valor_unitario_reais: { type: "number" }, quantidade: { type: "number" } }, required: ["descricao", "valor_unitario_reais"] },
+    },
+    terceiro_descricao: s("parte que OUTRA pessoa faz (ex.: 'palhinha do assento com o Seu Zé')"),
+    terceiro_reais_cada: n("quanto o terceiro cobra POR PEÇA"),
     observacao: s("detalhe dito de passagem para guardar (cor, tempo que ele acha que leva, ferramenta extra...)"),
   },
 };
@@ -314,6 +330,13 @@ async function clearFields(t: ToolContext, job: Job, keys: unknown): Promise<str
 }
 
 async function applyFields(t: ToolContext, job: Job, fields: Fields, correction: boolean): Promise<{ saved: string[]; rejected: string[] }> {
+  const r = await applyFieldsInner(t, job, fields, correction);
+  const p = t.state.presented;
+  if (p && p.jobIds.includes(job.id) && r.saved.some((x) => !/^prazo/.test(x))) p.stale = true;
+  return r;
+}
+
+async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correction: boolean): Promise<{ saved: string[]; rejected: string[] }> {
   const saved: string[] = [];
   const rejected: string[] = [];
   const set = async (field: ProjectField, value: unknown, label: string) => {
@@ -377,6 +400,82 @@ async function applyFields(t: ToolContext, job: Job, fields: Fields, correction:
     await saveOverrides(t.ctx, job.id, { ...ov, specificExpenses: [...ov.specificExpenses.filter((e) => e.category !== "transporte"), { description: "Transporte (frete informado pelo artesão)", amountCents: Math.round(frete * 100), category: "transporte" }] }, t.user.id);
     saved.push(`frete de ${formatBRL(Math.round(frete * 100))}`);
   }
+  // trabalho sob medida: cobrado pelas horas que ele estima (vai no PDF com a descrição dele)
+  const desc = typeof fields.trabalho_descricao === "string" && fields.trabalho_descricao.trim().length >= 3 ? fields.trabalho_descricao.trim().slice(0, 80) : null;
+  const dias = num("dias_artesao", 120);
+  const perDay = dias ? Number((await getActiveSettings(t.ctx)).params.hoursPerWorkday) || 6 : 0;
+  const horas = num("horas_artesao", 400) ?? (dias ? Math.round(dias * perDay * 10) / 10 : undefined);
+  const matTotal = num("material_total_reais", 20000);
+  if (matTotal) {
+    const ov = await getOverrides(t.ctx, job.id);
+    await saveOverrides(t.ctx, job.id, { ...ov, artisanMaterialCents: Math.round(matTotal * 100) }, t.user.id);
+    saved.push(`material: ${formatBRL(Math.round(matTotal * 100))} no total (o que você falou)`);
+  }
+  const extra = num("horas_extra", 200);
+  const curTechs = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
+  const realTechs = curTechs.filter((x) => x !== "sob_medida");
+  const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+  if (extra) {
+    // trabalho a mais que soma à conta normal
+    const ov = await getOverrides(t.ctx, job.id);
+    const description = cap(desc ?? "Trabalho extra");
+    await saveOverrides(t.ctx, job.id, { ...ov, extraLabor: [...ov.extraLabor.filter((x) => normalizeText(x.description) !== normalizeText(description)), { description, hours: String(extra) }] }, t.user.id);
+    saved.push(`${description}: ${extra} h a mais`);
+  } else if (horas || (desc && realTechs.length === 0)) {
+    // conta pelas horas dele (trabalho todo)
+    if (!curTechs.includes("sob_medida")) await set("techniques", [...curTechs, "sob_medida"], `trabalho: ${desc ?? "sob medida"}`);
+    const ov = await getOverrides(t.ctx, job.id);
+    const description = cap(desc ?? ov.artisanTotal?.description ?? (realTechs.length ? `Trabalho de ${realTechs.map(techniqueLabel).join(" e ")}` : "Trabalho sob medida"));
+    const hours = horas ? String(horas) : ov.artisanTotal?.hours;
+    if (hours) {
+      await saveOverrides(t.ctx, job.id, { ...ov, artisanTotal: { description, hours } }, t.user.id);
+      saved.push(`conta pelas suas horas: ${description}, ${hours} h`);
+    } else if (desc) {
+      const notes = (job.facts.details?.value as string | undefined) ?? "";
+      if (!notes.includes(desc)) await set("details", notes ? `${notes}; ${desc}` : desc, `trabalho: ${desc}`);
+    }
+  } else if (desc) {
+    const notes = (job.facts.details?.value as string | undefined) ?? "";
+    if (!notes.includes(desc)) await set("details", notes ? `${notes}; ${desc}` : desc, `trabalho: ${desc}`);
+  }
+  if (Array.isArray(fields.materiais_extras)) {
+    const ov = await getOverrides(t.ctx, job.id);
+    let expenses = [...ov.specificExpenses];
+    for (const m of fields.materiais_extras as { descricao?: unknown; valor_unitario_reais?: unknown; quantidade?: unknown }[]) {
+      if (typeof m?.descricao !== "string" || typeof m.valor_unitario_reais !== "number" || !(m.valor_unitario_reais > 0)) continue;
+      if (!ok(m.valor_unitario_reais, t)) {
+        rejected.push(`material ${m.descricao}=${m.valor_unitario_reais} (valor não foi dito por ele — pergunte)`);
+        continue;
+      }
+      const qty = typeof m.quantidade === "number" && m.quantidade > 0 && m.quantidade <= 200 ? m.quantidade : 1;
+      const label = `${m.descricao.trim().slice(0, 60)}${qty > 1 ? ` (${qty} un.)` : ""}`;
+      expenses = [...expenses.filter((e) => !(e.category === "outros" && normalizeText(e.description).startsWith(normalizeText(m.descricao as string).slice(0, 12)))), { description: label, amountCents: Math.round(m.valor_unitario_reais * 100 * qty), category: "outros" }];
+      saved.push(`material: ${label} ${formatBRL(Math.round(m.valor_unitario_reais * 100 * qty))}`);
+    }
+    await saveOverrides(t.ctx, job.id, { ...ov, specificExpenses: expenses }, t.user.id);
+  }
+  const terceiro = typeof fields.terceiro_descricao === "string" && fields.terceiro_descricao.trim().length >= 3 ? fields.terceiro_descricao.trim().slice(0, 100) : null;
+  const terceiroCada = num("terceiro_reais_cada", 20000);
+  if (terceiro || terceiroCada) {
+    const ft0 = job.facts.furniture_type?.value as FactValueMap["furniture_type"] | undefined;
+    const qty = ft0?.quantity && ft0.quantity > 1 ? ft0.quantity : 1;
+    const prev = await t.ctx.db.first<{ scope: string; cost_cents: number | null }>("SELECT scope, cost_cents FROM subcontract_quotes WHERE job_id = ? ORDER BY created_at DESC LIMIT 1", job.id);
+    const scope = terceiro ?? prev?.scope ?? "Serviço de parceiro";
+    const cost = terceiroCada ? Math.round(terceiroCada * 100 * qty) : (prev?.cost_cents ?? null);
+    const now = new Date(t.ctx.clock()).toISOString();
+    await t.ctx.db.run("DELETE FROM subcontract_quotes WHERE job_id = ?", job.id);
+    await t.ctx.db.run(
+      "INSERT INTO subcontract_quotes (id, job_id, scope, cost_cents, logistics_cents, confirmed, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?)",
+      crypto.randomUUID(),
+      job.id,
+      scope,
+      cost,
+      cost !== null ? 1 : 0,
+      now,
+      now,
+    );
+    saved.push(`parceiro: ${scope}${cost !== null ? ` ${formatBRL(cost)}` : " (falta o valor)"}`);
+  }
   if (typeof fields.prazo === "string" && fields.prazo.trim().length >= 3) await set("deadline", fields.prazo.trim().slice(0, 120), `prazo: ${fields.prazo.trim().slice(0, 120)}`);
   if (fields.material === "tem_tudo" || fields.material === "tem_parte" || fields.material === "precisa_comprar") await set("material_status", fields.material, `material: ${fields.material}`);
   const drawers = num("gavetas", 40);
@@ -424,6 +523,14 @@ async function attachPhotos(t: ToolContext, jobId: string): Promise<number> {
   return ids.length;
 }
 
+/** "outros dois móveis", "outro móvel (tampo, ainda sem nome)", "uma peça": não diz o que é */
+function isVaguePiece(text: string): boolean {
+  const norm = normalizeText(text.replace(/\([^)]*\)/g, " "));
+  if (/sem nome|nao sei o que e|ainda nao sei/.test(normalizeText(text))) return true;
+  const tokens = norm.split(/\s+/).filter((w) => w && !/^(o|a|os|as|um|uma|uns|umas|dois|duas|tres|quatro|outro|outra|outros|outras|mais|\d+)$/.test(w));
+  return tokens.length === 0 || /^(moveis?|pecas?|coisas?|itens?|item|objetos?|trabalhos?|servicos?|tampos?|partes?|pes|gavetas?)$/.test(tokens[0]!);
+}
+
 function resolveFurniture(movel: string): { key: string; label: string } | null {
   const hit = parseFurnitureList(movel)[0] ?? parseFurnitureList(`um ${movel}`)[0];
   if (hit) return { key: hit.key, label: hit.description };
@@ -443,11 +550,13 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
     }
     case "criar_servico": {
       if (typeof a.movel !== "string" || !a.movel.trim()) return { erro: "diga qual é o móvel" };
+      // "outros dois móveis", "uma peça": não diz o que é — pergunte
+      if (isVaguePiece(a.movel)) return { erro: `'${a.movel}' não diz qual é a peça — pergunte o que é antes de criar` };
       const f = resolveFurniture(a.movel);
-      // "outros dois móveis" não é móvel: pergunte qual é (antes virava o tipo "movel_2_so_o_tampo")
-      if (!f) return { erro: `'${a.movel}' não é um móvel que eu reconheça — pergunte qual móvel é (ex.: aparador, cômoda, criado-mudo) antes de criar` };
       const job = await createJob(t.ctx, { actor: t.user.id, description: a.movel.slice(0, 200), messageId: t.inboundMessageId });
-      await setFact(t.ctx, job.id, "furniture_type", { type: f.key, descriptors: [] } as never, opts(t));
+      // peça fora do catálogo (estátua, bandeja, faqueiro...): guarda o nome que ele usou
+      const custom = a.movel.trim().replace(/^(um|uma|o|a)\s+/i, "").slice(0, 50);
+      await setFact(t.ctx, job.id, "furniture_type", (f ? { type: f.key, descriptors: [] } : { type: "outro", label: custom, descriptors: [] }) as never, opts(t));
       const fields = (a.campos && typeof a.campos === "object" ? a.campos : {}) as Fields;
       // técnica dita em texto livre no nome do móvel ("cômoda pra patinar") também vale
       if (!Array.isArray(fields.tecnicas) || !fields.tecnicas.length) {
@@ -491,6 +600,8 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         const job = await loadJob(t, id);
         if (typeof job === "string") return { erro: job };
         const falta = missingFor(job);
+        const tk = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
+        if (tk.includes("sob_medida") && !(await getOverrides(t.ctx, job.id)).artisanTotal) falta.push("quantas horas ele acha que leva o trabalho todo");
         if (falta.length) {
           items.push({ servico_id: job.id, nome: jobPhrase(job), pode_calcular: false, falta });
           continue;
@@ -510,7 +621,10 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
           minimo_sem_prejuizo: reais(r.floorCents),
           material_a_comprar: reais(r.materials.purchaseCashOutlayCents),
           material_usado: reais(r.materials.lines.reduce((acc, l) => acc + (l.consumptionCostCents ?? 0), 0)),
+          materiais: r.materials.lines.map((l) => ({ nome: l.name, gasto: reais(l.consumptionCostCents), a_comprar: l.packagesToBuy > 0 ? `${l.packagesToBuy} embalagem(ns)` : "já tem" })),
+          extras_cobrados: [...r.subcontracts.lines.map((s) => s.description), ...(await getOverrides(t.ctx, job.id)).specificExpenses.map((e) => e.description)],
           horas_de_trabalho: Math.round(Number(r.labor.totalHours)),
+          mao_de_obra: reais(r.labor.idealCents),
           dias_de_trabalho: r.leadTime.workingDays,
           prazo_combinado: (job.facts.deadline?.value as string | null | undefined) ?? null,
           avisos: [
@@ -617,6 +731,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       if (!p || !ids.length || ids.some((id) => !p.jobIds.includes(id))) return { erro: "calcule e mostre o orçamento antes (calcular_orcamento)" };
       if (p.turn >= t.turn) return { erro: "ele ainda não respondeu ao valor: mostre e pergunte se concorda; feche só depois da resposta" };
+      if (p.stale) return { erro: "depois do valor mostrado ele acrescentou ou mudou coisas", proximo_passo: "Calcule de novo (calcular_orcamento), mostre o NOVO valor com o que ele acrescentou e pergunte se fecha assim." };
       // prazo é crítico (ele tem fila de serviços): nunca vai pro PDF um prazo que ele não deu
       for (const id of ids) {
         const j = await getJob(t.ctx, id);

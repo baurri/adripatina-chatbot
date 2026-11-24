@@ -2,13 +2,13 @@ import { assertQuoteTransition, isRealMeasurement, type FactValueMap, type Quote
 import { BED_FRAME_MARGIN_RANGE_M, estimateArea, estimateNominalArea, priceJob, scaleArea, type PricingInput, type PricingResult } from "@adripatina/pricing";
 import { renderCommercialQuote, renderInternalQuote, findConfidentialTerms, type CommercialQuoteDoc } from "@adripatina/pdf";
 import { Dec, addDays, canonicalJson, formatBRL, newId, sha256Hex } from "@adripatina/shared";
-import { BED_SIZES, detectBedSize, furnitureLabel, techniqueLabel } from "@adripatina/conversations";
+import { BED_SIZES, detectBedSize, pieceLabel, techniqueLabel } from "@adripatina/conversations";
 import { z } from "zod";
 import type { Ctx } from "../context.js";
 import { nowIso } from "../context.js";
 import { json } from "../db/sql.js";
 import { auditStmt } from "../repos/audit.js";
-import { getActiveSettings, getInventory, loadCatalog } from "../repos/catalog.js";
+import { getActiveSettings, getInventory, loadCatalog, listMaterials } from "../repos/catalog.js";
 import { addJobEvent, getJob, type Job } from "../repos/jobs.js";
 import { enqueueOutbox } from "./outbox.js";
 
@@ -33,6 +33,10 @@ export const PricingOverridesSchema = z.object({
   areaM2Override: z.string().regex(/^\d+(\.\d+)?$/).nullable().default(null),
   /** materiais da receita que o artesão disse não usar neste serviço */
   excludedMaterials: z.array(z.string()).default([]),
+  /** conta pelas horas DELE (trabalho todo): substitui a receita das técnicas — só entram essas horas e os materiais que ele disser */
+  artisanTotal: z.object({ description: z.string().min(1), hours: z.string().regex(/^\d+(\.\d+)?$/) }).nullable().default(null),
+  /** quanto ELE diz que gasta de material no total: substitui os materiais da conta padrão */
+  artisanMaterialCents: z.number().int().nonnegative().nullable().default(null),
 });
 export type PricingOverrides = z.infer<typeof PricingOverridesSchema>;
 
@@ -260,15 +264,16 @@ export async function buildPricingInput(
   return {
     input: {
       area,
-      techniqueKeys: techniques,
-      methodKey: method,
-      extraLabor: overrides.extraLabor,
+      // horas dele para o trabalho todo: sem receita (nem horas nem materiais padrão); conserto já está incluído nelas
+      techniqueKeys: overrides.artisanTotal ? [] : techniques.filter((k) => k !== "sob_medida"),
+      methodKey: overrides.artisanTotal ? null : method,
+      extraLabor: overrides.artisanTotal ? [...overrides.extraLabor.filter((x) => !/^Conserto/.test(x.description)), overrides.artisanTotal] : overrides.extraLabor,
       subcontracts,
-      specificExpenses: overrides.specificExpenses,
+      specificExpenses: overrides.artisanMaterialCents !== null ? [...overrides.specificExpenses, { description: "Material (valor informado pelo artesão)", amountCents: overrides.artisanMaterialCents, category: "outros" as const }] : overrides.specificExpenses,
       specificRisk: overrides.specificRisk,
       inventory,
       proposedPriceCents: extra.proposedPriceCents ?? null,
-      excludedMaterialKeys: overrides.excludedMaterials,
+      excludedMaterialKeys: overrides.artisanMaterialCents !== null ? (await listMaterials(ctx)).map((m) => m.key) : overrides.excludedMaterials,
       approvals: { belowFloor: extra.approvals?.belowFloor ?? false, uncalibrated: extra.approvals?.uncalibrated ?? false },
     },
     gaps,
@@ -643,7 +648,7 @@ export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, num
   const dims = f.dimensions?.value as FactValueMap["dimensions"] | null | undefined;
   const techniques = (f.techniques?.value as string[] | null | undefined) ?? [];
   const r = q.result;
-  const descParts = [capitalize(furnitureLabel(ft?.type))];
+  const descParts = [capitalize(pieceLabel(ft))];
   if (ft?.descriptors?.length) descParts.push(ft.descriptors.join(", "));
   if (ft?.doors) descParts.push(`${ft.doors} portas`);
   if (ft?.drawers) descParts.push(`${ft.drawers} gavetas`);
@@ -700,7 +705,7 @@ export async function buildCommercialDoc(ctx: Ctx, q: QuoteRecord, job: Job, num
     client: { name: (f.client_name?.value as string | null | undefined) ?? job.clientName ?? "Cliente" },
     furniture: { description: descParts.join(" — ") },
     scope,
-    finishes: techniques.map((t) => capitalize(techniqueLabel(t))),
+    finishes: techniques.filter((t) => t !== "sob_medida").map((t) => capitalize(techniqueLabel(t))),
     lines,
     totalCents: r.finalPriceCents ?? r.recommendedCents ?? 0,
     // prazo do PDF é só o que o artesão combinou (ele tem fila de serviços); nunca um número calculado

@@ -102,6 +102,8 @@ export interface FactValueMap {
     descriptors?: string[];
     /** tipo do catálogo mestre (ex.: "cama_queen"); `type` continua a chave antiga para compatibilidade */
     catalogKey?: string;
+    /** nome que o artesão usou para uma peça fora do catálogo (type = "outro"): "estátua de Santo Antônio" */
+    label?: string;
     /** termo genérico ainda sem tipo definido ("armário") e os candidatos do catálogo */
     kindTerm?: string;
     kindCandidates?: string[];

@@ -53,8 +53,10 @@ export function priceJob(
 
   // ---------- 1. Geometria ----------
   let area: Dec | null = null;
+  // trabalho cobrado só pelas horas do artesão (sem técnica de pintura): a área não entra na conta
+  const hoursOnly = input.techniqueKeys.length === 0 && (input.extraLabor.length > 0 || input.subcontracts.length > 0);
   if (input.area === null) {
-    blockers.push({ code: "AREA_UNKNOWN", message: "Falta saber o tamanho do móvel (medidas ou porte)." });
+    if (!hoursOnly) blockers.push({ code: "AREA_UNKNOWN", message: "Falta saber o tamanho do móvel (medidas ou porte)." });
   } else if (input.area.kind === "exact") {
     area = Dec.from(input.area.m2);
   } else {
@@ -71,7 +73,7 @@ export function priceJob(
   }
 
   // ---------- 2. Receita técnica ----------
-  if (input.techniqueKeys.length === 0) {
+  if (input.techniqueKeys.length === 0 && !hoursOnly) {
     blockers.push({ code: "TECHNIQUE_UNKNOWN", message: "Falta definir a técnica." });
   }
   const techniques = input.techniqueKeys.map((k) => {
@@ -272,7 +274,7 @@ export function priceJob(
     }
   }
 
-  const computable = area !== null && !blockers.some((b) => ["AREA_UNKNOWN", "TECHNIQUE_UNKNOWN", "METHOD_REQUIRED", "MATERIAL_UNKNOWN"].includes(b.code));
+  const computable = (area !== null || hoursOnly) && !blockers.some((b) => ["AREA_UNKNOWN", "TECHNIQUE_UNKNOWN", "METHOD_REQUIRED", "MATERIAL_UNKNOWN"].includes(b.code));
 
   // ---------- 8/9/10. Risco, markup, tributos, piso e recomendado ----------
   const directCosts = consumptionTotal + subTotal + transport + otherExp;

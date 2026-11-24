@@ -45,14 +45,14 @@ describe.skipIf(!process.env.CHAT_SMOKE || !key())("conversa com Claude real", (
       h.telegram.clear();
       await h.send(text);
       const out = h.telegram.sent.map((s) => (s.kind === "document" ? "[PDF]" : s.text)).join("\n---\n");
-      console.log(`\n>>> ${text}\n<<< ${out}`);
+      console.info(`\n>>> ${text}\n<<< ${out}`);
     }
     const jobs = await h.ctx.db.all<{ facts_json: string }>("SELECT facts_json FROM jobs");
     for (const j of jobs) {
       const f = JSON.parse(j.facts_json) as Record<string, { value: unknown }>;
-      console.log("\nFATOS:", JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v?.value]))));
+      console.info("\nFATOS:", JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v?.value]))));
     }
     const q = await h.ctx.db.first<{ status: string }>("SELECT status FROM quotes ORDER BY updated_at DESC");
-    console.log("orçamento:", q?.status);
+    console.info("orçamento:", q?.status);
   }, 600000);
 });

@@ -161,6 +161,37 @@ describe("motor novo (D-075): travas do código", () => {
     expect(att?.job_id).toBeTruthy();
   });
 
+  it("peça fora do catálogo + trabalho sob medida: cria com o nome dele e calcula pelas horas e materiais", async () => {
+    let calc: Record<string, unknown> = {};
+    let jobId = "";
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "faqueiro", campos: { cliente: "Dona Lúcia", estado: "bom", trabalho_descricao: "encapar o interior com veludo vinho", horas_artesao: 4, materiais_extras: [{ descricao: "veludo", valor_unitario_reais: 35 }, { descricao: "cola de contato", valor_unitario_reais: 20 }], conserto: false, artesao_busca: false, artesao_entrega: false } }),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      (m) => {
+        calc = lastToolResult(m);
+        return say("Pronto! 🙂");
+      },
+    ]);
+    await h.send("faqueiro da dona Lúcia, encapar o interior com veludo vinho, uns 4 horas, veludo 35 reais e cola 20, tá bom, sem conserto, ela traz e busca");
+    const job = (await getJob(h.ctx, jobId))!;
+    expect((job.facts.furniture_type?.value as { label?: string }).label).toBe("faqueiro");
+    expect(job.title).toMatch(/faqueiro/i);
+    const item = (calc.itens as Record<string, unknown>[] | undefined)?.[0] ?? (calc as Record<string, unknown>);
+    expect(JSON.stringify(calc), JSON.stringify(calc)).not.toMatch(/pode_calcular":false/);
+    expect(JSON.stringify(item)).toMatch(/sugestao/);
+  });
+
+  it("'outros dois móveis' não vira serviço: pede pra dizer qual é", async () => {
+    let r: Record<string, unknown> = {};
+    const { h } = await setup([() => tool("criar_servico", { movel: "outros dois móveis" }), (m) => ((r = lastToolResult(m)), say("Quais são os outros dois?"))]);
+    await h.send("e tem outros dois móveis");
+    expect(String(r.erro)).toMatch(/não diz qual é a peça/);
+    expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM jobs").then((x) => x!.n)).toBe(0);
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };

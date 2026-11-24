@@ -18,7 +18,7 @@ import { AGENT_TOOLS, executePending, runTool, type AgentState, type ToolContext
  * resposta final passa pela conferência de números e de tom. Sem o Claude, o motor antigo responde.
  */
 
-const MAX_ROUNDS = 8;
+const MAX_ROUNDS = 12;
 const HISTORY = 16;
 
 /** Códigos internos (S-0001) e ids nunca aparecem para o artesão. */
@@ -52,6 +52,18 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - PRAZO é importante (ele tem fila de serviços). Ao mostrar o orçamento, diga quantos dias de trabalho a peça leva (dias_de_trabalho). Depois que ele decidir o valor, pergunte quando ele consegue começar e quando fica pronto pro cliente ("daqui a 2 meses", "daqui a 6 meses"). Anote em campos.prazo do jeito que ele falou. Nunca invente prazo; o orçamento só fecha com o prazo dele.
 - Anotou algo errado ou ele ainda não sabe: apague com anotar.limpar e pergunte. Se ele não sabe o método, sugira pincel e só anote se ele concordar.
 - Transporte: só anote ou diga que ele busca/entrega se ele disser claramente ("eu vou buscar a mesa"). "Tenho um serviço pra pegar lá na casa dela" ou "vou lá ver" = pegar o TRABALHO / ir orçar, NÃO é buscar a peça: não escreva "você busca". Pergunte quem leva e traz.
+- PEÇA QUE NÃO É MÓVEL (estátua, bandeja, faqueiro, caixa, quadro...) também é serviço: crie com o nome que ele usou.
+- TRABALHO FORA DAS TÉCNICAS (encapar com tecido, pintura artística à mão, entalhe...) ou PEÇA FORA DO COMUM (estátua, bandeja, caixa): anote trabalho_descricao e pergunte quantas horas ele acha que leva o trabalho todo (horas_artesao). A conta passa a ser pelas horas dele + materiais_extras: não pergunte medida, método nem preço de material da conta padrão.
+- Tempo em DIAS ("leva uns 7 dias"): dias_artesao (não insista em horas). Material total dito por ele ("de material dá uns 70"): material_total_reais.
+- Ele perguntar de onde saiu o valor: explique em 2 linhas com mao_de_obra, material_usado e extras_cobrados do cálculo.
+- Ele disser o tempo do trabalho todo ("isso me leva umas 6 horas") ou reclamar que a conta não bate com o que ele faz: use horas_artesao (e materiais_extras com o que ele gasta). A palavra dele vale mais que a conta padrão.
+- Trabalho A MAIS numa peça normal (trocar puxadores, colocar ferragem): horas_extra + trabalho_descricao, que somam à conta.
+- Material comprado só pra peça que ele quer cobrar (veludo, puxadores, ferragens): materiais_extras (valor de cada e quantidade). Parte feita por outra pessoa (palhinha, estofado, vidro): terceiro_descricao e terceiro_reais_cada.
+- Técnica da lista + algo a mais (ex.: verniz + palhinha, pintura + puxadores): anote as duas coisas no mesmo serviço.
+- Se ele acrescentar algo depois de ver o valor (material, parceiro, horas, frete), recalcule e mostre o novo valor antes de fechar.
+- O PDF vem pra ELE aqui no Telegram, pra ele repassar ao cliente: diga "te mandei o PDF aqui", nunca "mandei pro cliente".
+- Despedida: se ele já se despediu e manda mais um "valeu/falou", responda bem curtinho ("Valeu! 👋") sem repetir nada.
+- Ele perguntar se um material entrou na conta: responda com a lista materiais/extras_cobrados do último cálculo.
 - Fale dos serviços pelo móvel e pelo cliente ("a cômoda da Dona Carla"), nunca por código ou id.
 - Só liste os serviços em andamento se ele perguntar ou se precisar saber de qual peça ele está falando.
 - Resposta final: CURTA. Em geral 1 a 3 frases curtas e uma pergunta no fim. Nada de listas de campos, nada de repetir tudo o que ele falou.`;
@@ -250,6 +262,19 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   } catch (err) {
     console.error(JSON.stringify({ level: "error", msg: "agent_failed", error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));
     return null; // motor antigo assume
+  }
+  // terminou sem texto (só ferramentas, ou acabaram as rodadas): pede a resposta sem ferramentas
+  if (!finalText) {
+    try {
+      const ask = { type: "text", text: "Agora escreva a resposta para o Adriano (curta, com o que foi feito e uma pergunta), sem usar ferramentas." };
+      const lastMsg = messages.at(-1);
+      if (lastMsg?.role === "user") lastMsg.content = Array.isArray(lastMsg.content) ? [...lastMsg.content, ask] : `${lastMsg.content}\n\n${ask.text}`;
+      else messages.push({ role: "user", content: [ask] });
+      const last = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 800);
+      finalText = stripJobCodes(last.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim());
+    } catch {
+      // segue para a frase padrão
+    }
   }
   if (!finalText) finalText = "Opa, me perdi aqui. 😅 Pode me falar de novo?";
   // peça nova sem foto: pede uma vez (o Claude às vezes esquece)

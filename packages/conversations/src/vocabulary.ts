@@ -84,6 +84,8 @@ export const TECHNIQUES: Record<string, { label: string; variants: string[] }> =
   enceramento: { label: "enceramento", variants: ["encerar", "enceramento", "cera"] },
   restauracao: { label: "restauração", variants: ["restaurar", "restauracao", "restauro", "reformar", "reforma"] },
   pintura_lisa: { label: "pintura", variants: ["pintar", "pintura", "repintar", "pinte", "pintado", "pintada", "pinto"] },
+  /** trabalho fora das técnicas calculadas (tecido, pintura artística, palhinha...): cobrado pelas horas que o artesão estima */
+  sob_medida: { label: "trabalho sob medida", variants: [] },
 };
 
 export const DESCRIPTORS = [
@@ -143,6 +145,11 @@ export function findTechniques(text: string): string[] {
 export function findDescriptors(text: string): string[] {
   const norm = normalizeText(text);
   return DESCRIPTORS.filter((d) => containsPhrase(norm, d));
+}
+
+/** Nome da peça: o que ele falou (peça fora do catálogo) ou o rótulo do catálogo. */
+export function pieceLabel(ft: { type?: string | null; label?: string | null } | null | undefined): string {
+  return ft?.label?.trim() || furnitureLabel(ft?.type);
 }
 
 export function furnitureLabel(key: string | null | undefined): string {
