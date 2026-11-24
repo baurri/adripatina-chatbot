@@ -469,6 +469,28 @@ async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correc
       const label = `${m.descricao.trim().slice(0, 60)}${qty > 1 ? ` (${qty} un.)` : ""}`;
       expenses = [...expenses.filter((e) => !(e.category === "outros" && normalizeText(e.description).startsWith(normalizeText(m.descricao as string).slice(0, 12)))), { description: label, amountCents: Math.round(m.valor_unitario_reais * 100 * qty), category: "outros" }];
       saved.push(`material: ${label} ${formatBRL(Math.round(m.valor_unitario_reais * 100 * qty))}`);
+      // material da conta padrão ainda sem preço (ex.: lixa avulsa a 2 reais): o preço unitário vale pro catálogo também
+      const all = await listMaterials(t.ctx);
+      const nm = normalizeText(m.descricao);
+      const cat = all.find((x) => (nm.includes(normalizeText(x.key).replace(/_/g, " ")) || nm.includes(normalizeText(x.name).split(" ")[0]!)) && ["folha", "un"].includes(x.unit.toLowerCase()));
+      if (cat && !(await getMaterialByKey(t.ctx, cat.key))?.replacementPriceCents) {
+        await applyConfirmedPrice(t.ctx, {
+          materialKey: cat.key,
+          priceCents: Math.round(m.valor_unitario_reais * 100),
+          packageSize: "1",
+          packages: null,
+          totalCents: null,
+          confidence: "alta",
+          origin: "telegram_quote_confirmed",
+          userId: t.user.id,
+          messageId: t.inboundMessageId,
+          jobId: job.id,
+          quoteId: null,
+          sourceText: t.userCorpus.slice(-300),
+          idempotencyKey: `agent-price-extra:${t.inboundMessageId}:${cat.key}`,
+          observationKind: "MATERIAL_PRICE_QUOTE",
+        }).catch(() => undefined);
+      }
     }
     await saveOverrides(t.ctx, job.id, { ...ov, specificExpenses: expenses }, t.user.id);
   }
