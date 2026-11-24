@@ -27,12 +27,52 @@ const STATUS_TONE: Record<string, "ok" | "warn" | "danger" | "neutral"> = {
   CANCELADO: "danger",
 };
 
+interface ProposalRow {
+  id: string;
+  number: string;
+  version: number;
+  createdAt: string;
+  documentId: string | null;
+  client: string;
+  pieces: string[];
+  totalCents: number | null;
+  deadline: string | null;
+  preliminary: boolean;
+  situation: string;
+}
+
+const SITUATION_TONE: Record<string, "ok" | "warn" | "danger" | "neutral"> = { enviada: "ok", aceita: "ok", recusada: "danger", "substituída": "neutral" };
+
 export function Quotes() {
-  const [status, setStatus] = useState("AGUARDANDO_REVISAO");
+  const [status, setStatus] = useState("");
   const { data, error, loading } = useLoad(() => api<{ rows: QuoteRow[] }>(`/quotes${status ? `?status=${status}` : ""}`), [status]);
+  const props = useLoad(() => api<{ rows: ProposalRow[] }>("/proposals"), []);
+  const [showOld, setShowOld] = useState(false);
+  const visible = props.data?.rows.filter((p) => showOld || p.situation !== "substituída") ?? [];
   return (
     <>
       <h1>Orçamentos</h1>
+      <Section title="Propostas (PDF para o cliente)">
+        <label>
+          <input type="checkbox" checked={showOld} onChange={(e) => setShowOld(e.target.checked)} /> mostrar também as substituídas
+        </label>
+        <Loading error={props.error} loading={props.loading} />
+        {props.data && (
+          <Table
+            rows={visible}
+            columns={[
+              { header: "Proposta", cell: (p) => (p.documentId ? <a href={`/api/v1/admin/documents/${p.documentId}/download`} target="_blank" rel="noreferrer">{p.number}</a> : p.number) },
+              { header: "Cliente", cell: (p) => p.client },
+              { header: "Peças", cell: (p) => p.pieces.join(" + ") },
+              { header: "Total", cell: (p) => formatBRL(p.totalCents), className: "num" },
+              { header: "Prazo", cell: (p) => p.deadline ?? "—" },
+              { header: "Situação", cell: (p) => <Badge tone={SITUATION_TONE[p.situation] ?? "neutral"}>{p.preliminary ? `${p.situation} (estimativa)` : p.situation}</Badge> },
+              { header: "Data", cell: (p) => formatDate(p.createdAt) },
+            ]}
+          />
+        )}
+      </Section>
+      <h2>Cálculos por serviço (detalhe)</h2>
       <Field label="Filtrar por situação">
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Todos</option>

@@ -332,6 +332,39 @@ export function adminRoutes(): Hono<AppEnv> {
   });
 
   // ---------------- orçamentos
+  // propostas (AP-…): uma linha por PDF comercial, com as peças; a mais nova que inclui uma peça substitui as anteriores
+  r.get("/proposals", async (c) => {
+    const ctx = c.get("ctx");
+    const rows = await ctx.db.all<{ id: string; number: string; doc_version: number; created_at: string; snapshot_json: string; quote_id: string; doc_id: string | null }>(
+      "SELECT s.id, s.number, s.doc_version, s.created_at, s.snapshot_json, s.quote_id, d.id AS doc_id FROM quote_snapshots s LEFT JOIN quote_documents d ON d.snapshot_id = s.id AND d.kind = 'COMERCIAL' ORDER BY s.created_at DESC LIMIT 100",
+    );
+    const quoteJobs = new Map((await ctx.db.all<{ id: string; job_id: string; status: string }>("SELECT id, job_id, status FROM quotes")).map((q) => [q.id, q]));
+    const seenJobs = new Set<string>();
+    const out = rows.map((r) => {
+      const snap = JSON.parse(r.snapshot_json) as { quoteId?: string; quoteIds?: string[]; commercial?: { client?: { name?: string }; furniture?: { description?: string }; items?: { title: string; amountCents: number }[]; totalCents?: number; deadlineText?: string; preliminary?: boolean } };
+      const qids = snap.quoteIds ?? [snap.quoteId ?? r.quote_id];
+      const jobIds = [...new Set(qids.map((q) => quoteJobs.get(q)?.job_id).filter((x): x is string => !!x))];
+      const superseded = jobIds.length > 0 && jobIds.every((j) => seenJobs.has(j));
+      for (const j of jobIds) seenJobs.add(j);
+      const statuses = qids.map((q) => quoteJobs.get(q)?.status ?? "");
+      const outcome = statuses.every((s) => s === "ACEITO") ? "aceita" : statuses.some((s) => s === "RECUSADO") ? "recusada" : "enviada";
+      const cm = snap.commercial ?? {};
+      return {
+        id: r.id,
+        number: r.number,
+        version: r.doc_version,
+        createdAt: r.created_at,
+        documentId: r.doc_id,
+        client: cm.client?.name ?? "—",
+        pieces: cm.items?.length ? cm.items.map((i) => i.title) : [cm.furniture?.description?.split(" — ")[0] ?? "—"],
+        totalCents: cm.totalCents ?? null,
+        deadline: cm.deadlineText ?? null,
+        preliminary: !!cm.preliminary,
+        situation: superseded ? "substituída" : outcome,
+      };
+    });
+    return c.json({ rows: out });
+  });
   r.get("/quotes", async (c) => {
     const status = c.req.query("status");
     const s = status && (QUOTE_STATUSES as readonly string[]).includes(status) ? (status as (typeof QUOTE_STATUSES)[number]) : undefined;
