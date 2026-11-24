@@ -8,7 +8,7 @@ import { getActiveSettings, getMaterialByKey, listMaterials } from "../repos/cat
 import { createJob, getJob, jobPhrase, listActiveJobs, setFact, transitionJob, computePending, jobBalance, type Job } from "../repos/jobs.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { applyConfirmedPrice, missingPriceKeys } from "../services/material-pricing.js";
-import { calculateQuote, closeQuoteByArtisan, getOverrides, issueDocuments, issueGroupDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
+import { calculateQuote, closeQuoteByArtisan, getOverrides, getQuote, issueDocuments, issueGroupDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
 import { enqueueOutbox } from "../services/outbox.js";
 import type { User } from "../repos/users.js";
 
@@ -668,6 +668,62 @@ async function closedRecentSiblings(t: ToolContext, ids: string[]): Promise<Job[
   return out;
 }
 
+/** Embalagens a comprar para o conjunto: consumo somado por material, menos o estoque, em latas inteiras. */
+async function groupPurchaseCents(t: ToolContext, quotes: QuoteRecord[]): Promise<number> {
+  const need = new Map<string, { qty: number; inv: number }>();
+  for (const q of quotes) {
+    for (const l of q.result.materials.lines) {
+      const cur = need.get(l.materialKey) ?? { qty: 0, inv: 0 };
+      need.set(l.materialKey, { qty: cur.qty + Number(l.quantity || 0), inv: Math.max(cur.inv, Number(l.inventoryAvailable || 0)) });
+    }
+  }
+  let cents = 0;
+  for (const [key, v] of need) {
+    const mat = await getMaterialByKey(t.ctx, key);
+    const pkg = Number(mat?.packageSize ?? 0);
+    const price = mat?.replacementPriceCents ?? null;
+    const missing = Math.max(0, v.qty - v.inv);
+    if (!missing || !(pkg > 0) || price === null) continue;
+    cents += Math.ceil(missing / pkg - 1e-9) * price;
+  }
+  return cents;
+}
+
+/**
+ * O mesmo pedido dá sempre o mesmo valor (a conta é determinística). Se mudou desde o último PDF da peça,
+ * é porque algo mudou de verdade — e o bot diz o quê (valor da hora, horas, material, extras).
+ */
+async function valueChanges(t: ToolContext, quotes: QuoteRecord[]): Promise<{ peca: string; antes: string; agora: string; motivo: string }[]> {
+  const out: { peca: string; antes: string; agora: string; motivo: string }[] = [];
+  for (const q of quotes) {
+    const prev = await t.ctx.db.first<{ id: string }>(
+      "SELECT q.id FROM quotes q WHERE q.job_id = ? AND q.id <> ? AND EXISTS (SELECT 1 FROM quote_snapshots s WHERE s.snapshot_json LIKE '%' || q.id || '%') ORDER BY q.created_at DESC LIMIT 1",
+      q.jobId,
+      q.id,
+    );
+    if (!prev) continue;
+    const p = await latestQuoteById(t, prev.id);
+    if (!p || p.recommendedCents === null || q.recommendedCents === null || p.recommendedCents === q.recommendedCents) continue;
+    type R = { hourlyRate?: { idealCentsPerHour?: string }; labor: { totalHours: string }; materials: { consumptionCostCents: number }; subcontracts: { totalCents: number }; expenses: { totalCents: number } };
+    const a = p.result as unknown as R;
+    const b = q.result as unknown as R;
+    const why: string[] = [];
+    const ra = Number(a.hourlyRate?.idealCentsPerHour ?? 0);
+    const rb = Number(b.hourlyRate?.idealCentsPerHour ?? 0);
+    if (Math.abs(ra - rb) >= 50) why.push(`o valor da sua hora mudou nas configurações (${formatBRL(Math.round(ra))} → ${formatBRL(Math.round(rb))})`);
+    if (Math.abs(Number(a.labor.totalHours) - Number(b.labor.totalHours)) >= 0.25) why.push(`as horas mudaram (${Math.round(Number(a.labor.totalHours))} h → ${Math.round(Number(b.labor.totalHours))} h)`);
+    if (Math.abs(a.materials.consumptionCostCents - b.materials.consumptionCostCents) >= 100) why.push("o preço do material mudou");
+    if (Math.abs(a.subcontracts.totalCents + a.expenses.totalCents - b.subcontracts.totalCents - b.expenses.totalCents) >= 100) why.push("entrou ou saiu frete/extra/parceiro");
+    const job = await getJob(t.ctx, q.jobId);
+    out.push({ peca: job ? jobPhrase(job) : "peça", antes: formatBRL(p.recommendedCents), agora: formatBRL(q.recommendedCents), motivo: why.length ? why.join(" e ") : "mudou algum dado da peça" });
+  }
+  return out;
+}
+
+async function latestQuoteById(t: ToolContext, id: string): Promise<QuoteRecord | null> {
+  return getQuote(t.ctx, id);
+}
+
 /** Peças abertas (sem orçamento fechado) do mesmo cliente das peças pedidas, fora delas. */
 async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
   const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
@@ -875,7 +931,9 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         t.effects.presentedQuote = true;
         const jobs = await Promise.all(ids.map((id) => getJob(t.ctx, id)));
         const hasMaterial = jobs.every((j) => j?.facts.material_status?.value === "tem_tudo");
-        const buy = quotes.reduce((acc, q) => acc + q.result.materials.purchaseCashOutlayCents, 0);
+        // várias peças usam as mesmas latas: soma o consumo e calcula as embalagens UMA vez
+        const buy = await groupPurchaseCents(t, quotes);
+        const changes = await valueChanges(t, quotes);
         const hours = Math.round(quotes.reduce((acc, q) => acc + Number(q.result.labor.totalHours), 0));
         const roundUp = (c: number) => formatBRL(Math.ceil(c / 100) * 100);
         const lines = [`🧮 Fiz as contas${quotes.length > 1 ? ` dos ${quotes.length} serviços` : ` d${jobs[0] ? jobPhrase(jobs[0]) : "o serviço"}`}!`, ""];
@@ -886,7 +944,10 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         if (buy > 0 && !hasMaterial) lines.push(`🛒 De material novo, uns ${roundUp(buy)}.`);
         if (hours > 0) lines.push(`⏱️ Umas ${hours} horas de trabalho.`);
         lines.push("", "Você concorda, quer dar um desconto ou acrescentar algo? 🤝");
-        return { itens: items, total_sugerido: reais(base), mensagem_pronta: lines.join("\n"), proximo_passo: "Responda com a mensagem_pronta (pode trocar uma palavra ou outra, mas sem tirar nem pôr números e sem outra pergunta)." };
+        if (changes.length) {
+          lines.splice(lines.length - 2, 0, "", ...changes.map((c) => `🔄 ${c.peca}: era ${c.antes} no último PDF, agora ${c.agora} — ${c.motivo}.`));
+        }
+        return { itens: items, total_sugerido: reais(base), material_a_comprar_total: reais(buy), mudou_desde_o_ultimo_pdf: changes, mensagem_pronta: lines.join("\n"), proximo_passo: "Responda com a mensagem_pronta (pode trocar uma palavra ou outra, mas sem tirar nem pôr números e sem outra pergunta)." };
       }
       return { itens: items, proximo_passo: "Ainda falta informação: pergunte UMA coisa por vez." };
     }

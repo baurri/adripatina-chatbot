@@ -240,6 +240,22 @@ describe("motor novo (D-075): travas do código", () => {
     expect(res.headers.get("content-type")).toBe("application/pdf");
   });
 
+  it("mesma peça, mesmos dados, mesmas configurações → sempre o mesmo valor", async () => {
+    const h = await createHarness();
+    await h.calibrateAndPrice();
+    const { createJob, setFact } = await import("../src/repos/jobs.js");
+    const { calculateQuote } = await import("../src/services/quotes.js");
+    const job = await createJob(h.ctx, { actor: h.artisanId, description: "mesa" });
+    const o = { actor: h.artisanId, source: "telegram_text" as const };
+    await setFact(h.ctx, job.id, "furniture_type", { type: "mesa", descriptors: [] } as never, o);
+    await setFact(h.ctx, job.id, "techniques", ["verniz"] as never, o);
+    await setFact(h.ctx, job.id, "dimensions", { width: "1", depth: "0.6", height: "0.8" } as never, o);
+    await setFact(h.ctx, job.id, "application_method", "pincel" as never, o);
+    const values = [];
+    for (let i = 0; i < 3; i++) values.push((await calculateQuote(h.ctx, job.id, h.artisanId)).recommendedCents);
+    expect(new Set(values).size).toBe(1);
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };
