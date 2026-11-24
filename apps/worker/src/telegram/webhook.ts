@@ -185,8 +185,9 @@ async function handlePhoto(ctx: Ctx, user: User, chatId: string, msg: TelegramMe
   await ctx.storage.put(key, bytes, { httpMetadata: { contentType: mime } });
   const caption = msg.caption ?? "";
   const classification = /\b(recibo|nota|cupom|comprovante)\b/i.test(caption) ? "recibo" : "foto_movel";
+  const group = msg.media_group_id ?? null;
   await ctx.db.run(
-    "INSERT INTO attachments (id, r2_key, mime, size_bytes, sha256, telegram_file_unique_id, owner_user_id, job_id, classification, retention_until, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)",
+    "INSERT INTO attachments (id, r2_key, mime, size_bytes, sha256, telegram_file_unique_id, owner_user_id, job_id, classification, retention_until, created_at, media_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)",
     attId,
     key,
     mime,
@@ -197,11 +198,43 @@ async function handlePhoto(ctx: Ctx, user: User, chatId: string, msg: TelegramMe
     classification,
     classification === "recibo" ? addDays(ctx.clock(), ctx.config.mediaRetentionDays).toISOString() : null,
     nowIso(ctx),
+    group,
   );
+  const inId = await logMessage(ctx, { sessionId, userId: user.id, jobId, direction: "in", kind: "photo", text: caption, updateId, messageId: msg.message_id, fileUniqueId: best.file_unique_id });
+  if (group && ctx.ai.agent) {
+    // álbum: várias fotos chegam juntas, cada uma num update. Espera o álbum terminar e só a ÚLTIMA
+    // responde, olhando todas (antes eram 3 fotos → 3 respostas).
+    const album = await albumLeader(ctx, group, attId);
+    if (!album) return "ok";
+    return deliver(ctx, user, chatId, { user, chatId, kind: "photo", text: album.caption, inboundMessageId: inId, photo: { attachmentId: attId, hash, visionHint: null, groupIds: album.ids } });
+  }
   // com o motor novo, o próprio Claude olha a foto; o palpite do modelo de imagem só serve ao motor antigo
   const visionHint = classification === "foto_movel" && !ctx.ai.agent ? await describeImage(ctx, bytes, mime) : null;
-  const inId = await logMessage(ctx, { sessionId, userId: user.id, jobId, direction: "in", kind: "photo", text: caption, updateId, messageId: msg.message_id, fileUniqueId: best.file_unique_id });
   return deliver(ctx, user, chatId, { user, chatId, kind: "photo", text: caption, inboundMessageId: inId, photo: { attachmentId: attId, hash, visionHint } });
+}
+
+/** Quanto esperar as outras fotos do álbum chegarem (os testes zeram). */
+export const albumWait = { ms: 2500 };
+
+/**
+ * Null = outra foto do mesmo álbum responde (ou o álbum já foi respondido: a foto atrasada vai pro mesmo
+ * serviço, calada). Senão: todas as fotos do álbum e a legenda (vem numa só).
+ */
+async function albumLeader(ctx: Ctx, group: string, attId: string): Promise<{ ids: string[]; caption: string } | null> {
+  const before = await ctx.db.all<{ id: string; job_id: string | null }>("SELECT id, job_id FROM attachments WHERE media_group_id = ? AND id <> ? AND deleted_at IS NULL", group, attId);
+  const handled = before.find((r) => r.job_id);
+  if (handled) {
+    await ctx.db.run("UPDATE attachments SET job_id = ? WHERE id = ?", handled.job_id, attId);
+    return null;
+  }
+  if (albumWait.ms > 0) await new Promise((r) => setTimeout(r, albumWait.ms));
+  const all = await ctx.db.all<{ id: string; fu: string | null }>("SELECT id, telegram_file_unique_id fu FROM attachments WHERE media_group_id = ? AND deleted_at IS NULL ORDER BY rowid", group);
+  if (all.at(-1)?.id !== attId) return null;
+  const caps = await ctx.db.all<{ text: string | null }>(
+    `SELECT text FROM conversation_messages WHERE kind = 'photo' AND direction = 'in' AND telegram_file_unique_id IN (${all.map(() => "?").join(",")})`,
+    ...all.map((r) => r.fu ?? ""),
+  );
+  return { ids: all.map((r) => r.id), caption: caps.map((c) => (c.text ?? "").trim()).filter(Boolean).join("\n") };
 }
 
 /** Valida MIME pelos bytes (não confia na extensão). */

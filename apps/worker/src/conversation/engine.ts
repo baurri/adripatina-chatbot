@@ -102,7 +102,7 @@ export interface EngineInput {
   kind: "text" | "voice" | "photo" | "callback";
   text: string;
   inboundMessageId: string;
-  photo?: { attachmentId: string; hash: string; visionHint?: string | null };
+  photo?: { attachmentId: string; hash: string; visionHint?: string | null; /** álbum: todas as fotos que chegaram juntas */ groupIds?: string[] };
 }
 
 const RESUME_GAP_HOURS = 6;

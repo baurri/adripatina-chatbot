@@ -1,0 +1,1103 @@
+[
+  {
+    "id": "real2-valdir-3pecas-texto",
+    "title": "Real (texto curto): 3 peças do Seu Valdir, só tampo em duas, um PDF único",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "Boa noite",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Boa noite, Adriano! 😊 Me conta, qual peça você tem pra orçar hoje?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Boa noite. Tenho 3 peças do seu Valdir pra orçar: uma mesinha de centro 1.30 x 60, um rack 1.50 x 80 e um aparador 1.20 x 50",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei as 3 peças do Seu Valdir ✅ Mesinha, rack e aparador.\n\nQual trabalho vai ser feito nelas? Pintura, verniz, patina ou restauração?\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Mesinha é lixar e envernizar a mesa inteira, por dentro também. Tampo tem trinco na folha, então lixa e massinha F12 pra acertar. Rack e aparador só tampo, lixar e envernizar, só por fora.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei tudo ✅ Mesinha com trinco, lixar e envernizar por dentro e por fora. Rack e aparador só tampo, por fora.\n\nO rack e o aparador estão em que estado? Bons, só com riscos, ou precisam de reparo?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "rack tem riscos e manchas, o resto do móvel tá bom. aparador tem o tampo manchado, resto ok",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei ✅ Rack e aparador com estado bom, só o tampo e por fora.\n\nPra envernizar, vai ser pincel, rolo ou pistola?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "pincel e rolo de espuma em tudo",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: pincel e rolo de espuma nas três ✅\n\nQuem leva e traz as peças, você ou o Seu Valdir?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "o seu valdir que traz e busca depois",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Pra fechar a mesinha, quantas horas você acha que leva o conserto do trinco? ⏱️",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "nao sei dizer as horas do trinco agora, deixa pro sistema calcular",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Fiz as contas das 3 peças do Seu Valdir ✅\n\n• Mesinha de centro: R$ 645,00\n• Rack: R$ 198,00\n• Aparador: R$ 141,00\n\n💰 Total sugerido: R$ 984,00. Abaixo de R$ 806,00 você fica no prejuízo.\n\n⚠️ O conserto do trinco ainda não tem horas definidas, então não entrou na mesinha. Você concorda com esse valor, ou quer dar desconto ou acrescentar algo?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "nao sei, deixa como ta por enquanto. quero um pdf unico com as 3 pecas do seu valdir, consegue fazer?",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Show, o PDF sai junto com as 3 peças 📄 Só falta o prazo: a partir de quando você começa e quanto tempo leva o trabalho todo?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "começo terça. tudo junto leva uns 5 dias",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado ✅ Anotei começo na terça e uns 5 dias de trabalho pras 3 peças.\n\nTe mandei o PDF aqui no Telegram, com o total de R$ 984,00. Quando o Seu Valdir responder, me avisa.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "valeu, era isso. vou esperar ele responder",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Valeu, Adriano! Quando o Seu Valdir responder, é só chamar 👋",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, valeu",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Valeu, Adriano! 👋",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "3 peças anotadas"
+      },
+      {
+        "ok": true,
+        "name": "rack e aparador só no tampo"
+      },
+      {
+        "ok": true,
+        "name": "cliente Seu Valdir em todas"
+      },
+      {
+        "ok": true,
+        "name": "transporte anotado (cliente leva e busca)"
+      },
+      {
+        "ok": true,
+        "name": "PDF único com as 3 peças"
+      },
+      {
+        "ok": true,
+        "name": "prazo no PDF"
+      }
+    ],
+    "metrics": {
+      "falas": 11,
+      "falas_ate_pdf": 9,
+      "pedidos_de_foto": 1
+    },
+    "judge": {
+      "notas": {
+        "entendimento": 4,
+        "naturalidade": 4,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 3,
+        "eficiencia": 4,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Pergunta sobre horas do conserto do trinco surge do nada, com botões Concordo/Desconto/Acrescentar que não combinam com a pergunta."
+        },
+        {
+          "turno": 14,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Usa 'Total sugerido', 'prejuízo' e 'não tem horas definidas' de forma técnica; mensagem longa com lista e aviso, pesada para quem fala por áudio."
+        },
+        {
+          "turno": 14,
+          "gravidade": "media",
+          "classe": "inventou",
+          "descricao": "Informa um valor mínimo (R$ 806,00) sem que ele tenha pedido. Não sai da fala dele, e o trinco ficou fora da conta da mesinha, o que subestima o orçamento."
+        },
+        {
+          "turno": 8,
+          "gravidade": "baixa",
+          "classe": "perdeu_informacao",
+          "descricao": "Resumo omite as manchas e riscos do tampo, trocados por 'estado bom'. Pode confundir o registro do defeito."
+        },
+        {
+          "turno": 20,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Pede 'me avisa' quando o cliente responder, o que é leve cobrança. Confirma o PDF, mas não deixa claro que o trinco ficou fora do valor."
+        },
+        {
+          "turno": 16,
+          "gravidade": "baixa",
+          "classe": "fluxo_confuso",
+          "descricao": "Diz 'o PDF sai junto' e pergunta o prazo, mas pergunta duas coisas juntas (início e duração)."
+        }
+      ],
+      "resumo": "Objetivo cumprido: PDF único com as 3 peças, prazo e transporte anotados, sem perder dados no banco. Pontos fracos: pergunta confusa sobre horas do trinco com botões inadequados, mensagem de total cheia de jargão e valor mínimo não pedido. O trinco ficou fora do orçamento e isso não foi reforçado no fim."
+    },
+    "ms": 104237
+  },
+  {
+    "id": "real2-neide-pomba",
+    "title": "Real (texto curto): peça decorativa (pomba com raios), pintura, pelas horas, material que ele já tem",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "oi, tenho um trabalho pra orçar. é da dona Neide, uma pomba decorativa de madeira com raios de sol",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: pomba decorativa de madeira com raios de sol, da Dona Neide ✅ Se tiver foto, manda que ajuda 📸 Quantas horas você acha que leva o trabalho todo?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "uns 3 horas",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: 3 horas pro trabalho todo ✅ Quanto dá, mais ou menos, a tinta e o material que você vai usar? Entra no valor, porque depois você repõe.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "eu tenho as tintas",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei que você já tem as tintas ✅ Mesmo assim, quanto dá, mais ou menos, a tinta que vai usar? Entra no valor, porque você repõe depois.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "já falei, eu tenho as tintas. o material eu quero ver depois",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Opa, tudo certo ✅ A pomba está em que estado: boa, com reparos ou danificada?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "boa, inteira, sem defeito. tamanho médio",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, sem repetir. Só falta saber quem leva e traz a pomba. Você busca na casa da Dona Neide ou ela traz pra oficina?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ela traz e busca, na oficina mesmo.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Opa, entendi 👍 Só falta o valor do material que você vai usar na pomba. Mesmo com as tintas em casa, entra na conta pra repor depois. Dá pra estimar em quanto?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "eu tenho as tintas. o material eu quero ver depois",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Opa, criei a pomba duas vezes sem querer 😅 Já preparei a remoção da cópia extra. Pode confirmar no botão aí? Depois eu fecho o valor da pomba.\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": [
+          {
+            "text": "✅ Sim, cancelar",
+            "data": "ag:ok:73f5c23c"
+          },
+          {
+            "text": "✏️ Não",
+            "data": "ag:no:73f5c23c"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: ✏️ Não]"
+      },
+      {
+        "who": "bot",
+        "text": "Não cancelei nada ainda, então as duas pombas da Dona Neide continuam abertas por causa do meu erro. 😅 Quer que eu cancele uma delas?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "não, deixa as duas",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, deixo as duas como estão 👍 São duas pombas iguais da Dona Neide, ou uma só que ficou duplicada?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "uma só, foi duplicada pelo erro. pode apagar a outra, mas só se eu confirmar aqui. tenho que confirmar o valor só depois",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, preparei o cancelamento da pomba duplicada da Dona Neide. Confirma no botão aí? A outra fica com as anotações: boa, inteira, tamanho médio, ela traz e busca, 3 horas.",
+        "buttons": [
+          {
+            "text": "✅ Sim, cancelar",
+            "data": "ag:ok:17d6985d"
+          },
+          {
+            "text": "✏️ Não",
+            "data": "ag:no:17d6985d"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: ✅ Sim, cancelar]"
+      },
+      {
+        "who": "bot",
+        "text": "Show, a duplicada foi cancelada ✅ A pomba da Dona Neide segue aberta. Qual é o trabalho nela: pintura lisa, patina ou outro?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "pintura, a pomba cinza com os raios dourados. já tenho uma foto de referência, bem parecida",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Quantas horas você acha que leva o trabalho todo da pomba?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "umas 3 horas",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: pintura da pomba cinza com raios dourados, 3 horas ✅\n\nPela conta, a pomba da Dona Neide fica em R$ 156,00. Abaixo de R$ 121,00 você fica no prejuízo.\n\nVocê concorda com esse valor, quer dar desconto ou acrescentar algo?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "Show, valor da pomba fechado ✅ Antes de gerar o PDF, quando você consegue começar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "imediato, consigo começar já. leva uns 3 dias",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: começa já e leva uns 3 dias ✅\n\nO valor continua R$ 156,00. Posso fechar assim e mandar o PDF aqui pra você?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado ✅ Te mandei o PDF aqui no Telegram, com a pomba da Dona Neide em R$ 156,00. Quando ela responder, me avisa que eu marco como aceito.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Valeu. Ok, o PDF chegou aqui. Tá certo, pode mandar pra ela.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza! Eu não mando direto pra Dona Neide, então repassa o PDF que está aí no seu Telegram 📄 Quando ela responder, me avisa que eu marco como aceito.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Valeu. Ok, vou repassar o PDF pra ela. Quando ela responder eu te aviso.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano! Quando a Dona Neide responder, é só me avisar que eu marco como aceito 👍",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "peça anotada com o nome que ele usou"
+      },
+      {
+        "ok": true,
+        "name": "chegou num valor"
+      },
+      {
+        "ok": true,
+        "name": "PDF gerado"
+      },
+      {
+        "ok": true,
+        "name": "sem travar nem falar de sistema"
+      },
+      {
+        "ok": false,
+        "name": "material de 40 reais entrou na conta",
+        "detail": "0"
+      }
+    ],
+    "metrics": {
+      "falas": 18,
+      "falas_ate_pdf": 16,
+      "pedidos_de_foto": 2
+    },
+    "judge": {
+      "notas": {
+        "entendimento": 2,
+        "naturalidade": 2,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 3,
+        "eficiencia": 1,
+        "conclusao": 3
+      },
+      "problemas": [
+        {
+          "turno": 6,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Repete a pergunta do valor do material logo depois de ele dizer que já tem as tintas."
+        },
+        {
+          "turno": 12,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta de novo o valor do material, quase igual, pela terceira vez; ele já tinha respondido duas vezes."
+        },
+        {
+          "turno": 14,
+          "gravidade": "alta",
+          "classe": "fluxo_confuso",
+          "descricao": "Criou a peça em duplicidade e pede para cancelar a cópia, confundindo o usuário e expondo erro de sistema. A mensagem diz que 'já preparou a remoção' sem ele pedir."
+        },
+        {
+          "turno": 16,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Pergunta se quer cancelar uma das pombas depois de ele já ter dito não; a confusão da duplicata se arrasta por vários turnos."
+        },
+        {
+          "turno": 24,
+          "gravidade": "alta",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta de novo as horas de trabalho, que ele já informou no turno 3."
+        },
+        {
+          "turno": 22,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "Pergunta o tipo de trabalho com opções ('patina') quando ele já tinha dito que era pintura; as informações se perdem com o cancelamento da duplicata e são reperguntadas."
+        },
+        {
+          "turno": 26,
+          "gravidade": "alta",
+          "classe": "perdeu_informacao",
+          "descricao": "O material de cerca de 40 reais, que ele disse que iria gastar, não entrou na conta. O valor R$ 156 sai sem material. Também usa 'prejuízo' e diz 'pela conta' sem explicar."
+        },
+        {
+          "turno": 8,
+          "gravidade": "media",
+          "classe": "nao_entendeu",
+          "descricao": "Ele diz 'o material eu quero ver depois' e o bot ignora, retomando o assunto depois; o valor do material nunca é resolvido."
+        },
+        {
+          "turno": 10,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "'Beleza, sem repetir' soa estranho e brusco, depois repete mesmo assim."
+        },
+        {
+          "turno": 34,
+          "gravidade": "baixa",
+          "classe": "texto_longo",
+          "descricao": "Mensagens finais repetitivas (34, 36, 38) dizem a mesma coisa sobre marcar como aceito."
+        }
+      ],
+      "resumo": "O PDF saiu e o fluxo fechou, mas a conversa foi cheia de repetições: perguntou o material três vezes e as horas duas vezes, criou uma peça duplicada que teve de ser cancelada e, no fim, o material de cerca de 40 reais ficou fora do valor de R$ 156. O assistente ignorou o que o Adriano disse e se enrolou num erro próprio, então o objetivo foi atingido só em parte."
+    },
+    "ms": 140014
+  },
+  {
+    "id": "real2-prazo-so-duracao",
+    "title": "Real: 'consigo começar e fica pronto em dois dias' (sem dizer quando): o bot pergunta a partir de quando",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "opa, tenho um aparador do seu Ivo pra envernizar, só o tampo, 1.20 x 50",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: aparador do Seu Ivo, só o tampo, verniz, 120 x 50 cm ✅\n\nComo tá o tampo: bom, só com riscos, ou precisa de reparo ou conserto?\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "tampo manchado, resto da peça tá bom. só o tampo mesmo, só por fora",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: tampo manchado, só por fora ✅\n\nPrecisa de conserto no tampo, ou é só limpar e envernizar?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "só limpar e envernizar mesmo, a mancha sai na lixa. não precisa de conserto",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: sem conserto, a mancha sai na lixa ✅\n\nVai de pincel, rolo ou pistola pro verniz?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "pincel e rolo de espuma",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: pincel e rolo de espuma ✅\n\nQuem leva e traz o aparador: você busca e entrega, ou o Seu Ivo traz e leva?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "o seu Ivo traz e leva, ele vem aqui",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: o Seu Ivo traz e leva, sem frete ✅\n\nPra fechar a conta, o verniz vai no pincel ou no rolo de espuma? Se for os dois, qual você usa na maior parte?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "os dois, mas no tampo uso mais o rolo de espuma e o pincel só nas bordas",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Pronto, fiz a conta do aparador do Seu Ivo (tampo, só por fora, pincel só nas bordas):\n\n💰 Sugestão: **R$ 138,00**\n⚠️ Abaixo de R$ 111,17 você fica no prejuízo.\n⏱️ Umas 2 horas, cerca de 2 dias de trabalho.\n\nVocê concorda, quer dar um desconto ou acrescentar algo? 🤝",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, valor combinado ✅ Quando você consegue começar o aparador? Se já der pra começar, pode dizer \"já posso começar\".",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "sim consigo começar e fica pronto em dois dias",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Opa, anotei que ele começa e leva 2 dias ✅ Mas falta saber a data: quando você consegue começar o aparador?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "a partir de terça",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechou o aparador do Seu Ivo em R$ 138,00 ✅ Começa a partir de terça, leva 2 dias. Te mandei o PDF aqui no Telegram pra você repassar pra ele.\n\nQuando ele responder, me avisa que eu anoto 👍",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "valeu, mandei o pdf pro seu ivo, ele responde quando puder",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Valeu! 👋 Quando o Seu Ivo responder, me avisa que eu anoto.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "valeu, quando ele responder eu te aviso. tudo certo",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Valeu! 👋 Quando o Seu Ivo responder, é só me avisar.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "blz, valeu",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Valeu! 👋",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "peça anotada com o nome que ele usou"
+      },
+      {
+        "ok": true,
+        "name": "chegou num valor"
+      },
+      {
+        "ok": true,
+        "name": "PDF gerado"
+      },
+      {
+        "ok": true,
+        "name": "sem travar nem falar de sistema"
+      },
+      {
+        "ok": true,
+        "name": "prazo com início (terça) + duração"
+      }
+    ],
+    "metrics": {
+      "falas": 12,
+      "falas_ate_pdf": 9,
+      "pedidos_de_foto": 1
+    },
+    "judge": {
+      "notas": {
+        "entendimento": 4,
+        "naturalidade": 3,
+        "acessibilidade": 4,
+        "uma_pergunta_por_vez": 3,
+        "sem_invencao": 3,
+        "eficiencia": 3,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "No turno 10 o bot já tinha perguntado pincel/rolo/pistola e o Adriano respondeu 'pincel e rolo de espuma'. No turno 10 pergunta de novo 'pincel ou rolo' (turno 10 do bot, ou seja, mensagem 10 pedindo logística, mas a mensagem 10 já seguia com outra pergunta); a pergunta redundante aparece na mensagem do turno 10, antes da conta."
+        },
+        {
+          "turno": 10,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "O bot pergunta de novo se o verniz vai no pincel ou no rolo, algo que o Adriano já tinha dito (pincel e rolo de espuma); além disso a mensagem tem duas perguntas encadeadas."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "inventou",
+          "descricao": "O resumo diz 'pincel só nas bordas' e omite o rolo de espuma no tampo; as horas ('umas 2 horas') e '2 dias de trabalho' aparecem antes de o Adriano falar de prazo, e são números que ele não deu e parecem incoerentes entre si."
+        },
+        {
+          "turno": 12,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "Usa 'Sugestão', 'prejuízo' e texto com negrito/markdown e vários blocos; a mensagem ficou um pouco longa e formal para o Adriano."
+        },
+        {
+          "turno": 14,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Pergunta a data de início e já sugere resposta 'já posso começar', um pouco mecânico."
+        },
+        {
+          "turno": 16,
+          "gravidade": "baixa",
+          "classe": "nao_entendeu",
+          "descricao": "O Adriano disse que consegue começar; o bot só anotou a duração e perguntou a data, o que é aceitável, mas a frase 'ele começa' soa estranha (refere-se ao aparador, não ao Adriano)."
+        },
+        {
+          "turno": 22,
+          "gravidade": "baixa",
+          "classe": "repeticao",
+          "descricao": "Nos turnos 22, 24 e 26 o bot repete quase o mesmo 'Quando o Seu Ivo responder, me avisa', soando robótico depois que o Adriano já confirmou duas vezes."
+        },
+        {
+          "turno": 20,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Fecha com 'Te mandei o PDF aqui no Telegram', correto, mas a mensagem junta várias informações e faz o aviso final longo."
+        }
+      ],
+      "resumo": "O objetivo foi cumprido: valor fechado, prazo com início (terça) e duração (2 dias) e PDF gerado. Há falhas de naturalidade: o bot repetiu a pergunta de pincel/rolo que o Adriano já respondera, o resumo da conta omitiu o rolo de espuma e os fechamentos foram repetitivos."
+    },
+    "ms": 81958
+  },
+  {
+    "id": "real2-fila",
+    "title": "Fila cheia: o bot propõe o início pela fila (2 serviços aceitos até 15/12)",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "oi, chegou uma cômoda da dona Lia pra fazer pátina. ela quer saber quanto fica e quando fica pronta",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Opa, cômoda da Dona Lia com pátina anotada ✅ Pra eu calcular, me conta: qual o tamanho dela (em cm, ou pequeno/médio/grande)? Se tiver foto, manda que ajuda 📸",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "90 x 45 x 85 de altura. 4 gavetas, só por fora. bom estado, sem conserto, só pátina com pincel",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei tudo ✅ Falta só uma coisa: você vai buscar a cômoda na casa dela e entregar, ou ela traz e leva?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ela traz e busca",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotado: ela traz e busca, sem frete ✅\n\nFiz a conta da cômoda da Dona Lia:\n\n💰 Sugestão: R$ 451,00\n⚠️ Abaixo de R$ 364,00 você fica no prejuízo.\n⏱️ Uns 3 dias de trabalho.\n\nVocê concorda, quer dar um desconto ou acrescentar algo?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, fechado o valor da cômoda da Dona Lia ✅ Pela fila, você fica livre a partir de 16/12. Dá pra começar por volta de 16/12?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "pode ser, começo dia 16/12. levo uns 4 dias",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado ✅ Começo por volta de 16/12, uns 4 dias de trabalho. Te mandei o PDF aqui de R$ 451,00 pra você repassar pra Dona Lia. Assim que ela responder, me avisa 👍",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Valeu, recebi o PDF. Vou mandar pra Dona Lia agora.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Show, Adriano! 👍 Quando ela responder, me avisa que eu anoto aqui.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "valeu, ela respondeu nada ainda. quando responder eu falo",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano 👍 Quando ela responder, me fala que eu anoto aqui.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, quando ela responder eu falo",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano 👍 Quando a Dona Lia responder, me fala aqui que eu anoto.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, quando ela responder eu falo",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Combinado, Adriano 👍 Quando a Dona Lia responder, é só me falar aqui que eu anoto.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, quando ela responder eu falo. valeu",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Valeu, Adriano! Quando a Dona Lia responder, é só me chamar 👍",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, valeu. quando ela responder eu falo aqui",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Combinado, Adriano 👍 Quando a Dona Lia responder, é só me falar aqui.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, quando ela responder eu falo aqui",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano 👍 Quando ela responder, é só me chamar aqui.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "ok, quando ela responder eu falo aqui",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano 👍 Quando a Dona Lia responder, me fala aqui que eu anoto.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Dona Lia ainda não respondeu, tá bom. Quando ela responder eu falo aqui.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Beleza, Adriano 👍 Quando a Dona Lia responder, é só me chamar aqui.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Dona Lia ainda não respondeu",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, Adriano 👍 Assim que a Dona Lia responder, me fala aqui que eu registro.",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Dona Lia ainda não respondeu. Tenho uns serviços na frente, não sei ainda quando dá pra começar.",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Entendi, Adriano. Pela fila, você fica livre a partir de 16/12. Quer usar essa data como início da cômoda da Dona Lia? 📅",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "pode ser",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: a cômoda da Dona Lia começa por volta de 16/12 ✅ Quer que eu reenvie o PDF com essa data?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "sim, leva uns 4 dias",
+        "voice": false
+      },
+      {
+        "who": "bot",
+        "text": "Tudo certo com a cômoda da Dona Lia ✅ Quer que eu mande o PDF de novo com o prazo de 16/12 e os 4 dias?",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "peça anotada com o nome que ele usou"
+      },
+      {
+        "ok": true,
+        "name": "chegou num valor"
+      },
+      {
+        "ok": true,
+        "name": "PDF gerado"
+      },
+      {
+        "ok": true,
+        "name": "sem travar nem falar de sistema"
+      },
+      {
+        "ok": true,
+        "name": "bot propôs o início pela fila (15–16/12)"
+      },
+      {
+        "ok": true,
+        "name": "prazo do PDF depois da fila"
+      }
+    ],
+    "metrics": {
+      "falas": 18,
+      "falas_ate_pdf": 5,
+      "pedidos_de_foto": 1
+    },
+    "judge": {
+      "notas": {
+        "entendimento": 3,
+        "naturalidade": 2,
+        "acessibilidade": 4,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 3,
+        "eficiencia": 2,
+        "conclusao": 3
+      },
+      "problemas": [
+        {
+          "turno": 14,
+          "gravidade": "media",
+          "classe": "loop_repetitivo",
+          "descricao": "Do turno 14 ao 32 o bot repete quase a mesma frase ('quando ela responder, me fala') por cerca de 10 vezes, mesmo o Adriano já tendo dito que avisa. Deveria encerrar ou ficar quieto após a primeira confirmação."
+        },
+        {
+          "turno": 34,
+          "gravidade": "media",
+          "classe": "perdeu_informacao",
+          "descricao": "O bot volta a perguntar a data de início, que já tinha sido combinada (16/12, uns 4 dias) no turno 9 e estava no PDF. Ele pergunta de novo por causa da fala solta do Adriano no turno 33, sem reconhecer que já havia data."
+        },
+        {
+          "turno": 36,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Pergunta se reenvia o PDF com a data; o PDF já tinha 16/12 e 4 dias. Depois, no turno 38, repete a mesma pergunta quase igual, mesmo o Adriano já ter respondido 'sim' no turno 37."
+        },
+        {
+          "turno": 38,
+          "gravidade": "alta",
+          "classe": "nao_cumpriu",
+          "descricao": "O Adriano disse 'sim' e o bot não reenviou o PDF, só perguntou de novo. Não houve ação nem aviso de que não dava para refazer."
+        },
+        {
+          "turno": 12,
+          "gravidade": "baixa",
+          "classe": "pergunta_repetida",
+          "descricao": "Pelo turno 12, o bot já fechou com 'Começo por volta de 16/12, uns 4 dias', mas o PDF foi enviado sem confirmar que a data constava nele. Pouca clareza sobre o que o PDF contém."
+        },
+        {
+          "turno": 6,
+          "gravidade": "baixa",
+          "classe": "jargao",
+          "descricao": "'Abaixo de R$ 364,00 você fica no prejuízo' é aceitável, mas a mensagem é longa e junta várias informações (frete, valor, aviso, prazo, pergunta)."
+        }
+      ],
+      "resumo": "O começo está bom: o bot entende a cômoda, as medidas e o transporte, calcula R$ 451, propõe início pela fila em 16/12 e gera o PDF com o prazo. Depois a conversa degringola: o bot repete a frase 'me avisa quando ela responder' por uns 10 turnos, sem perceber que o Adriano já concordou. No final, pergunta de novo a data já combinada e pede duas vezes para reenviar o PDF, sem reenviar mesmo depois do 'sim'. O objetivo principal (PDF com prazo respeitando a fila) foi atingido cedo, mas o fim passa uma imagem ruim, repetitiva e sem ação."
+    },
+    "ms": 79781
+  }
+]

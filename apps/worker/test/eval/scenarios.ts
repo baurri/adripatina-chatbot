@@ -396,3 +396,6 @@ export const DIVERSE: Scenario[] = [
     checks: async (h) => [...(await common(h, /ba[uú]/i)), check(/moldura|espelho/i.test(await factsText(h)), "moldura anotada")],
   },
 ];
+
+// usados pelos cenários reais (real-scenarios.ts)
+export { check, common, has, jobs, pieces, seedJob, v };

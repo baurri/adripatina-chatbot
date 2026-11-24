@@ -8,7 +8,7 @@ import { getActiveSettings, getMaterialByKey, listMaterials } from "../repos/cat
 import { createJob, getJob, jobPhrase, listActiveJobs, setFact, transitionJob, computePending, jobBalance, type Job } from "../repos/jobs.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { applyConfirmedPrice, missingPriceKeys } from "../services/material-pricing.js";
-import { calculateQuote, closeQuoteByArtisan, getOverrides, getQuote, issueDocuments, issueGroupDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
+import { calculateQuote, closeQuoteByArtisan, getOverrides, getQuote, issueDocuments, issueGroupDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, supersedeOlderProposals, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
 import { enqueueOutbox } from "../services/outbox.js";
 import type { User } from "../repos/users.js";
 
@@ -42,6 +42,8 @@ export interface AgentState {
   pending?: PendingAction | null;
   /** orçamentos fechados juntos: "cliente aceitou" vale para todos */
   closed?: string[];
+  /** turno em que pedimos foto (pede uma vez; não repete em toda mensagem) */
+  photoAskTurn?: number;
   /** serviços sob medida em que já perguntamos o material (pergunta uma vez) */
   askedMaterial?: string[];
   /** turno em que perguntamos se as outras peças do cliente entram no mesmo orçamento */
@@ -206,7 +208,11 @@ export const AGENT_TOOLS: AgentTool[] = [
     description: "Cria um serviço novo (uma peça, ou várias peças IGUAIS com quantidade). Para peças diferentes, crie um serviço para cada. Já passe tudo o que ele disse sobre a peça em 'campos'.",
     input_schema: {
       type: "object",
-      properties: { movel: { type: "string", description: "o móvel como ele falou, corrigindo erro óbvio: 'cômoda', 'mesa de centro', 'criado-mudo'" }, campos: FIELDS_SCHEMA },
+      properties: {
+        movel: { type: "string", description: "o móvel como ele falou, corrigindo erro óbvio: 'cômoda', 'mesa de centro', 'criado-mudo'" },
+        campos: FIELDS_SCHEMA,
+        outra_peca: { type: "boolean", description: "true só se ele disse que é OUTRA peça do mesmo tipo e do mesmo cliente que já está aberta" },
+      },
       required: ["movel"],
     },
   },
@@ -760,6 +766,19 @@ function estimateDelivery(now: Date, entrega: string | null, inicio: string | nu
       const ahead = (wd - today + 7) % 7 || 7;
       return ahead + (/que vem|proxima/.test(n) && ahead < 7 ? 7 : 0);
     }
+    // data dita ("16/12", "dia 16", "lá pelo dia 16/12/2026"): dias até ela
+    const dm = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/.exec(n) ?? (/\bdia (\d{1,2})\b/.exec(n) ? [null, /\bdia (\d{1,2})\b/.exec(n)![1], null, null] : null);
+    if (dm) {
+      const sp = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+      const day = Number(dm[1]);
+      let month = dm[2] ? Number(dm[2]) - 1 : sp.getMonth();
+      let year = dm[3] ? (dm[3].length === 2 ? 2000 + Number(dm[3]) : Number(dm[3])) : sp.getFullYear();
+      if (!dm[2] && day < sp.getDate()) month += 1; // "dia 5" já passou neste mês → mês que vem
+      let target = new Date(year, month, day);
+      if (!dm[3] && target.getTime() < new Date(sp.getFullYear(), sp.getMonth(), sp.getDate()).getTime()) target = new Date(++year, month, day);
+      const diff = Math.round((target.getTime() - new Date(sp.getFullYear(), sp.getMonth(), sp.getDate()).getTime()) / 86400000);
+      if (diff >= 0 && diff <= 400) return diff;
+    }
     if (/semana que vem|proxima semana/.test(n)) return 7;
     if (/mes que vem|proximo mes/.test(n)) return 30;
     const m = /(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta)\s*(dia|semana|mes|meses)/.exec(n);
@@ -777,6 +796,68 @@ function estimateDelivery(now: Date, entrega: string | null, inicio: string | nu
   if (total === null || total > 400) return null;
   const d = new Date(now.getTime() + total * 86400000);
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+}
+
+/** Peça aberta igual (mesmo nome de peça e mesmo cliente, ou sem cliente), criada nos últimos 2 dias e sem PDF. */
+async function findOpenTwin(t: ToolContext, movel: string, cliente: unknown): Promise<Job | null> {
+  const name = normalizeText(movel.replace(/^(um|uma|o|a)\s+/i, ""));
+  const f = resolveFurniture(movel);
+  const client = typeof cliente === "string" ? normalizeText(cliente.replace(/^(dona|seu|sr|sra)\s+/i, "")) : "";
+  const since = new Date(t.ctx.clock().getTime() - 2 * 86400000).toISOString();
+  const rows = await t.ctx.db.all<{ id: string }>("SELECT id FROM jobs WHERE status = 'ORCAMENTO' AND created_at >= ? ORDER BY created_at DESC LIMIT 12", since);
+  for (const r of rows) {
+    const j = await getJob(t.ctx, r.id);
+    if (!j) continue;
+    const ft = j.facts.furniture_type?.value as (FactValueMap["furniture_type"] & { label?: string }) | undefined;
+    if (!ft) continue;
+    const same = normalizeText(pieceLabel(ft)) === name || (!!ft.label && normalizeText(ft.label) === name) || (!!f && f.key !== "outro" && ft.type === f.key && !ft.label);
+    if (!same) continue;
+    const theirs = normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
+    if (client && theirs && client !== theirs) continue;
+    if (await jobClosed(t, j.id)) continue;
+    return j;
+  }
+  return null;
+}
+
+const fmtDay = (d: Date) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(d);
+
+/**
+ * A FILA dele: serviços aceitos (aguardando início / em execução) e quando cada um fica pronto, pelo prazo
+ * anotado. Com isso o bot sugere um início realista ("você tem 3 na fila até 15/12; começa lá pelo 16?")
+ * em vez de ele prometer prazo que não cabe.
+ */
+export async function queueInfo(ctx: ToolContext["ctx"], exceptJobIds: string[] = []): Promise<{ servicos_na_fila: number; com_previsao: { nome: string; pronto_por_volta_de: string }[]; sem_previsao: string[]; livre_a_partir_de: string | null; orcamentos_esperando_resposta: number } | null> {
+  const rows = await ctx.db.all<{ id: string; status: string }>("SELECT id, status FROM jobs WHERE status IN ('AGUARDANDO_INICIO','EM_EXECUCAO','ORCAMENTO') ORDER BY created_at");
+  const now = ctx.clock();
+  let last: Date | null = null;
+  const com: { nome: string; pronto_por_volta_de: string }[] = [];
+  const sem: string[] = [];
+  let waiting = 0;
+  for (const r of rows) {
+    if (exceptJobIds.includes(r.id)) continue;
+    const job = await getJob(ctx, r.id);
+    if (!job) continue;
+    if (r.status === "ORCAMENTO") {
+      if (await ctx.db.first("SELECT 1 FROM quotes q JOIN quote_documents d ON d.quote_id = q.id AND d.kind = 'COMERCIAL' WHERE q.job_id = ? LIMIT 1", r.id)) waiting++;
+      continue;
+    }
+    const dl = (job.facts.deadline?.value as string | undefined) ?? "";
+    const m = /por volta de (\d{2})\/(\d{2})\/(\d{4})/.exec(dl);
+    if (m) {
+      const d = new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 15));
+      com.push({ nome: jobPhrase(job), pronto_por_volta_de: fmtDay(d) });
+      if (d.getTime() >= now.getTime() && (!last || d > last)) last = d;
+    } else sem.push(jobPhrase(job));
+  }
+  if (!com.length && !sem.length && !waiting) return null;
+  return {
+    servicos_na_fila: com.length + sem.length,
+    com_previsao: com.slice(0, 6),
+    sem_previsao: sem.slice(0, 6),
+    livre_a_partir_de: last ? fmtDay(new Date(last.getTime() + 86400000)) : null,
+    orcamentos_esperando_resposta: waiting,
+  };
 }
 
 function resolveFurniture(movel: string): { key: string; label: string } | null {
@@ -800,6 +881,12 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       if (typeof a.movel !== "string" || !a.movel.trim()) return { erro: "diga qual é o móvel" };
       // "outros dois móveis", "uma peça": não diz o que é — pergunte
       if (isVaguePiece(a.movel)) return { erro: `'${a.movel}' não diz qual é a peça — pergunte o que é antes de criar` };
+      // a mesma peça do mesmo cliente já está aberta (criada há pouco): não duplica — o avaliador viu
+      // "criei a pomba duas vezes sem querer" e a confusão de cancelar a cópia
+      if (a.outra_peca !== true) {
+        const dup = await findOpenTwin(t, a.movel, (a.campos as Fields | undefined)?.cliente);
+        if (dup) return { erro: `essa peça já existe: ${jobPhrase(dup)} (servico_id ${dup.id}). Use anotar nela. Só crie outra se ele disse que é OUTRA peça (aí passe outra_peca: true, ou use quantidade se forem iguais).`, servico_existente: describeJob(dup) };
+      }
       const f = resolveFurniture(a.movel);
       const job = await createJob(t.ctx, { actor: t.user.id, description: a.movel.slice(0, 200), messageId: t.inboundMessageId });
       // peça fora do catálogo (estátua, bandeja, faqueiro...): guarda o nome que ele usou
@@ -945,7 +1032,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         if (quotes.length > 1) for (let i = 0; i < quotes.length; i++) lines.push(`• ${jobs[i] ? jobPhrase(jobs[i]!) : "serviço"}: ${reais(quotes[i]!.recommendedCents)}`);
         if (quotes.length > 1) lines.push("");
         lines.push(`💰 Minha sugestão${quotes.length > 1 ? " pro total" : ""}: ${reais(base)}`);
-        if (floor !== null) lines.push(`⚠️ Menos que ${roundUp(floor)} você fica no prejuízo.`);
+        if (floor !== null) lines.push(`⚠️ Menos que ${roundUp(floor)} não cobre seus custos.`);
         if (buy > 0 && !hasMaterial) lines.push(`🛒 De material novo, uns ${roundUp(buy)}.`);
         if (hours > 0) lines.push(`⏱️ Umas ${hours} horas de trabalho.`);
         lines.push("", "Você concorda, quer dar um desconto ou acrescentar algo? 🤝");
@@ -1033,7 +1120,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       // prazo é crítico (ele tem fila de serviços): nunca vai pro PDF um prazo que ele não deu
       for (const id of ids) {
         const j = await getJob(t.ctx, id);
-        if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte QUANDO ele consegue começar (ex.: 'daqui a 2 semanas') e quanto tempo leva — ou quando fica pronto pro cliente. Anote em prazo_inicio + prazo_duracao, ou prazo_entrega, e depois feche." };
+        if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte QUANDO ele consegue começar (ex.: 'daqui a 2 semanas') e quanto tempo leva — ou quando fica pronto pro cliente. Anote em prazo_inicio + prazo_duracao, ou prazo_entrega, e depois feche. Se o ESTADO ATUAL tiver fila_de_servicos com livre_a_partir_de, proponha o início com base nela." };
       }
       // várias peças = um orçamento = UM prazo para o conjunto
       if (ids.length > 1) {
@@ -1089,6 +1176,8 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
             : await issueGroupDocuments(t.ctx, group.map((g) => g.quoteId), t.user.id, { preliminary: group.some((g) => g.preliminary), artisanClosed: true });
           await sendDocumentToArtisan(t.ctx, docs.commercial.id, t.user.id, t.chatId);
           pdfs++;
+          // o PDF novo substitui os antigos dessas peças (não ficam "esperando resposta")
+          await supersedeOlderProposals(t.ctx, group.map((g) => g.quoteId), t.user.id, docs.commercial.number).catch(() => 0);
         } catch (err) {
           console.error(JSON.stringify({ level: "error", msg: "agent_pdf_failed", error: err instanceof Error ? err.message.slice(0, 160) : String(err) }));
         }
@@ -1111,7 +1200,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         ainda_sem_orcamento: stillOpen.map((j) => jobPhrase(j)),
         proximo_passo: stillOpen.length
           ? "Diga que fechou e que mandou o PDF, e lembre numa frase das peças que ainda estão sem orçamento (ainda_sem_orcamento), perguntando se ele quer seguir com elas."
-          : "Diga que fechou e que mandou o PDF; peça pra avisar quando o cliente responder.",
+          : "Diga numa frase curta que fechou e que o PDF está aqui. NÃO peça pra ele avisar quando o cliente responder (daqui uns dias você mesmo pergunta).",
       };
     }
     case "registrar_pagamento": {

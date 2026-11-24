@@ -1,3 +1,4 @@
+import { REAL } from "./real-scenarios.js";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -129,6 +130,8 @@ interface Result {
   title: string;
   turns: Turn[];
   checks: { ok: boolean; name: string; detail?: string }[];
+  /** medidas objetivas: falas dele até o PDF (meta ≤ 6 num caso simples), pedidos de foto */
+  metrics?: { falas: number; falas_ate_pdf: number | null; pedidos_de_foto: number };
   judge: { notas: Record<string, number>; problemas: { turno?: number; gravidade: string; classe: string; descricao: string }[]; resumo: string } | null;
   error?: string;
   ms: number;
@@ -151,6 +154,7 @@ async function runScenario(s: Scenario, key: string): Promise<Result> {
   const turns: Turn[] = [];
   let error: string | undefined;
   let voiceSeq = 0;
+  let untilPdf: number | null = null;
   try {
     for (let i = 0; i < (s.maxTurns ?? 18); i++) {
       const last = turns.filter((t) => t.who === "bot").slice(-4);
@@ -180,6 +184,7 @@ async function runScenario(s: Scenario, key: string): Promise<Result> {
       const lastAdriano = [...turns].reverse().find((t) => t.who === "adriano");
       if (lastAdriano && rj) lastAdriano.text += `\n   {entendido: ${rj.understood ?? "(igual)"} · rota: ${rj.route ?? "?"}/${rj.contextualIntent ?? "?"}}`;
       turns.push(...botTurns(replies));
+      if (untilPdf === null && replies.some((r) => r.kind === "document")) untilPdf = turns.filter((x) => x.who === "adriano").length;
     }
   } catch (err) {
     error = err instanceof Error ? `${err.message}\n${err.stack?.split("\n").slice(1, 4).join("\n")}` : String(err);
@@ -192,7 +197,14 @@ async function runScenario(s: Scenario, key: string): Promise<Result> {
   } catch (err) {
     error = (error ? `${error}\n` : "") + `juiz: ${err instanceof Error ? err.message : String(err)}`;
   }
-  return { id: s.id, title: s.title, turns, checks, judge: verdict, ...(error ? { error } : {}), ms: Date.now() - started };
+  const photoAsks = turns.filter((x) => x.who === "bot" && /(manda|tiver|envia|consegue)[^.?!]*foto|foto[^.?!]*(manda|tiver|envia)/i.test(x.text)).length;
+  const metrics = { falas: turns.filter((x) => x.who === "adriano").length, falas_ate_pdf: untilPdf, pedidos_de_foto: photoAsks };
+  return { id: s.id, title: s.title, turns, checks, metrics, judge: verdict, ...(error ? { error } : {}), ms: Date.now() - started };
+}
+
+function mean(xs: (number | null | undefined)[]): string {
+  const v = xs.filter((x): x is number => typeof x === "number");
+  return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : "—";
 }
 
 function report(results: Result[]): string {
@@ -209,6 +221,8 @@ function report(results: Result[]): string {
     "",
     `Conferências objetivas: **${checks.filter((c) => c.ok).length}/${checks.length}**`,
     "",
+    `Falas do Adriano até o PDF (média): **${mean(results.map((r) => r.metrics?.falas_ate_pdf))}** · casos sem PDF: ${results.filter((r) => r.metrics && r.metrics.falas_ate_pdf === null).length} · pedidos de foto por conversa (média): ${mean(results.map((r) => r.metrics?.pedidos_de_foto))}`,
+    "",
     "| Critério | Média (1–5) |",
     "|---|---|",
     ...keys.map((k) => `| ${k} | ${avg(k)} |`),
@@ -218,7 +232,7 @@ function report(results: Result[]): string {
   for (const r of results) for (const p of r.judge?.problemas ?? []) classes.set(`${p.gravidade}:${p.classe}`, (classes.get(`${p.gravidade}:${p.classe}`) ?? 0) + 1);
   lines.push("## Problemas por classe", "", ...[...classes].sort((a, b) => b[1] - a[1]).map(([k, n]) => `- ${k}: ${n}`), "");
   for (const r of results) {
-    lines.push(`## ${r.id} — ${r.title}`, "", `Notas: ${r.judge ? keys.map((k) => `${k} ${r.judge!.notas?.[k] ?? "—"}`).join(" · ") : "—"} · ${Math.round(r.ms / 1000)}s`, "");
+    lines.push(`## ${r.id} — ${r.title}`, "", `Notas: ${r.judge ? keys.map((k) => `${k} ${r.judge!.notas?.[k] ?? "—"}`).join(" · ") : "—"} · ${Math.round(r.ms / 1000)}s${r.metrics ? ` · falas até o PDF: ${r.metrics.falas_ate_pdf ?? "sem PDF"} · pedidos de foto: ${r.metrics.pedidos_de_foto}` : ""}`, "");
     if (r.error) lines.push("```", r.error, "```", "");
     for (const c of r.checks) lines.push(`- ${c.ok ? "✅" : "❌"} ${c.name}${c.detail ? ` — ${c.detail}` : ""}`);
     if (r.judge) lines.push("", `> ${r.judge.resumo}`, "", ...r.judge.problemas.map((p) => `- [${p.gravidade}] (${p.classe}) turno ${p.turno ?? "?"}: ${p.descricao}`));
@@ -230,13 +244,22 @@ function report(results: Result[]): string {
 describe.skipIf(!KEY)("avaliação com Claude real (EVAL=1)", () => {
   it("roda os cenários e grava o relatório", { timeout: 60 * 60 * 1000 }, async () => {
     const only = process.env.EVAL_ONLY?.split(",").map((s) => s.trim()).filter(Boolean);
-    const list = [...SCENARIOS, ...DIVERSE].filter((s) => !only?.length || only.includes(s.id));
-    const results: Result[] = [];
-    for (const s of list) {
-      const r = await runScenario(s, KEY!);
-      results.push(r);
-      console.info(`[eval] ${s.id}: checks ${r.checks.filter((c) => c.ok).length}/${r.checks.length} · notas ${r.judge ? JSON.stringify(r.judge.notas) : "—"}${r.error ? " · ERRO" : ""}`);
-    }
+    const list = [...SCENARIOS, ...DIVERSE, ...REAL].filter((s) => !only?.length || only.includes(s.id));
+    const results: Result[] = new Array(list.length);
+    // EVAL_PAR=4 roda 4 cenários ao mesmo tempo (cada um tem o seu banco)
+    const par = Math.max(1, Number(process.env.EVAL_PAR ?? 1));
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: par }, async () => {
+        while (next < list.length) {
+          const i = next++;
+          const s = list[i]!;
+          const r = await runScenario(s, KEY!);
+          results[i] = r;
+          console.info(`[eval] ${s.id}: checks ${r.checks.filter((c) => c.ok).length}/${r.checks.length} · falas até PDF ${r.metrics?.falas_ate_pdf ?? "—"} · foto ${r.metrics?.pedidos_de_foto ?? "—"} · notas ${r.judge ? JSON.stringify(r.judge.notas) : "—"}${r.error ? " · ERRO" : ""}`);
+        }
+      }),
+    );
     const dir = join(ROOT, "docs/eval");
     mkdirSync(dir, { recursive: true });
     const out = process.env.EVAL_OUT ?? "latest";

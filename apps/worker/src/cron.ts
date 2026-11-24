@@ -7,6 +7,7 @@ import { listArtisans } from "./repos/users.js";
 import { listActiveJobs } from "./repos/jobs.js";
 import { scanForDuplicates } from "./services/duplicates.js";
 import { runProactiveCollection } from "./services/proactive/job.js";
+import { runQuoteFollowups } from "./services/followup.js";
 
 /** Cron (a cada 15 min): outbox, resumo diário idempotente, retenção de mídia, varredura de duplicidades. */
 export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
@@ -16,6 +17,14 @@ export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
   result.retention = await purgeExpiredMedia(ctx);
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(ctx.clock()));
   if (hour === 3) result.duplicates = await scanForDuplicates(ctx);
+  // "o cliente respondeu?" alguns dias depois do PDF (D-081) — de manhã, fora de conversa
+  if (hour >= 9 && hour <= 18) {
+    try {
+      result.followups = await runQuoteFollowups(ctx);
+    } catch (err) {
+      console.error(JSON.stringify({ level: "error", msg: "followups_failed", error: err instanceof Error ? err.message.slice(0, 200) : "unknown" }));
+    }
+  }
   // coleta proativa: isolada — uma falha aqui nunca interrompe o restante do cron nem o bot
   try {
     const r = await runProactiveCollection(ctx);

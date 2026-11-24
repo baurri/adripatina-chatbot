@@ -3,10 +3,11 @@ import { normalizeText } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import type { AgentMessage, AgentTool, OutgoingMessage } from "../ports.js";
 import { logUsage } from "../ai/service.js";
+import { answerFollowup } from "../services/followup.js";
 import { loadSession, saveSession } from "../repos/sessions.js";
 import { getJob, jobPhrase, listActiveJobs } from "../repos/jobs.js";
 import type { EngineInput } from "../conversation/engine.js";
-import { AGENT_TOOLS, executePending, runTool, type AgentState, type ToolContext } from "./tools.js";
+import { AGENT_TOOLS, executePending, queueInfo, runTool, type AgentState, type ToolContext } from "./tools.js";
 
 /**
  * D-075 — MOTOR DE CONVERSA RECONSTRUÍDO. O Claude conduz: lê a conversa (histórico + estado dos
@@ -20,6 +21,11 @@ import { AGENT_TOOLS, executePending, runTool, type AgentState, type ToolContext
 
 const MAX_ROUNDS = 12;
 const HISTORY = 16;
+
+/** Telegram sem parse_mode mostra os asteriscos literalmente: tira **negrito** e *ênfase*. */
+export function stripMarkdown(text: string): string {
+  return text.replace(/\*\*([^*\n]+)\*\*/g, "$1").replace(/(^|\s)\*([^*\n]+)\*(?=\s|[.,!?]|$)/g, "$1$2");
+}
 
 /** Códigos internos (S-0001) e ids nunca aparecem para o artesão. */
 export function stripJobCodes(text: string): string {
@@ -40,7 +46,8 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Gavetas e portas vão nos campos gavetas/portas (total: "4 gavetas e 1 gavetão" = 5), não só na observação.
 - Depois de preparar pagamento/gasto/situação/cancelamento, a mensagem termina pedindo a confirmação no botão — sem outra pergunta junto.
 - "Recomeçar do zero": cancele o serviço e NÃO recrie com os dados antigos; espere ele contar de novo.
-- Datas: não escreva datas (dia/mês) que ele não disse.
+- Datas: não escreva datas (dia/mês) que ele não disse — a não ser as da fila_de_servicos (ESTADO ATUAL).
+- FILA: na hora de perguntar o prazo, olhe fila_de_servicos. Se tiver livre_a_partir_de, PROPONHA o início com base nela, numa frase: "Você tem 3 serviços na fila, o último fica pronto lá pelo 15/12. Dá pra começar esse lá pelo 16/12?" — se ele concordar, anote prazo_inicio "por volta de 16/12" (a data da fila) e pergunte quanto tempo leva, se ainda não souber. Se tiver serviços sem_previsao, pode lembrar que eles também estão na fila. Sem fila, pergunte normal. Ele decide: se ele der outra data, vale a dele.
 - Desconto ou acréscimo: faça a conta com simular_ajuste (nunca de cabeça) e diga o valor que ela devolver.
 - Só calcule orçamento quando ele estiver fazendo um orçamento ou perguntar o valor; andamento, pagamento e conversa não pedem cálculo.
 - Conversa encerrada e ele só se despedindo/agradecendo: responda numa linha, sem repetir resumo nem valores.
@@ -70,7 +77,9 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Preço de material que a conta pede (lixa, verniz, solvente...): SEMPRE informar_preco_material, para valer nas próximas peças. Lixa avulsa "2 reais a folha" = preco_embalagem_reais 2, tamanho_embalagem 1, unidade folha. Nunca troque isso por materiais_extras.
 - Não conclua o que ele não disse: "a foto é só referência" não quer dizer "feita do zero"; pergunte se precisar.
 - Valor que ele já aceitou (Concordo) não precisa de nova confirmação: siga pro prazo e feche.
-- Trabalho pelas horas dele (peça fora do comum): pergunte quanto dá o material que ele vai usar, MESMO que já tenha em casa ("já tenho as tintas" → "e quanto dá, mais ou menos, a tinta que vai usar? entra no valor, porque depois você repõe"). Anote em material_total_reais.
+- Trabalho pelas horas dele (peça fora do comum): pergunte quanto dá o material que ele vai usar, MESMO que já tenha em casa ("já tenho as tintas" → "e quanto dá, mais ou menos, a tinta que vai usar? entra no valor, porque depois você repõe"). Anote em material_total_reais. Se depois disso ele ainda não der valor ("vejo depois", "já falei"), NÃO pergunte de novo: calcule sem o material e diga numa frase que o material ficou de fora até ele dizer quanto gasta.
+- Uma peça já criada NÃO se cria de novo: para acrescentar dados, use anotar no servico_id dela.
+- Depois do PDF, se ele só confirmar ("ok", "valeu", "vou repassar"), responda numa linha curtinha. Não peça pra ele avisar quando o cliente responder — você mesmo pergunta daqui uns dias.
 - "Me manda o orçamento", "reenvia o PDF": reenviar_orcamento (manda o PDF que já existe). NÃO recalcule, a não ser que ele peça pra atualizar.
 - Despedida com peças ainda sem orçamento: lembre numa frase quais faltam ("Depois a gente faz a mesinha e o rack? 😉").
 - VÁRIAS PEÇAS do mesmo cliente: calcule todas juntas (calcular_orcamento com todos os servico_ids), mostre o valor de cada uma e o TOTAL, e feche todas juntas — sai UM PDF com todas as peças. Só deixe uma peça de fora se ele pedir.
@@ -78,6 +87,9 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Valor fechado pelo total ("150 fechado em tudo"): use valor_final_reais no fechamento de todas as peças juntas.
 - Fale dos serviços pelo móvel e pelo cliente ("a cômoda da Dona Carla"), nunca por código ou id.
 - Só liste os serviços em andamento se ele perguntar ou se precisar saber de qual peça ele está falando.
+- ANTES DE PERGUNTAR, releia o que ele já falou nesta conversa: se ele já respondeu aquilo (mesmo com outras palavras — "tampo meio danificado" É o estado; "eu busco" É o transporte), anote e pergunte a próxima coisa. Pergunta repetida cansa e faz ele achar que você não ouviu.
+- Confirmação curta: "Anotei ✅" + no máximo o essencial em poucas palavras. Não repita a lista do que ele disse.
+- Nunca afirme transporte (quem busca/entrega, frete), prazo ou estado da peça que ele NÃO disse. Na dúvida, pergunte.
 - Resposta final: CURTA. Em geral 1 a 3 frases curtas e uma pergunta no fim. Nada de listas de campos, nada de repetir tudo o que ele falou.`;
 
 function systemFor(firstName: string, today: string): string {
@@ -106,27 +118,35 @@ async function historyMessages(ctx: Ctx, userId: string, currentId: string): Pro
 }
 
 /** Foto recebida: carrega do armazenamento para o Claude ver e deixa na fila para guardar no serviço. */
-async function loadPhoto(ctx: Ctx, state: AgentState, input: EngineInput): Promise<{ block: Record<string, unknown> | null; repeated: string | null }> {
+async function loadPhoto(ctx: Ctx, state: AgentState, input: EngineInput): Promise<{ blocks: Record<string, unknown>[]; repeated: string | null }> {
   const p = input.photo;
-  if (!p) return { block: null, repeated: null };
-  const dup = await ctx.db.first<{ job_id: string }>(
-    "SELECT job_id FROM attachments WHERE sha256 = ? AND id <> ? AND job_id IS NOT NULL AND deleted_at IS NULL LIMIT 1",
-    p.hash,
-    p.attachmentId,
-  );
-  if (dup) {
-    await ctx.db.run("UPDATE attachments SET deleted_at = ? WHERE id = ?", ctx.clock().toISOString(), p.attachmentId);
-    const job = await getJob(ctx, dup.job_id);
-    return { block: null, repeated: job ? jobPhrase(job) : "num serviço" };
+  if (!p) return { blocks: [], repeated: null };
+  const blocks: Record<string, unknown>[] = [];
+  let repeated: string | null = null;
+  // álbum: todas as fotos que chegaram juntas (até 6)
+  for (const id of (p.groupIds?.length ? p.groupIds : [p.attachmentId]).slice(0, 6)) {
+    const att = await ctx.db.first<{ r2_key: string; mime: string; sha256: string | null }>("SELECT r2_key, mime, sha256 FROM attachments WHERE id = ?", id);
+    if (!att) continue;
+    const dup = await ctx.db.first<{ job_id: string }>(
+      "SELECT job_id FROM attachments WHERE sha256 = ? AND id <> ? AND job_id IS NOT NULL AND deleted_at IS NULL LIMIT 1",
+      att.sha256 ?? "__none__",
+      id,
+    );
+    if (dup) {
+      await ctx.db.run("UPDATE attachments SET deleted_at = ? WHERE id = ?", ctx.clock().toISOString(), id);
+      const job = await getJob(ctx, dup.job_id);
+      repeated = job ? jobPhrase(job) : "num serviço";
+      continue;
+    }
+    state.photos = [...(state.photos ?? []), id].slice(-6);
+    const obj = await ctx.storage.get(att.r2_key);
+    if (!obj) continue;
+    const bytes = new Uint8Array(await obj.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    blocks.push({ type: "image", source: { type: "base64", media_type: att.mime, data: btoa(bin) } });
   }
-  state.photos = [...(state.photos ?? []), p.attachmentId].slice(-6);
-  const att = await ctx.db.first<{ r2_key: string; mime: string }>("SELECT r2_key, mime FROM attachments WHERE id = ?", p.attachmentId);
-  const obj = att ? await ctx.storage.get(att.r2_key) : null;
-  if (!att || !obj) return { block: null, repeated: null };
-  const bytes = new Uint8Array(await obj.arrayBuffer());
-  let bin = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return { block: { type: "image", source: { type: "base64", media_type: att.mime, data: btoa(bin) } }, repeated: null };
+  return { blocks, repeated };
 }
 
 async function stateSnapshot(ctx: Ctx, state: AgentState): Promise<string> {
@@ -159,7 +179,103 @@ async function stateSnapshot(ctx: Ctx, state: AgentState): Promise<string> {
     orcamento_mostrado_aguardando_resposta: state.presented ? { servico_ids: state.presented.jobIds } : null,
     acao_aguardando_confirmacao: state.pending ? state.pending.summary : null,
     orcamentos_fechados_recentes: state.closed?.length ? state.closed.length : 0,
+    fila_de_servicos: await queueInfo(ctx, state.presented?.jobIds ?? state.focus ?? []),
   });
+}
+
+type Facts = Record<string, { value?: unknown } | undefined>;
+const hasFact = (facts: Facts[], key: string) => facts.some((f) => f[key]?.value !== undefined && f[key]?.value !== null);
+
+/** Assuntos que o bot pergunta: como reconhecer a pergunta e como reconhecer que ele já falou disso. */
+const TOPICS: { name: string; field: string; q: RegExp; said: RegExp }[] = [
+  { name: "o estado da peça", field: "condition", q: /\bestado\b|como (?:que )?(?:t[aá]|est[aá]|ficou|anda)\b|condi[cç][aã]o/i, said: /danificad|riscad|descascad|bom estado|\bboas?\b|\bruim\b|estragad|rachad|cupim|melhor(?:es)?\b|conservad|detonad|lascad|desgastad|t[aã]o bem|t[aá] bem|\bbem\b.*\briscos?\b/i },
+  { name: "pincel, rolo ou pistola", field: "application_method", q: /pincel|\brolo\b|pistola/i, said: /pincel|\brolo\b|pistola/i },
+  { name: "quem leva e traz", field: "logistics", q: /\bbusca|\bleva\b|\btraz\b|entreg|frete|transporte/i, said: /\bbusc|entreg|\blevo\b|\btrago\b|\btraz\b|frete|\bdeixa\b/i },
+  { name: "por dentro ou só por fora", field: "surfaces", q: /por dentro|por fora/i, said: /por dentro|por fora|s[oó] fora|dentro tamb/i },
+  { name: "só o tampo ou a peça inteira", field: "scope", q: /s[oó] o tampo|\btampo\b[^?]*\binteir|\binteir[^?]*\btampo\b/i, said: /\btampos?\b|\binteir[ao]\b/i },
+  { name: "se precisa de conserto", field: "repairs", q: /consert|reparo/i, said: /consert|reparo|\bcolar\b|\bmassa\b|rachad|quebrad|sem conserto|nada de/i },
+  { name: "as medidas", field: "dimensions", q: /\bmedidas?\b|tamanho|quantos? cm|largura|altura/i, said: /\d+\s*(?:cm|m\b|metros?)|\d+(?:[,.]\d+)?\s*(?:por|x)\s*\d/i },
+];
+
+const sentences = (text: string) => text.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+
+/**
+ * Revisão do rascunho antes de mandar (vale uma volta a mais, com ferramentas):
+ * - pergunta o que ele JÁ disse (o avaliador viu "como tá a mesinha?" logo depois de "tampo meio danificado")
+ * - afirma transporte, prazo ou estado que ele NÃO disse (o "entrega depois" inventado)
+ */
+export function reviewDraft(draft: string, recentSaid: string, corpus: string, facts: Facts[], toolText: string, prevBot: string[] = []): { kind: string; instruction: string } | null {
+  const parts = sentences(draft);
+  const norm = (x: string) => new Set(normalizeText(x).split(" ").filter((w) => w.length > 2));
+  // a mesma mensagem de novo ("quando ela responder, me avisa" 10 vezes): responda curtinho
+  const mine = norm(draft);
+  for (const p of prevBot.slice(-2)) {
+    const other = norm(p);
+    const common = [...mine].filter((w) => other.has(w)).length;
+    if (mine.size >= 5 && common / Math.min(mine.size, other.size) >= 0.7) {
+      return { kind: "repetiu_mensagem", instruction: "Você está mandando quase a mesma mensagem que já mandou. Não repita: responda curtinho só ao que ele disse agora (ex.: 'Valeu! 👋' ou '👍'), sem repetir resumo, valor ou pedido." };
+    }
+  }
+  // material (trabalho pelas horas): pergunta no máximo 2 vezes; depois segue sem
+  const MAT = /quanto[^?]*(material|tinta)|(material|tinta)[^?]*quanto/i;
+  if (parts.some((x) => x.endsWith("?") && MAT.test(x)) && prevBot.filter((p) => MAT.test(p)).length >= 2) {
+    return { kind: "material_insistente", instruction: "Você já perguntou o valor do material duas vezes e ele não deu. Não pergunte de novo: siga sem o material (calcule) e diga numa frase que o material ficou de fora até ele dizer quanto gasta." };
+  }
+  const questions = parts.filter((x) => x.endsWith("?"));
+  for (const question of questions) {
+    for (const tp of TOPICS) {
+      if (!tp.q.test(question)) continue;
+      if (facts.length && facts.every((f) => f[tp.field]?.value !== undefined && f[tp.field]?.value !== null)) {
+        return { kind: `repetida:${tp.field}`, instruction: `Você ia perguntar ${tp.name}, mas isso JÁ está anotado nessa peça. Não pergunte de novo: pergunte a próxima coisa que falta (veja falta_para_orcamento) ou, se não faltar nada, calcule.` };
+      }
+      const said = sentences(recentSaid).find((x) => tp.said.test(x));
+      if (said) {
+        return {
+          kind: `ja_disse:${tp.field}`,
+          instruction: `Você ia perguntar ${tp.name}, mas ele já falou disso: "${said.slice(0, 220)}". Se isso responde PARA ESTA peça, anote agora (anotar) e pergunte a próxima coisa que falta (ou calcule, se não faltar nada). Se não responde pra esta peça, pode mandar a mesma mensagem.`,
+        };
+      }
+    }
+  }
+  const claims = parts.filter((x) => !x.endsWith("?"));
+  const claim = (re: RegExp) => claims.find((x) => re.test(x));
+  const logistics = claim(/\bvoc[eê] (?:mesmo )?(?:busca|pega|leva|traz|entrega)\b|\b(?:entrega|busca)(?:r)? depois\b|\bfrete\b|\b(?:ela|ele|a cliente|o cliente|dona \w+|seu \w+) (?:leva|traz|busca|deixa)\b/i);
+  if (logistics && !hasFact(facts, "logistics") && !/\bbusc|entreg|\blevo\b|\btrago\b|\btraz\b|frete|\bdeixa\b|\bpega\b/i.test(corpus)) {
+    return { kind: "inventou:transporte", instruction: `Na sua mensagem você afirma algo de transporte ("${logistics.slice(0, 120)}") que ele NÃO disse. Tire isso; se precisar saber, pergunte quem leva e traz.` };
+  }
+  const prazo = claim(/\bfica pront[ao]\b|\bcome[cç]a (?:na|no|em|daqui|semana)|\bentrega (?:em|na|no|dia)\b|\bprazo (?:de|é)\b/i);
+  if (prazo && !hasFact(facts, "deadline") && !/\bdias?\b|semanas?|\bm[eê]s|meses|pront[ao]|come[cç]|amanh[aã]|segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado|domingo|janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro/i.test(corpus) && !/prazo|dias_de_trabalho|previs/i.test(toolText)) {
+    return { kind: "inventou:prazo", instruction: `Na sua mensagem você afirma um prazo ("${prazo.slice(0, 120)}") que ele NÃO disse. Tire isso; prazo só com as palavras dele.` };
+  }
+  const estado = claim(/\b(?:t[aá]|est[aá]|ficou) (?:em )?(?:bom estado|boa|bem conservad|danificad|riscad|ruim|detonad)/i);
+  if (estado && !hasFact(facts, "condition") && !TOPICS[0]!.said.test(corpus) && !/pela foto|na foto/i.test(draft)) {
+    return { kind: "inventou:estado", instruction: `Na sua mensagem você afirma o estado da peça ("${estado.slice(0, 120)}") que ele NÃO disse. Tire isso ou pergunte.` };
+  }
+  return null;
+}
+
+/** Frase que PEDE foto ("se tiver foto, manda", "consegue mandar uma foto?"). */
+const isPhotoAsk = (x: string) => /\bfotos?\b/i.test(x) && /\bmand|\btiver\b|\benvi|\btira\b|\bconsegue\b|\btem\b/i.test(x);
+
+/**
+ * Foto se pede UMA vez, quando entra peça nova sem foto — o avaliador viu o bot pedindo foto em toda
+ * mensagem, o que cansa. Fora disso, a frase de pedir foto sai; quando é a hora e o Claude esqueceu, entra.
+ */
+export function limitPhotoAsks(text: string, state: AgentState, turn: number, newPieceWithoutPhoto: boolean, gotPhoto: boolean): string {
+  const lines = text.split("\n").map((line) => line.split(/(?<=[.!?])\s+/));
+  const asked = lines.some((l) => l.some(isPhotoAsk));
+  const recently = state.photoAskTurn !== undefined && turn - state.photoAskTurn <= 3;
+  if (newPieceWithoutPhoto && !recently && !gotPhoto) {
+    state.photoAskTurn = turn;
+    return asked ? text : `${text}\n\n📸 Se tiver foto da peça, manda que ajuda!`;
+  }
+  if (!asked || gotPhoto) return text;
+  const cleaned = lines
+    .map((l) => l.filter((x) => !isPhotoAsk(x)).join(" ").replace(/^\s*📸\s*/u, "").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return cleaned.length >= 8 ? cleaned : text;
 }
 
 const AFFIRM = /^(sim|s|isso|isso mesmo|pode|pode sim|pode anotar|anota|anota ai|confirmo|confirma|confirmar|ok|certo|beleza|blz|ta certo|correto|exato|perfeito|fechado|bora)\b/;
@@ -181,6 +297,11 @@ export interface AgentRunResult {
 export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMessage[] | null> {
   const model = ctx.ai.agent;
   if (!model) return null;
+  // botões da pergunta "o cliente respondeu?" (D-081): resposta fixa, sem Claude
+  if (input.kind === "callback" && input.text.startsWith("ag:fu:")) {
+    const [, , action, snap] = input.text.split(":");
+    return [{ text: await answerFollowup(ctx, input.user, action ?? "", snap ?? "") }];
+  }
   const session = await loadSession(ctx, input.user.id);
   // pergunta proativa aguardando resposta: o fluxo dela (estruturado) responde
   if (session.flow === "data_collection") return null;
@@ -243,46 +364,62 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   const today = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }).format(ctx.clock());
   const system = systemFor(firstName, today);
   const photo = input.kind === "photo" ? await loadPhoto(ctx, state, input) : null;
-  const what = input.kind === "voice" ? " (áudio transcrito)" : photo ? ` (mandou uma foto${photo.repeated ? ` — essa mesma foto já estava guardada ${photo.repeated}` : ""}${userText ? "; legenda" : ", sem legenda"})` : "";
+  const nPhotos = photo?.blocks.length ?? 0;
+  const what = input.kind === "voice" ? " (áudio transcrito)" : photo ? ` (mandou ${nPhotos > 1 ? `${nPhotos} fotos juntas — olhe todas e responda uma vez só` : "uma foto"}${photo.repeated ? ` — essa mesma foto já estava guardada ${photo.repeated}` : ""}${userText ? "; legenda" : ", sem legenda"})` : "";
   const current = `ESTADO ATUAL (dados): ${await stateSnapshot(ctx, state)}\n\nMENSAGEM DO ${firstName.toUpperCase() || "ARTESÃO"}${what}: ${userText}`;
   const messages: AgentMessage[] = [...history];
   const last = messages.at(-1);
   const merged = last && last.role === "user" ? `${String(last.content)}\n\n${current}` : current;
-  const content = photo?.block ? [photo.block, { type: "text", text: merged }] : merged;
+  const content = nPhotos ? [...photo!.blocks, { type: "text", text: merged }] : merged;
   if (last && last.role === "user") last.content = content;
   else messages.push({ role: "user", content });
 
   const toolResults: string[] = [];
   let finalText = "";
   try {
-    for (let round = 0; round < MAX_ROUNDS; round++) {
-      const started = Date.now();
-      const step = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 1500);
-      await logUsage(ctx, { model: model.name, task: "extraction", inputUnits: step.usage?.inputTokens, outputUnits: step.usage?.outputTokens, unitKind: "tokens", success: true, latencyMs: Date.now() - started, purpose: "agent:step", schemaName: "agent", fallbackUsed: false }).catch(() => undefined);
-      const uses = step.content.filter((c) => c.type === "tool_use") as { type: "tool_use"; id: string; name: string; input: unknown }[];
-      const text = step.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim();
-      if (!uses.length) {
-        finalText = stripJobCodes(text);
-        break;
-      }
-      messages.push({ role: "assistant", content: step.content.map((c) => (c.type === "text" ? { type: "text", text: c.text } : { type: "tool_use", id: c.id, name: c.name, input: c.input })) });
-      const results: Record<string, unknown>[] = [];
-      for (const u of uses) {
-        let result: unknown;
-        try {
-          result = await runTool(t, u.name, u.input);
-        } catch (err) {
-          console.error(JSON.stringify({ level: "error", msg: "agent_tool_failed", tool: u.name, error: err instanceof Error ? err.message.slice(0, 300) : String(err) }));
-          result = { erro: err instanceof Error ? err.message.slice(0, 200) : String(err) };
+    const runRounds = async (rounds: number): Promise<string> => {
+      for (let round = 0; round < rounds; round++) {
+        const started = Date.now();
+        const step = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 1500);
+        await logUsage(ctx, { model: model.name, task: "extraction", inputUnits: step.usage?.inputTokens, outputUnits: step.usage?.outputTokens, unitKind: "tokens", success: true, latencyMs: Date.now() - started, purpose: "agent:step", schemaName: "agent", fallbackUsed: false }).catch(() => undefined);
+        const uses = step.content.filter((c) => c.type === "tool_use") as { type: "tool_use"; id: string; name: string; input: unknown }[];
+        const text = step.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim();
+        if (!uses.length) return stripJobCodes(text);
+        messages.push({ role: "assistant", content: step.content.map((c) => (c.type === "text" ? { type: "text", text: c.text } : { type: "tool_use", id: c.id, name: c.name, input: c.input })) });
+        const results: Record<string, unknown>[] = [];
+        for (const u of uses) {
+          let result: unknown;
+          try {
+            result = await runTool(t, u.name, u.input);
+          } catch (err) {
+            console.error(JSON.stringify({ level: "error", msg: "agent_tool_failed", tool: u.name, error: err instanceof Error ? err.message.slice(0, 300) : String(err) }));
+            result = { erro: err instanceof Error ? err.message.slice(0, 200) : String(err) };
+          }
+          const json = JSON.stringify(result);
+          toolResults.push(json);
+          results.push({ type: "tool_result", tool_use_id: u.id, content: json.slice(0, 6000) });
         }
-        const json = JSON.stringify(result);
-        toolResults.push(json);
-        results.push({ type: "tool_result", tool_use_id: u.id, content: json.slice(0, 6000) });
+        messages.push({ role: "user", content: results });
       }
-      messages.push({ role: "user", content: results });
+      return "";
+    };
+    finalText = await runRounds(MAX_ROUNDS);
+    // revisão do rascunho (uma vez): pergunta o que ele já disse? afirma transporte/prazo/estado que ele não disse?
+    // (fora do turno que mostra orçamento, manda PDF ou pede confirmação no botão: esses têm texto próprio)
+    if (finalText && !toolResults.some((r) => r.includes("mensagem_pronta")) && !t.effects.pdfsSent && !state.pending) {
+      const recentSaid = [...history.filter((m) => m.role === "user").slice(-6).map((m) => (typeof m.content === "string" ? m.content : "")), userText].join("\n");
+      const focusJobs = (await Promise.all((state.focus ?? []).slice(0, 4).map((id) => getJob(ctx, id)))).filter((j): j is NonNullable<typeof j> => !!j);
+      const fix = reviewDraft(finalText, recentSaid, t.userCorpus, focusJobs.map((j) => j.facts as Record<string, { value?: unknown } | undefined>), toolResults.join(" "), history.filter((m) => m.role === "assistant").slice(-6).map((m) => (typeof m.content === "string" ? m.content : "")));
+      if (fix) {
+        console.info(JSON.stringify({ level: "info", msg: "agent_draft_review", kind: fix.kind, turn: t.turn }));
+        messages.push({ role: "assistant", content: finalText });
+        messages.push({ role: "user", content: `${fix.instruction} Não comente essa revisão; responda só a mensagem pro Adriano.` });
+        const again = await runRounds(4);
+        if (again) finalText = again;
+      }
     }
     // conferência da resposta: nenhum número que não veio das ferramentas, do estado ou dele
-    const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...(photo?.block ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
+    const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...(nPhotos ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
     const invented = numbersIn(finalText).filter((x) => !grounded(x, allowed));
     const tone = toneIssues(finalText, 4);
     if (/\bsistema\b|\bmarca[cç](ao|ão)\b|\bferramenta\b/i.test(finalText)) tone.push('palavras de sistema ("sistema", "marcação", "ferramenta")');
@@ -317,8 +454,9 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   }
   if (!finalText) finalText = "Opa, me perdi aqui. 😅 Pode me falar de novo?";
   // peça nova sem foto: pede uma vez (o Claude às vezes esquece)
-  if (t.effects.askPhoto && !/foto|📸/i.test(finalText)) finalText = `${finalText}\n\n📸 Se tiver foto da peça, manda que ajuda!`;
-  finalText = stripJobCodes(finalText);
+  finalText = limitPhotoAsks(finalText, state, t.turn, !!t.effects.askPhoto, input.kind === "photo");
+  // Telegram sem parse_mode mostra os asteriscos: tira o negrito de markdown
+  finalText = stripMarkdown(stripJobCodes(finalText));
 
   const buttons: Button[][] = [];
   if (state.pending) {

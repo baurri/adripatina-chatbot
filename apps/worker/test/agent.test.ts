@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buttonsOf, createHarness, type Harness } from "./harness.js";
 import type { AgentMessage, AgentModel, AgentStep } from "../src/ports.js";
-import { getJob } from "../src/repos/jobs.js";
+import { createJob, getJob, setFact } from "../src/repos/jobs.js";
+import { queueInfo } from "../src/agent/tools.js";
+import { albumWait } from "../src/telegram/webhook.js";
+import { limitPhotoAsks, reviewDraft } from "../src/agent/engine.js";
 
 /**
  * D-075 — motor de conversa com o Claude conduzindo. Aqui o "Claude" é roteirizado: cada passo
@@ -261,5 +264,236 @@ describe("motor novo (D-075): travas do código", () => {
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };
     const r = h.allText(await h.send("Peguei uma mesa da dona Ana para envernizar"));
     expect(r).toMatch(/Anotei um serviço novo|mesa/i);
+  });
+});
+
+describe("excelência: álbum de fotos, foto pedida uma vez, revisão do rascunho", () => {
+  it("3 fotos mandadas juntas: UMA resposta, e o Claude vê as 3", async () => {
+    albumWait.ms = 30;
+    let images = 0;
+    const { h, agent } = await setup([
+      (m) => {
+        const last = m.at(-1)!;
+        images = Array.isArray(last.content) ? last.content.filter((b) => (b as { type: string }).type === "image").length : 0;
+        return say("Pelas fotos é uma cômoda com 4 gavetas, certo? 📸");
+      },
+    ]);
+    const jpg = (n: number) => new Uint8Array([0xff, 0xd8, 0xff, 0xe0, n, n, n, n]);
+    const r = await h.album([jpg(1), jpg(2), jpg(3)], "cômoda da dona Rita");
+    albumWait.ms = 2500;
+    expect(r.filter((x) => x.kind === "message")).toHaveLength(1);
+    expect(images).toBe(3);
+    expect(agent.calls).toHaveLength(1);
+    expect(JSON.stringify(agent.calls[0])).toMatch(/dona Rita/);
+  });
+
+  it("foto é pedida uma vez: o pedido some das mensagens seguintes", () => {
+    const st: Record<string, unknown> = {};
+    const a = limitPhotoAsks("Anotei a cômoda ✅ Qual o tamanho?", st, 1, true, false);
+    expect(a).toMatch(/foto/);
+    const b = limitPhotoAsks("Anotei o tamanho ✅ Se tiver foto, manda que ajuda! 📸 Ela tem conserto?", st, 2, false, false);
+    expect(b).not.toMatch(/foto/);
+    expect(b).toMatch(/conserto\?/);
+    // peça nova logo em seguida: não pede de novo tão cedo
+    expect(limitPhotoAsks("Anotei a mesa ✅ De quem é?", st, 3, true, false)).not.toMatch(/foto/);
+    // muito depois, peça nova: pede de novo
+    expect(limitPhotoAsks("Anotei o rack ✅ De quem é?", st, 9, true, false)).toMatch(/foto/);
+  });
+
+  it("revisão: pergunta o que ele já disse volta pro Claude (com a frase dele)", () => {
+    const r = reviewDraft("Anotei a mesinha ✅ Como tá o estado dela?", "a mesinha é redonda, tampo meio danificado, tem que acertar uns detalhes", "", [{}], "");
+    expect(r?.kind).toBe("ja_disse:condition");
+    expect(r?.instruction).toMatch(/meio danificado/);
+    const s = reviewDraft("Beleza ✅ Vai ser pincel, rolo ou pistola?", "", "", [{ application_method: { value: "pincel" } }], "");
+    expect(s?.kind).toBe("repetida:application_method");
+    expect(reviewDraft("Beleza ✅ Vai ser pincel, rolo ou pistola?", "é uma cômoda da dona Ana", "", [{}], "")).toBeNull();
+  });
+
+  it("revisão: transporte ou prazo que ele não disse é tirado", () => {
+    expect(reviewDraft("Fechado ✅ Você entrega depois de pronto.", "", "cômoda da dona Ana, patina", [{}], "")?.kind).toBe("inventou:transporte");
+    expect(reviewDraft("Fechado ✅ Você entrega depois de pronto.", "", "eu busco e entrego", [{}], "")).toBeNull();
+    expect(reviewDraft("Show ✅ Fica pronto em 5 dias.", "", "cômoda da dona Ana", [{}], "")?.kind).toBe("inventou:prazo");
+  });
+
+  it("revisão de verdade no fluxo: o Claude corrige a pergunta repetida e anota", async () => {
+    const { h, agent } = await setup([
+      () => tool("criar_servico", { movel: "mesinha de centro", campos: { cliente: "Dona Jo", tecnicas: ["verniz"] } }),
+      () => say("Anotei a mesinha ✅ Como tá o estado dela?"),
+      (m) => {
+        const last = String(m.at(-1)!.content);
+        expect(last).toMatch(/já falou disso/);
+        return say("Anotei que o tampo tá meio danificado ✅ Precisa de conserto?");
+      },
+    ]);
+    const r = h.allText(await h.send("mesinha de centro da dona jo pra envernizar, o tampo tá meio danificado"));
+    expect(r).toMatch(/conserto/);
+    expect(r).not.toMatch(/Como tá o estado/);
+    expect(agent.calls.length).toBe(3);
+  });
+});
+
+describe("excelência: prazo pela fila", () => {
+  it("fila: serviços aceitos com previsão → livre a partir do dia seguinte ao último; o Claude vê isso", async () => {
+    const { h, agent } = await setup([() => say("Você tem 2 serviços na fila. Dá pra começar lá pelo 16/12?")]);
+    h.clock.now = new Date("2026-11-24T13:00:00Z");
+    const mk = async (desc: string, deadline: string | null, status: "AGUARDANDO_INICIO" | "EM_EXECUCAO") => {
+      const j = await createJob(h.ctx, { actor: "u", description: desc });
+      await setFact(h.ctx, j.id, "furniture_type", { type: "comoda", descriptors: [] } as never, { actor: "u", source: "admin" });
+      if (deadline) await setFact(h.ctx, j.id, "deadline", deadline as never, { actor: "u", source: "admin" });
+      await h.ctx.db.run("UPDATE jobs SET status = ? WHERE id = ?", status, j.id);
+    };
+    await mk("cômoda", "Início: já · cerca de 5 dias de trabalho · previsão de entrega: por volta de 01/12/2026", "EM_EXECUCAO");
+    await mk("rack", "Início: semana que vem · cerca de 1 semana de trabalho · previsão de entrega: por volta de 15/12/2026", "AGUARDANDO_INICIO");
+    const q = await queueInfo(h.ctx);
+    expect(q?.servicos_na_fila).toBe(2);
+    expect(q?.livre_a_partir_de).toBe("16/12");
+    await h.send("e aí, quando eu consigo pegar um serviço novo?");
+    expect(JSON.stringify(agent.calls[0])).toMatch(/livre_a_partir_de.{0,6}16\/12/);
+    expect(h.lastText()).toMatch(/16\/12/); // data da fila não é "inventada"
+  });
+
+  it("prazo com data dita ('lá pelo 16/12') vira previsão de entrega", async () => {
+    let jobId = "";
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "cômoda", campos: { cliente: "Dona Ana" } }),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("anotar", { servico_id: jobId, campos: { prazo_inicio: "lá pelo dia 16/12", prazo_duracao: "5 dias" } });
+      },
+      () => say("Anotado ✅"),
+    ]);
+    h.clock.now = new Date("2026-11-24T13:00:00Z");
+    await h.send("cômoda da dona ana, começo lá pelo dia 16/12 e levo 5 dias");
+    const dl = String((await getJob(h.ctx, jobId))!.facts.deadline?.value);
+    expect(dl).toMatch(/por volta de 2[2-4]\/12\/2026/);
+  });
+});
+
+describe("excelência: depois do PDF (D-081)", () => {
+  async function closedMesa() {
+    let jobId = "";
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo_entrega: "daqui a 2 meses" } }),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      () => say("Minha sugestão é essa aí. Você concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: [jobId] }),
+      () => say("Fechado! ✅ Te mandei o PDF."),
+    ]);
+    h.clock.now = new Date("2026-11-24T13:00:00Z");
+    await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
+    await h.send("concordo");
+    return { h, jobId };
+  }
+
+  it("3 dias depois pergunta se o cliente fechou; 'Fechou' aceita e a peça vai pra fila", async () => {
+    const { runQuoteFollowups } = await import("../src/services/followup.js");
+    const { h, jobId } = await closedMesa();
+    h.telegram.clear();
+    h.advance(1);
+    expect(await runQuoteFollowups(h.ctx)).toBe(0); // cedo demais
+    h.advance(2.2);
+    expect(await runQuoteFollowups(h.ctx)).toBe(1);
+    const msg = h.telegram.sent.at(-1)!;
+    expect(msg.text).toMatch(/mesa da Dona Ana.*respondeu\?/);
+    expect(buttonsOf(msg)).toEqual(expect.arrayContaining([expect.stringMatching(/^ag:fu:yes:/), expect.stringMatching(/^ag:fu:wait:/)]));
+    expect(await runQuoteFollowups(h.ctx)).toBe(0); // não repete no mesmo dia
+    const yes = buttonsOf(msg).find((b) => b.startsWith("ag:fu:yes:"))!;
+    const r = h.allText(await h.click(yes));
+    expect(r).toMatch(/fechou/i);
+    expect((await getJob(h.ctx, jobId))!.status).toBe("AGUARDANDO_INICIO");
+    expect(h.allText(await h.click(yes))).toMatch(/já está anotado/);
+    h.advance(10);
+    expect(await runQuoteFollowups(h.ctx)).toBe(0); // resolvido: nunca mais pergunta
+  });
+
+  it("'Ainda não' pergunta de novo 4 dias depois, uma vez", async () => {
+    const { runQuoteFollowups } = await import("../src/services/followup.js");
+    const { h } = await closedMesa();
+    h.advance(3.2);
+    await runQuoteFollowups(h.ctx);
+    const wait = buttonsOf(h.telegram.sent.at(-1)!).find((b) => b.startsWith("ag:fu:wait:"))!;
+    expect(h.allText(await h.click(wait))).toMatch(/pergunto de novo/);
+    h.advance(1);
+    expect(await runQuoteFollowups(h.ctx)).toBe(0);
+    h.advance(3.5);
+    expect(await runQuoteFollowups(h.ctx)).toBe(1);
+    h.advance(10);
+    expect(await runQuoteFollowups(h.ctx)).toBe(0);
+  });
+
+  it("no meio de uma conversa não pergunta", async () => {
+    const { runQuoteFollowups } = await import("../src/services/followup.js");
+    const { h } = await closedMesa();
+    h.advance(3.2);
+    h.ctx.ai.agent = new ScriptedAgent([() => say("Oi! 🙂")]);
+    await h.send("e aí");
+    expect(await runQuoteFollowups(h.ctx)).toBe(0);
+  });
+});
+
+describe("excelência: PDF novo substitui o antigo", () => {
+  it("fechar de novo a mesma peça: a proposta anterior vira CANCELADO (substituída)", async () => {
+    let jobId = "";
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo_entrega: "daqui a 2 meses" } }),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      () => say("Concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: [jobId] }),
+      () => say("Fechado! ✅"),
+      () => tool("calcular_orcamento", { servico_ids: [jobId] }),
+      () => say("Concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: [jobId], valor_final_reais: 999 }),
+      () => say("Fechado! ✅"),
+    ]);
+    await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
+    await h.send("concordo");
+    await h.send("refaz a conta da mesa, vou cobrar 999");
+    await h.send("isso, 999");
+    const rows = await h.ctx.db.all<{ status: string }>("SELECT status FROM quotes WHERE status IN ('ENVIADO','APROVADO','CANCELADO') ORDER BY created_at");
+    expect(rows.map((r) => r.status)).toEqual(["CANCELADO", "ENVIADO"]);
+  });
+});
+
+describe("excelência: guardas vindas da avaliação real", () => {
+  it("criar a mesma peça do mesmo cliente de novo é recusado (volta o servico_id); outra_peca: true deixa", async () => {
+    let second: Record<string, unknown> = {};
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "pomba decorativa", campos: { cliente: "Dona Neide" } }),
+      () => say("Anotei ✅"),
+      () => tool("criar_servico", { movel: "pomba decorativa", campos: { cliente: "Dona Neide", estado: "bom" } }),
+      (m) => {
+        second = lastToolResult(m);
+        return say("Anotei ✅");
+      },
+    ]);
+    await h.send("uma pomba decorativa da dona neide");
+    await h.send("ela tá boa");
+    expect(String(second.erro)).toMatch(/já existe/);
+    expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM jobs").then((r) => r!.n)).toBe(1);
+  });
+
+  it("mesma mensagem de novo → pede resposta curtinha", () => {
+    const prev = ["Fechado ✅ Te mandei o PDF aqui. Quando a Dona Neide responder, me avisa que eu marco como aceito 👍"];
+    const r = reviewDraft("Beleza! Quando a Dona Neide responder, me avisa que eu marco como aceito 👍", "", "", [{}], "", prev);
+    expect(r?.kind).toBe("repetiu_mensagem");
+  });
+
+  it("material perguntado 2 vezes sem resposta: não pergunta a 3ª", () => {
+    const prev = ["Quanto dá, mais ou menos, a tinta que você vai usar?", "Mesmo assim, quanto dá a tinta que vai usar? Entra no valor."];
+    expect(reviewDraft("Só falta isso: quanto dá o material que você vai usar?", "eu tenho as tintas", "", [{}], "", prev)?.kind).toBe("material_insistente");
+    expect(reviewDraft("Mesmo assim, quanto dá a tinta?", "eu tenho as tintas", "", [{}], "", prev.slice(0, 1))?.kind).not.toBe("material_insistente");
+  });
+});
+
+describe("excelência: texto pro Telegram", () => {
+  it("negrito de markdown sai (Telegram mostraria os asteriscos)", async () => {
+    const { stripMarkdown } = await import("../src/agent/engine.js");
+    expect(stripMarkdown("💰 Sugestão: **R$ 156,00**, pelas *3 horas*.")).toBe("💰 Sugestão: R$ 156,00, pelas 3 horas.");
   });
 });

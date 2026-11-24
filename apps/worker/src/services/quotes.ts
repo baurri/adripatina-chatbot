@@ -1175,3 +1175,34 @@ export function artisanQuoteSummary(q: QuoteRecord): string {
   }
   return lines.join("\n");
 }
+
+/**
+ * PDF novo de uma peça SUBSTITUI os anteriores: as propostas antigas ainda sem resposta (APROVADO/ENVIADO)
+ * viram CANCELADO com o motivo — não entram em "esperando resposta" nem na pergunta de acompanhamento.
+ */
+export async function supersedeOlderProposals(ctx: Ctx, keepQuoteIds: string[], actor: string, number: string): Promise<number> {
+  let n = 0;
+  const jobs = new Set<string>();
+  for (const id of keepQuoteIds) {
+    const q = await getQuote(ctx, id);
+    if (q) jobs.add(q.jobId);
+  }
+  for (const jobId of jobs) {
+    const old = await ctx.db.all<{ id: string }>(
+      `SELECT id FROM quotes WHERE job_id = ? AND status IN ('APROVADO','ENVIADO') AND id NOT IN (${keepQuoteIds.map(() => "?").join(",")})`,
+      jobId,
+      ...keepQuoteIds,
+    );
+    for (const o of old) {
+      const q = await getQuote(ctx, o.id);
+      if (!q) continue;
+      try {
+        await setQuoteStatus(ctx, q, "CANCELADO", actor, "", [], `substituído pelo PDF ${number}`);
+        n++;
+      } catch {
+        // transição não permitida: deixa como está
+      }
+    }
+  }
+  return n;
+}

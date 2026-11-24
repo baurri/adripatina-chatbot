@@ -36,6 +36,8 @@ export interface Harness {
   click(data: string, from?: number): Promise<SentRecord[]>;
   voice(fileUniqueId: string, transcript: string | null, from?: number): Promise<SentRecord[]>;
   photo(bytes: Uint8Array, caption?: string, from?: number): Promise<SentRecord[]>;
+  /** várias fotos mandadas juntas (álbum do Telegram: mesmo media_group_id, updates em paralelo) */
+  album(photos: Uint8Array[], caption?: string): Promise<SentRecord[]>;
   lastText(): string;
   allText(records: SentRecord[]): string;
   advance(days: number): void;
@@ -120,6 +122,21 @@ export async function createHarness(opts: { requireAdminReview?: boolean } = {})
         update_id: updateSeq++,
         message: { message_id: msgSeq++, from: { id: from }, chat: { id: from, type: "private" }, date: 0, ...(caption ? { caption } : {}), photo: [{ file_id: fileId, file_unique_id: `u-${fileId}`, width: 10, height: 10 }] },
       });
+      return newSince(n);
+    },
+    async album(photos, caption) {
+      const n = since();
+      const group = `g-${updateSeq}`;
+      await Promise.all(
+        photos.map((bytes, i) => {
+          const fileId = `photo-${updateSeq}`;
+          telegram.files.set(fileId, bytes);
+          return processUpdate(ctx, {
+            update_id: updateSeq++,
+            message: { message_id: msgSeq++, from: { id: ARTISAN_TG }, chat: { id: ARTISAN_TG, type: "private" }, date: 0, media_group_id: group, ...(caption && i === 0 ? { caption } : {}), photo: [{ file_id: fileId, file_unique_id: `u-${fileId}`, width: 10, height: 10 }] },
+          });
+        }),
+      );
       return newSince(n);
     },
     lastText() {
