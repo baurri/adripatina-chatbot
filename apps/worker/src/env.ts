@@ -23,6 +23,7 @@ export interface Env {
   DAILY_SUMMARY_HOUR: string;
   PHRASING_VARIETY?: string;
   CONVERSATION_AI?: string;
+  PUBLIC_BASE_URL?: string;
   AGENT_ENGINE?: string;
   AI_AGENT_MODEL?: string;
   /** coleta proativa: off | dry_run | live (live ainda exige ativação no painel) */
@@ -62,6 +63,7 @@ export const ConfigSchema = z.object({
   phrasingVariety: z.boolean(),
   /** D-073: Claude lê toda mensagem recebida e dá voz a toda mensagem enviada */
   conversationAi: z.boolean(),
+  publicBaseUrl: z.string().nullable(),
   /** D-075: motor de conversa novo (Claude com ferramentas) */
   agentEngine: z.boolean(),
   agentModel: z.string(),
@@ -93,6 +95,7 @@ export function loadConfig(env: Partial<Env>): Config {
     dailySummaryHour: intStr(7).parse(env.DAILY_SUMMARY_HOUR),
     phrasingVariety: env.PHRASING_VARIETY !== "false",
     conversationAi: env.CONVERSATION_AI !== "false",
+    publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || null,
     agentEngine: env.AGENT_ENGINE !== "false",
     agentModel: env.AI_AGENT_MODEL ?? env.AI_CLAUDE_MODEL ?? "claude-haiku-5-5",
     // fora de produção o padrão é só simular — nunca enviar mensagens reais automaticamente

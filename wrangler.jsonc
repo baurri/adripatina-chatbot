@@ -27,6 +27,7 @@
   "triggers": { "crons": ["*/15 * * * *"] },
   "vars": {
     "ENVIRONMENT": "production",
+    "PUBLIC_BASE_URL": "https://adripatina-chatbot.baurri.workers.dev",
     "AI_ENABLED": "true",
     "AI_STT_MODEL": "@cf/openai/whisper-large-v3-turbo",
     "AI_EXTRACTION_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
@@ -107,6 +108,7 @@
       "triggers": { "crons": ["*/15 * * * *"] },
       "vars": {
         "ENVIRONMENT": "production",
+    "PUBLIC_BASE_URL": "https://adripatina-chatbot.baurri.workers.dev",
         "AI_ENABLED": "true",
         "AI_STT_MODEL": "@cf/openai/whisper-large-v3-turbo",
         "AI_EXTRACTION_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",

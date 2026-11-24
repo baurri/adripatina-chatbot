@@ -6,6 +6,8 @@ import { findFurniture, findTechniques, findDescriptors, furnitureLabel, TECHNIQ
 export interface Button {
   text: string;
   data: string;
+  /** botão que abre um link (ex.: WhatsApp) em vez de mandar um callback */
+  url?: string;
 }
 
 export interface Question {

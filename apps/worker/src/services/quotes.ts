@@ -1085,6 +1085,54 @@ export async function sendDocumentToArtisan(ctx: Ctx, documentId: string, actor:
   ]);
   const q = await getQuote(ctx, doc.quoteId);
   if (q && q.status === "APROVADO" && !doc.preliminary) await setQuoteStatus(ctx, q, "ENVIADO", actor, "", [], "PDF entregue ao artesão para encaminhamento");
+  await sendWhatsAppShortcut(ctx, documentId, chatId).catch((err) => console.error(JSON.stringify({ level: "error", msg: "whatsapp_shortcut_failed", error: String(err instanceof Error ? err.message : err).slice(0, 160) })));
+}
+
+/** Validade do link do PDF mandado ao cliente. */
+export const DOCUMENT_LINK_DAYS = 30;
+
+/** Cria um link temporário (token aleatório) para o PDF comercial. */
+export async function createDocumentLink(ctx: Ctx, documentId: string): Promise<string> {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const token = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const now = ctx.clock();
+  await ctx.db.run(
+    "INSERT INTO document_links (token, document_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
+    token,
+    documentId,
+    addDays(now, DOCUMENT_LINK_DAYS).toISOString(),
+    now.toISOString(),
+  );
+  return token;
+}
+
+/** Depois do PDF: botão que abre o WhatsApp com a mensagem e o link prontos (+ dica de compartilhar o arquivo). */
+async function sendWhatsAppShortcut(ctx: Ctx, documentId: string, chatId: string): Promise<void> {
+  const tip = "Ou segure o PDF ☝️ → Compartilhar → WhatsApp.";
+  const base = ctx.config.publicBaseUrl;
+  if (!base) {
+    await ctx.telegram.sendMessage(chatId, `📲 Pra mandar pro cliente: ${tip.replace(/^Ou s/, "s")}`);
+    return;
+  }
+  const token = await createDocumentLink(ctx, documentId);
+  const business = (await getActiveSettings(ctx)).business.name || "Adripatina";
+  const text = `Olá! Segue o orçamento da ${business}: ${base}/p/${token}`;
+  await ctx.telegram.sendMessage(chatId, `📲 Pra mandar no WhatsApp do cliente, é só tocar no botão e escolher o contato.\n\n${tip}`, [
+    [{ text: "📲 Mandar no WhatsApp", data: "noop", url: `https://wa.me/?text=${encodeURIComponent(text)}` }],
+  ]);
+}
+
+/** Abre o PDF de um link válido (rota pública /p/:token). Null = link inválido ou vencido. */
+export async function openDocumentLink(ctx: Ctx, token: string): Promise<{ bytes: ArrayBuffer; filename: string } | null> {
+  if (!/^[0-9a-f]{32}$/.test(token)) return null;
+  const link = await ctx.db.first<{ document_id: string; expires_at: string }>("SELECT document_id, expires_at FROM document_links WHERE token = ?", token);
+  if (!link || link.expires_at < ctx.clock().toISOString()) return null;
+  const doc = await getDocument(ctx, link.document_id);
+  if (!doc || doc.kind !== "COMERCIAL") return null;
+  const obj = await ctx.storage.get(doc.r2Key);
+  if (!obj) return null;
+  await ctx.db.run("UPDATE document_links SET opened_count = opened_count + 1, last_opened_at = ? WHERE token = ?", ctx.clock().toISOString(), token);
+  return { bytes: await obj.arrayBuffer(), filename: doc.filename };
 }
 
 /** Cliente aceitou/recusou (informado pelo artesão ou admin). Aceite fixa o valor contratado. */

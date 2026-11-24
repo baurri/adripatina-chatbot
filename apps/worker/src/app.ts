@@ -7,7 +7,7 @@ import type { AccessVerifier } from "./ports.js";
 import type { User } from "./repos/users.js";
 import { adminRoutes } from "./admin/routes.js";
 import { requireAdmin } from "./admin/access.js";
-import { DomainError } from "./services/quotes.js";
+import { DomainError, openDocumentLink } from "./services/quotes.js";
 import { processUpdate, verifyTelegramSecret } from "./telegram/webhook.js";
 
 export interface AppEnv {
@@ -63,6 +63,20 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
 
   // saúde sem segredos
   app.get("/api/v1/health", (c) => c.json({ ok: true, service: "adripatina", time: new Date().toISOString() }));
+  // PDF do orçamento para o cliente (link temporário mandado pelo WhatsApp) — sem login, só com o token
+  app.get("/p/:token", async (c) => {
+    const doc = await openDocumentLink(c.get("ctx"), c.req.param("token"));
+    if (!doc) return c.text("Este link de orçamento venceu ou não existe. Peça um novo para quem te enviou. 🙂", 404);
+    return new Response(doc.bytes, {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `inline; filename="${doc.filename.replace(/[^\w.-]/g, "_")}"`,
+        "cache-control": "private, max-age=300",
+        "x-robots-tag": "noindex, nofollow",
+        "referrer-policy": "no-referrer",
+      },
+    });
+  });
 
   app.post("/api/v1/telegram/webhook", async (c) => {
     if (!verifyTelegramSecret(c.req.header("X-Telegram-Bot-Api-Secret-Token"), deps.telegramWebhookSecret)) {

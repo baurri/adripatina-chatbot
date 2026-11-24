@@ -219,6 +219,27 @@ describe("motor novo (D-075): travas do código", () => {
     expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quotes WHERE status IN ('APROVADO','ENVIADO')").then((x) => x!.n)).toBe(2);
   });
 
+  it("depois do PDF vem o botão do WhatsApp com link temporário que abre o PDF", async () => {
+    const { createDocumentLink, openDocumentLink } = await import("../src/services/quotes.js");
+    const h = await createHarness();
+    (h.ctx.config as { publicBaseUrl: string | null }).publicBaseUrl = "https://exemplo.test";
+    const fake = new TextEncoder().encode("%PDF-1.4 teste");
+    await h.ctx.storage.put("documents/x.pdf", fake);
+    const now = new Date(h.ctx.clock()).toISOString();
+    const jobId = (await (await import("../src/repos/jobs.js")).createJob(h.ctx, { actor: h.artisanId, description: "mesa" })).id;
+    await h.ctx.db.run("INSERT INTO quotes (id, job_id, version, status, input_json, result_json, engine_version, created_at, updated_at) VALUES ('q1', ?, 1, 'ENVIADO', '{}', '{}', 'x', ?, ?)", jobId, now, now);
+    await h.ctx.db.run("INSERT INTO quote_snapshots (id, quote_id, number, doc_version, snapshot_json, sha256, created_at) VALUES ('s1','q1','AP-2026-0099',1,'{}','x',?)", now);
+    await h.ctx.db.run("INSERT INTO quote_documents (id, quote_id, snapshot_id, number, doc_version, kind, preliminary, r2_key, sha256, size_bytes, created_at) VALUES ('d1','q1','s1','AP-2026-0099',1,'COMERCIAL',0,'documents/x.pdf','x',14,?)", now);
+    const token = await createDocumentLink(h.ctx, "d1");
+    expect(token).toMatch(/^[0-9a-f]{32}$/);
+    const opened = await openDocumentLink(h.ctx, token);
+    expect(new TextDecoder().decode(opened!.bytes)).toMatch(/%PDF/);
+    expect(await openDocumentLink(h.ctx, "0".repeat(32))).toBeNull();
+    const res = await h.app().request(`/p/${token}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };

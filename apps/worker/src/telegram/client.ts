@@ -23,7 +23,7 @@ export class LiveTelegramClient implements TelegramClient {
     const r = (await this.call("sendMessage", {
       chat_id: chatId,
       text,
-      ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons.map((row) => row.map((b) => ({ text: b.text, callback_data: b.data.slice(0, 64) }))) } } : {}),
+      ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons.map((row) => row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data.slice(0, 64) }))) } } : {}),
     })) as { message_id?: number } | undefined;
     return { messageId: typeof r?.message_id === "number" ? r.message_id : null };
   }
