@@ -597,6 +597,14 @@ function estimateDelivery(now: Date, entrega: string | null, inicio: string | nu
     const n = normalizeText(s);
     if (/\b(ja|agora|hoje|imediat)/.test(n)) return 0;
     if (/\bamanha\b/.test(n)) return 1;
+    // "terça", "na quinta": o próximo dia da semana com esse nome (em São Paulo)
+    const WEEK = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
+    const wd = WEEK.findIndex((d) => new RegExp(`\\b${d}\\b`).test(n));
+    if (wd >= 0) {
+      const today = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getDay();
+      const ahead = (wd - today + 7) % 7 || 7;
+      return ahead + (/que vem|proxima/.test(n) && ahead < 7 ? 7 : 0);
+    }
     if (/semana que vem|proxima semana/.test(n)) return 7;
     if (/mes que vem|proximo mes/.test(n)) return 30;
     const m = /(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta)\s*(dia|semana|mes|meses)/.exec(n);
