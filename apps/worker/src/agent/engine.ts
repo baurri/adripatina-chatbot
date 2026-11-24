@@ -64,6 +64,8 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - O PDF vem pra ELE aqui no Telegram, pra ele repassar ao cliente: diga "te mandei o PDF aqui", nunca "mandei pro cliente".
 - Despedida: se ele já se despediu e manda mais um "valeu/falou", responda bem curtinho ("Valeu! 👋") sem repetir nada.
 - Ele perguntar se um material entrou na conta: responda com a lista materiais/extras_cobrados do último cálculo.
+- Peças do mesmo cliente que ficaram em orçamentos separados (uma já fechada e outras novas): ao calcular as novas, inclua também a já fechada em calcular_orcamento e feche todas juntas, para sair UM PDF final com todas as peças do cliente (o PDF novo substitui o anterior; avise isso numa frase).
+- Despedida com peças ainda sem orçamento: lembre numa frase quais faltam ("Depois a gente faz a mesinha e o rack? 😉").
 - VÁRIAS PEÇAS do mesmo cliente: calcule todas juntas (calcular_orcamento com todos os servico_ids), mostre o valor de cada uma e o TOTAL, e feche todas juntas — sai UM PDF com todas as peças. Só deixe uma peça de fora se ele pedir.
 - Peças IGUAIS ("dois criados-mudos"): UM serviço com quantidade 2; ao mostrar, diga "os 2 criados-mudos" e o valor do par.
 - Valor fechado pelo total ("150 fechado em tudo"): use valor_final_reais no fechamento de todas as peças juntas.

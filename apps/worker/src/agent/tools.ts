@@ -85,7 +85,9 @@ function missingFor(job: Job): string[] {
   const techs = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
   // trabalho só sob medida (tecido, pintura artística...): cobra pelas horas, não precisa de medida nem método
   const hoursOnly = techs.includes("sob_medida");
-  const skip: ProjectField[] = hoursOnly ? ["dimensions", "application_method", "surfaces", "scope"] : [];
+  const part = (job.facts.scope?.value as { part?: string } | null | undefined)?.part;
+  // só o tampo: não existe "por dentro" pra perguntar
+  const skip: ProjectField[] = hoursOnly ? ["dimensions", "application_method", "surfaces", "scope"] : part === "tampo" ? ["surfaces"] : [];
   return computePending(job.facts)
     .filter((f) => !OPTIONAL_FIELDS.includes(f) && f !== "details" && f !== "size_class" && !skip.includes(f))
     .filter((f) => !(f === "dimensions" && (job.facts.size_class?.value || job.facts.dimensions?.value)))
@@ -216,7 +218,14 @@ export const AGENT_TOOLS: AgentTool[] = [
   {
     name: "calcular_orcamento",
     description: "Calcula o orçamento de um ou mais serviços quando os dados estiverem completos. Devolve sugestão, mínimo sem prejuízo, material a comprar, horas, e o que ainda falta (campos ou preços de material).",
-    input_schema: { type: "object", properties: { servico_ids: { type: "array", items: { type: "string" } } }, required: ["servico_ids"] },
+    input_schema: {
+      type: "object",
+      properties: {
+        servico_ids: { type: "array", items: { type: "string" } },
+        so_estes: { type: "boolean", description: "true só quando ele disse que quer o orçamento SÓ destas peças, separado das outras peças abertas do mesmo cliente" },
+      },
+      required: ["servico_ids"],
+    },
   },
   {
     name: "informar_preco_material",
@@ -536,6 +545,22 @@ function isVaguePiece(text: string): boolean {
   return tokens.length === 0 || /^(movel|moveis|pecas?|coisas?|itens?|item|objetos?|trabalhos?|servicos?|tampos?|partes?|pes|gavetas?)$/.test(tokens[0]!);
 }
 
+/** Peças abertas (sem orçamento fechado) do mesmo cliente das peças pedidas, fora delas. */
+async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
+  const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
+  const chosen = (await Promise.all(ids.map((id) => getJob(t.ctx, id)))).filter((j): j is Job => !!j);
+  const clients = new Set(chosen.map(clientOf).filter(Boolean));
+  if (!clients.size) return [];
+  const out: Job[] = [];
+  for (const j of await listActiveJobs(t.ctx, 12)) {
+    if (ids.includes(j.id) || j.status !== "ORCAMENTO" || !clients.has(clientOf(j))) continue;
+    const lq = await latestQuoteForJob(t.ctx, j.id);
+    if (lq && ["APROVADO", "ENVIADO", "ACEITO"].includes(lq.status)) continue;
+    out.push(j);
+  }
+  return out;
+}
+
 function resolveFurniture(movel: string): { key: string; label: string } | null {
   const hit = parseFurnitureList(movel)[0] ?? parseFurnitureList(`um ${movel}`)[0];
   if (hit) return { key: hit.key, label: hit.description };
@@ -563,7 +588,10 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const custom = a.movel.trim().replace(/^(um|uma|o|a)\s+/i, "").slice(0, 50);
       // "dois criados-mudos" no nome: quantidade vem do que ele falou
       const spokenQty = parseFurnitureList(a.movel)[0]?.quantity ?? 1;
-      await setFact(t.ctx, job.id, "furniture_type", (f ? { type: f.key, descriptors: [], ...(spokenQty > 1 ? { quantity: spokenQty } : {}) } : { type: "outro", label: custom, descriptors: [] }) as never, opts(t));
+      // nome que ele usou ("mesinha de centro", "rack da TV") vale mais que o rótulo do catálogo ("mesa"); só peça única
+      const spoken = custom.replace(/^(dois|duas|tres|três|quatro|cinco|seis|\d+)\s+/i, "");
+      const keepSpoken = f && spokenQty === 1 && normalizeText(spoken) !== normalizeText(FURNITURE[f.key]?.label ?? f.key) && spoken.length <= 40;
+      await setFact(t.ctx, job.id, "furniture_type", (f ? { type: f.key, descriptors: [], ...(keepSpoken ? { label: spoken } : {}), ...(spokenQty > 1 ? { quantity: spokenQty } : {}) } : { type: "outro", label: custom, descriptors: [] }) as never, opts(t));
       const fields = (a.campos && typeof a.campos === "object" ? a.campos : {}) as Fields;
       // técnica dita em texto livre no nome do móvel ("cômoda pra patinar") também vale
       if (!Array.isArray(fields.tecnicas) || !fields.tecnicas.length) {
@@ -600,6 +628,17 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
     case "calcular_orcamento": {
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       if (!ids.length) return { erro: "servico_ids vazio" };
+      // outras peças abertas do mesmo cliente: o orçamento vai junto (um PDF) — só separa se ele quiser
+      if (a.so_estes !== true) {
+        const others = await openSiblings(t, ids);
+        if (others.length) {
+          return {
+            erro: "outras_pecas_do_mesmo_cliente",
+            outras: others.map((j) => ({ servico_id: j.id, nome: jobPhrase(j), falta: missingFor(j) })),
+            proximo_passo: "Este cliente tem outras peças abertas. Pergunte numa frase se o orçamento vai junto com elas (aí complete o que falta delas, uma pergunta por vez, e calcule todas juntas) ou se ele quer só desta peça agora (aí chame de novo com so_estes=true).",
+          };
+        }
+      }
       const items: Record<string, unknown>[] = [];
       const quotes: QuoteRecord[] = [];
       const missingPrices = new Set<string>();
@@ -800,7 +839,22 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       t.effects.pdfsSent = pdfs;
       const first = await getJob(t.ctx, p.jobIds[0]!);
       await enqueueOutbox(t.ctx, "notify_admins", { text: `${t.user.displayName} fechou o orçamento ${first?.code ?? ""} (${first?.title ?? ""}${p.jobIds.length > 1 ? ` e mais ${p.jobIds.length - 1}` : ""}) por ${formatBRL(final)}. Sugerido: ${formatBRL(p.baseCents)}${p.floorCents !== null && final < p.floorCents ? ` · ABAIXO do mínimo (${formatBRL(p.floorCents)})` : ""}.` }, `agent-close:${closedIds.join(",").slice(0, 150)}`);
-      return { ok: true, valor_final: formatBRL(final), sugestao_era: formatBRL(p.baseCents), pdfs_enviados: pdfs, proximo_passo: "Diga que fechou e que mandou o PDF; peça pra avisar quando o cliente responder." };
+      const pending = (await listActiveJobs(t.ctx, 12)).filter((j) => j.status === "ORCAMENTO" && !p.jobIds.includes(j.id));
+      const stillOpen: Job[] = [];
+      for (const j of pending) {
+        const lq = await latestQuoteForJob(t.ctx, j.id);
+        if (!lq || !["APROVADO", "ENVIADO", "ACEITO"].includes(lq.status)) stillOpen.push(j);
+      }
+      return {
+        ok: true,
+        valor_final: formatBRL(final),
+        sugestao_era: formatBRL(p.baseCents),
+        pdfs_enviados: pdfs,
+        ainda_sem_orcamento: stillOpen.map((j) => jobPhrase(j)),
+        proximo_passo: stillOpen.length
+          ? "Diga que fechou e que mandou o PDF, e lembre numa frase das peças que ainda estão sem orçamento (ainda_sem_orcamento), perguntando se ele quer seguir com elas."
+          : "Diga que fechou e que mandou o PDF; peça pra avisar quando o cliente responder.",
+      };
     }
     case "registrar_pagamento": {
       const job = await loadJob(t, a.servico_id);

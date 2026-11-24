@@ -345,7 +345,7 @@ export function jobPhrase(job: Pick<Job, "facts" | "clientName" | "code"> & { ti
   const type = ft?.type;
   // serviço criado sem o móvel identificado (ex.: pelo painel): usa o título, nunca "o móvel (S-0001)"
   if (!type && job.title && job.title.trim().length > 2) return `${/^(a|o|as|os) /i.test(job.title) ? "" : "o serviço "}${job.title.trim().replace(/[.,]+$/, "").slice(0, 60)}`;
-  if (type === "outro" && ft?.label) {
+  if (ft?.label) {
     const lbl = ft.label.trim();
     const art = /^[^ ]*a$/i.test(normalizeText(lbl).split(" ")[0] ?? "") ? "a" : "o";
     const c = (job.facts.client_name?.value as string | null | undefined) ?? job.clientName;
