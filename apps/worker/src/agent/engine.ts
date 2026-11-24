@@ -191,7 +191,14 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   }
 
   const history = await historyMessages(ctx, input.user.id, input.inboundMessageId);
-  const recentUser = history.filter((m) => m.role === "user").slice(-6).map((m) => String(m.content)).join("\n");
+  // tudo o que ele disse nos últimos dias vale como fonte de números e nomes (medida dita no começo
+  // de uma conversa longa não pode ser recusada como "não dita" 15 mensagens depois)
+  const said = await ctx.db.all<{ t: string | null }>(
+    "SELECT COALESCE(transcript, text) t FROM conversation_messages WHERE user_id = ? AND direction = 'in' AND created_at >= ? ORDER BY created_at DESC LIMIT 80",
+    input.user.id,
+    new Date(ctx.clock().getTime() - 3 * 86400000).toISOString(),
+  );
+  const recentUser = [...said.map((r) => r.t ?? "").reverse(), ...history.filter((m) => m.role === "user").slice(-6).map((m) => String(m.content))].join("\n");
   // "isso"/"sim" responde ao que o assistente acabou de perguntar (ex.: "pela foto são 4 gavetas, certo?")
   const lastBot = history.at(-1)?.role === "assistant" ? String(history.at(-1)!.content) : "";
   const confirmsBot = lastBot && normalizeText(userText).split(" ").length <= 6 && AFFIRM.test(normalizeText(userText)) ? `\n[ele confirmou: ${lastBot.slice(-400)}]` : "";
