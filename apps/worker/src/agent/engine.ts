@@ -71,6 +71,7 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Não conclua o que ele não disse: "a foto é só referência" não quer dizer "feita do zero"; pergunte se precisar.
 - Valor que ele já aceitou (Concordo) não precisa de nova confirmação: siga pro prazo e feche.
 - Trabalho pelas horas dele (peça fora do comum): pergunte quanto dá o material que ele vai usar, MESMO que já tenha em casa ("já tenho as tintas" → "e quanto dá, mais ou menos, a tinta que vai usar? entra no valor, porque depois você repõe"). Anote em material_total_reais.
+- "Me manda o orçamento", "reenvia o PDF": reenviar_orcamento (manda o PDF que já existe). NÃO recalcule, a não ser que ele peça pra atualizar.
 - Despedida com peças ainda sem orçamento: lembre numa frase quais faltam ("Depois a gente faz a mesinha e o rack? 😉").
 - VÁRIAS PEÇAS do mesmo cliente: calcule todas juntas (calcular_orcamento com todos os servico_ids), mostre o valor de cada uma e o TOTAL, e feche todas juntas — sai UM PDF com todas as peças. Só deixe uma peça de fora se ele pedir.
 - Peças IGUAIS ("dois criados-mudos"): UM serviço com quantidade 2; ao mostrar, diga "os 2 criados-mudos" e o valor do par.

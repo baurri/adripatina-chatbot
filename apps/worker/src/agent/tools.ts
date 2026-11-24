@@ -4,7 +4,7 @@ import { allocateCents, formatBRL, normalizeText } from "@adripatina/shared";
 import { findConfidentialTerms } from "@adripatina/pdf";
 import type { Ctx } from "../context.js";
 import type { AgentTool } from "../ports.js";
-import { getMaterialByKey, listMaterials } from "../repos/catalog.js";
+import { getActiveSettings, getMaterialByKey, listMaterials } from "../repos/catalog.js";
 import { createJob, getJob, jobPhrase, listActiveJobs, setFact, transitionJob, computePending, jobBalance, type Job } from "../repos/jobs.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { applyConfirmedPrice, missingPriceKeys } from "../services/material-pricing.js";
@@ -308,6 +308,11 @@ export const AGENT_TOOLS: AgentTool[] = [
     name: "resultado_cliente",
     description: "Anota se o cliente aceitou ou recusou o orçamento já fechado.",
     input_schema: { type: "object", properties: { servico_ids: { type: "array", items: { type: "string" } }, aceitou: { type: "boolean" } }, required: ["servico_ids", "aceitou"] },
+  },
+  {
+    name: "reenviar_orcamento",
+    description: "Manda de novo o PDF de orçamento que JÁ EXISTE (o mais recente que inclui essas peças), sem recalcular. Use quando ele pedir 'me manda o orçamento', 'reenvia o PDF'. Só recalcule se ele pedir pra atualizar.",
+    input_schema: { type: "object", properties: { servico_ids: { type: "array", items: { type: "string" } } }, required: ["servico_ids"] },
   },
   {
     name: "situacao_financeira",
@@ -1086,6 +1091,38 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         total += r.finalPriceCents ?? r.recommendedCents ?? 0;
       }
       return { ok: true, total: formatBRL(total) };
+    }
+    case "reenviar_orcamento": {
+      const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
+      if (!ids.length) return { erro: "servico_ids vazio" };
+      // proposta mais recente que inclui cada peça (snapshot de uma peça ou de várias)
+      const found = new Map<string, { docId: string; number: string; createdAt: string; settingsId: string | null }>();
+      for (const id of ids) {
+        const r = await t.ctx.db.first<{ doc_id: string; number: string; created_at: string; snapshot_json: string }>(
+          "SELECT d.id doc_id, s.number, s.created_at, s.snapshot_json FROM quote_snapshots s JOIN quote_documents d ON d.snapshot_id = s.id AND d.kind = 'COMERCIAL' WHERE EXISTS (SELECT 1 FROM quotes q WHERE q.job_id = ? AND s.snapshot_json LIKE '%' || q.id || '%') ORDER BY s.created_at DESC LIMIT 1",
+          id,
+        );
+        if (!r) continue;
+        const snap = JSON.parse(r.snapshot_json) as { internal?: { settingsVersionId?: string } | { settingsVersionId?: string }[] };
+        const internal = Array.isArray(snap.internal) ? snap.internal[0] : snap.internal;
+        found.set(r.doc_id, { docId: r.doc_id, number: r.number, createdAt: r.created_at, settingsId: internal?.settingsVersionId ?? null });
+      }
+      if (!found.size) return { erro: "essas peças ainda não têm PDF", proximo_passo: "Diga que ainda não tem orçamento fechado dessas peças e pergunte se quer calcular." };
+      const active = (await getActiveSettings(t.ctx)).id;
+      let sent = 0;
+      const stale: string[] = [];
+      for (const d of found.values()) {
+        await sendDocumentToArtisan(t.ctx, d.docId, t.user.id, t.chatId);
+        sent++;
+        if (d.settingsId && d.settingsId !== active) stale.push(d.number);
+      }
+      t.effects.pdfsSent = (t.effects.pdfsSent ?? 0) + sent;
+      return {
+        ok: true,
+        pdfs_reenviados: [...found.values()].map((d) => d.number),
+        ...(stale.length ? { aviso: "Esses PDFs foram feitos antes de mudar o valor da hora/configuração. Diga numa frase que o valor é o de quando foi feito e pergunte se ele quer atualizar (recalcular)." } : {}),
+        proximo_passo: "Diga que reenviou o PDF aqui (com o botão do WhatsApp logo abaixo).",
+      };
     }
     case "situacao_financeira": {
       const job = await loadJob(t, a.servico_id);
