@@ -220,7 +220,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: "informar_preco_material",
-    description: "Guarda o preço de um material que ele informou (preço de UMA embalagem e o tamanho dela). Ex.: 'duas latas de 900 ml por 150' → preco_embalagem_reais 75, tamanho 900, unidade ml.",
+    description: "Guarda o preço de um material que ele informou (preço de UMA embalagem e o tamanho dela). Ex.: 'duas latas de 900 ml por 150' → preco_embalagem_reais 75, tamanho 900, unidade ml. Tamanhos de lata no Brasil: 'lata de 1/4', 'quartinho' ou 'quarto' = 1/4 de GALÃO = 900 ml; 'galão' = 3,6 l; 'lata grande'/'18 litros' = 18 l. Não pergunte '1/4 de quê'.",
     input_schema: {
       type: "object",
       properties: {
@@ -683,11 +683,14 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const corpusNums = said(t);
       const priceOk = grounded(price, corpusNums) || corpusNums.some((x) => [2, 3, 4, 5, 6].some((k) => Math.abs(x / k - price) < 0.01));
       if (!priceOk) return { erro: `o preço ${price} não foi dito por ele — pergunte quanto custou` };
-      if (!grounded(size, corpusNums) && !["un", "folha"].includes(String(a.unidade))) return { erro: `o tamanho ${size} não foi dito por ele — pergunte o tamanho da embalagem` };
+      const quarter = /1\/4|quart|galao/.test(normalizeText(t.userCorpus)) && [0.25, 0.9, 900, 3.6].some((x) => Math.abs(x - size) < 0.001);
+      if (!quarter && !grounded(size, corpusNums) && !["un", "folha"].includes(String(a.unidade))) return { erro: `o tamanho ${size} não foi dito por ele — pergunte o tamanho da embalagem` };
       const unit = String(a.unidade);
       const base = mat.unit.toLowerCase();
       let qty = size;
-      if (unit === "ml" && base === "l") qty = size / 1000;
+      // "lata de 1/4" é quarto de galão (0,9 l), nunca 0,25 l
+      if (unit === "l" && Math.abs(size - 0.25) < 0.001 && /1\/4|quart/.test(normalizeText(t.userCorpus))) qty = 0.9;
+      else if (unit === "ml" && base === "l") qty = size / 1000;
       else if (unit === "g" && base === "kg") qty = size / 1000;
       else if (unit === "l" && base === "ml") qty = size * 1000;
       const res = await applyConfirmedPrice(t.ctx, {
