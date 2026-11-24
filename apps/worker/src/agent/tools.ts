@@ -632,6 +632,32 @@ async function inheritFromSiblings(t: ToolContext, jobId: string): Promise<strin
   return out;
 }
 
+/** Peças do mesmo cliente que já tiveram PDF comercial nas últimas 24 h (fora as pedidas). */
+async function closedRecentSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
+  const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
+  const chosen = (await Promise.all(ids.map((id) => getJob(t.ctx, id)))).filter((j): j is Job => !!j);
+  const clients = new Set(chosen.map(clientOf).filter(Boolean));
+  if (!clients.size) return [];
+  const since = new Date(t.ctx.clock().getTime() - 86400000).toISOString();
+  const out: Job[] = [];
+  for (const j of await listActiveJobs(t.ctx, 12)) {
+    if (ids.includes(j.id) || !clients.has(clientOf(j))) continue;
+    const r = await t.ctx.db.first<{ n: number }>(
+      "SELECT COUNT(*) n FROM quote_documents d JOIN quotes q ON q.id = d.quote_id WHERE q.job_id = ? AND d.kind = 'COMERCIAL' AND d.created_at >= ?",
+      j.id,
+      since,
+    );
+    // peça que entrou num PDF de grupo fica ligada ao documento do primeiro orçamento: confere também o snapshot
+    const g = (r?.n ?? 0) > 0 ? null : await t.ctx.db.first<{ n: number }>(
+      "SELECT COUNT(*) n FROM quote_snapshots s WHERE s.created_at >= ? AND s.snapshot_json LIKE ?",
+      since,
+      `%${(await latestQuoteForJob(t.ctx, j.id))?.id ?? "__none__"}%`,
+    );
+    if ((r?.n ?? 0) > 0 || (g?.n ?? 0) > 0) out.push(j);
+  }
+  return out;
+}
+
 /** Peças abertas (sem orçamento fechado) do mesmo cliente das peças pedidas, fora delas. */
 async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
   const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
@@ -762,6 +788,16 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
             erro: "outras_pecas_do_mesmo_cliente",
             outras: others.map((j) => ({ servico_id: j.id, nome: jobPhrase(j), falta: missingFor(j) })),
             proximo_passo: "Este cliente tem outras peças abertas. Pergunte numa frase se o orçamento vai junto com elas (aí complete o que falta delas, uma pergunta por vez, e calcule todas juntas) ou se ele quer só desta peça agora (aí chame de novo com so_estes=true).",
+          };
+        }
+        // peças do mesmo cliente que já saíram em PDF hoje: oferece juntar tudo numa proposta só
+        const done = await closedRecentSiblings(t, ids);
+        if (done.length) {
+          t.state.siblingsAskedTurn = t.turn;
+          return {
+            erro: "pecas_do_mesmo_cliente_ja_fechadas_hoje",
+            ja_fechadas: done.map((j) => ({ servico_id: j.id, nome: jobPhrase(j) })),
+            proximo_passo: "Pergunte numa frase se ele quer UM PDF só com todas as peças do cliente (esta + as já fechadas hoje; o PDF novo substitui os anteriores). Se sim, calcule com todos os servico_ids juntos e feche juntos. Se não, chame de novo com so_estes=true.",
           };
         }
       }

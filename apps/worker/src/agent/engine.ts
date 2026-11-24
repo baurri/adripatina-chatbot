@@ -129,7 +129,26 @@ async function stateSnapshot(ctx: Ctx, state: AgentState): Promise<string> {
   const jobs = await listActiveJobs(ctx, 8);
   const focus = state.focus ?? [];
   const sorted = [...jobs].sort((a, b) => (focus.indexOf(a.id) === -1 ? 99 : focus.indexOf(a.id)) - (focus.indexOf(b.id) === -1 ? 99 : focus.indexOf(b.id)));
-  const brief = sorted.map((j) => ({ servico_id: j.id, nome: jobPhrase(j), situacao: j.status, em_foco: focus.includes(j.id) }));
+  // orçamento fechado (PDF emitido) é diferente de "falta orçar": a peça continua em ORCAMENTO até o cliente responder
+  const proposal = async (jobId: string): Promise<string | null> => {
+    const r = await ctx.db.first<{ number: string }>(
+      "SELECT d.number FROM quote_documents d JOIN quotes q ON q.id = d.quote_id WHERE q.job_id = ? AND d.kind = 'COMERCIAL' ORDER BY d.created_at DESC LIMIT 1",
+      jobId,
+    );
+    if (r) return r.number;
+    const g = await ctx.db.first<{ number: string }>(
+      "SELECT s.number FROM quote_snapshots s WHERE s.snapshot_json LIKE ? ORDER BY s.created_at DESC LIMIT 1",
+      `%"${(await ctx.db.first<{ id: string }>("SELECT id FROM quotes WHERE job_id = ? AND status IN ('APROVADO','ENVIADO','ACEITO') ORDER BY created_at DESC LIMIT 1", jobId))?.id ?? "__none__"}"%`,
+    );
+    return g?.number ?? null;
+  };
+  const brief = await Promise.all(
+    sorted.map(async (j) => {
+      const pdf = j.status === "ORCAMENTO" ? await proposal(j.id) : null;
+      const orcamento = j.status !== "ORCAMENTO" ? "aceito/em andamento" : pdf ? `FECHADO — PDF ${pdf} já enviado; não está faltando` : "ainda sem orçamento fechado";
+      return { servico_id: j.id, nome: jobPhrase(j), situacao: j.status, orcamento, em_foco: focus.includes(j.id) };
+    }),
+  );
   return JSON.stringify({
     servicos_em_andamento: brief,
     em_foco: focus,
