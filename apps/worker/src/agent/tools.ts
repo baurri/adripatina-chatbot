@@ -573,6 +573,15 @@ function isVaguePiece(text: string): boolean {
   return tokens.length === 0 || /^(movel|moveis|pecas?|coisas?|itens?|item|objetos?|trabalhos?|servicos?|tampos?|partes?|pes|gavetas?)$/.test(tokens[0]!);
 }
 
+/** A peça já teve orçamento fechado (algum orçamento aprovado/enviado ou PDF comercial emitido) — uma estimativa nova por cima não reabre. */
+async function jobClosed(t: ToolContext, jobId: string): Promise<boolean> {
+  const r = await t.ctx.db.first<{ n: number }>(
+    "SELECT COUNT(*) n FROM quotes q WHERE q.job_id = ? AND (q.status IN ('APROVADO','ENVIADO','ACEITO') OR EXISTS (SELECT 1 FROM quote_documents d WHERE d.quote_id = q.id AND d.kind = 'COMERCIAL'))",
+    jobId,
+  );
+  return (r?.n ?? 0) > 0;
+}
+
 /** Peças abertas (sem orçamento fechado) do mesmo cliente das peças pedidas, fora delas. */
 async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
   const clientOf = (j: Job) => normalizeText(((j.facts.client_name?.value as string | undefined) ?? j.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
@@ -582,8 +591,7 @@ async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
   const out: Job[] = [];
   for (const j of await listActiveJobs(t.ctx, 12)) {
     if (ids.includes(j.id) || j.status !== "ORCAMENTO" || !clients.has(clientOf(j))) continue;
-    const lq = await latestQuoteForJob(t.ctx, j.id);
-    if (lq && ["APROVADO", "ENVIADO", "ACEITO"].includes(lq.status)) continue;
+    if (await jobClosed(t, j.id)) continue;
     out.push(j);
   }
   return out;
@@ -853,6 +861,17 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         const j = await getJob(t.ctx, id);
         if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte QUANDO ele consegue começar (ex.: 'daqui a 2 semanas') e quanto tempo leva — ou quando fica pronto pro cliente. Anote em prazo_inicio + prazo_duracao, ou prazo_entrega, e depois feche." };
       }
+      // várias peças = um orçamento = UM prazo para o conjunto
+      if (ids.length > 1) {
+        const dl = await Promise.all(ids.map(async (id) => ((await getJob(t.ctx, id))?.facts.deadline?.value as string | undefined) ?? ""));
+        if (new Set(dl).size > 1) {
+          return {
+            erro: "prazos diferentes nas peças",
+            prazos: dl,
+            proximo_passo: "O PDF é um só: pergunte UM prazo para o conjunto — quando começa e quanto tempo leva tudo (pode propor a soma das durações), ou quando fica tudo pronto. Anote o MESMO prazo em todas as peças (anotar em cada uma) e feche.",
+          };
+        }
+      }
       let final = p.baseCents;
       if (typeof a.valor_final_reais === "number") {
         const simulated = (t.state.simulated ?? []).some((x) => Math.abs(x - (a.valor_final_reais as number)) < 0.01);
@@ -908,8 +927,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const pending = (await listActiveJobs(t.ctx, 12)).filter((j) => j.status === "ORCAMENTO" && !p.jobIds.includes(j.id));
       const stillOpen: Job[] = [];
       for (const j of pending) {
-        const lq = await latestQuoteForJob(t.ctx, j.id);
-        if (!lq || !["APROVADO", "ENVIADO", "ACEITO"].includes(lq.status)) stillOpen.push(j);
+        if (!(await jobClosed(t, j.id))) stillOpen.push(j);
       }
       return {
         ok: true,
