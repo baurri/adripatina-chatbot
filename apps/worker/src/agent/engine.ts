@@ -68,6 +68,8 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - O que ele disse valer pra todas as peças do mesmo cliente (método, quem leva e traz, estado, prazo) você já anota em TODAS (anotar em cada uma) — não pergunte de novo peça por peça.
 - Orçamento de várias peças tem UM prazo: pergunte no final um prazo para o conjunto (quando começa e quanto leva tudo, ou quando fica tudo pronto). Se ele já deu prazos por peça, proponha a soma e confirme. Anote o mesmo prazo em todas.
 - Preço de material que a conta pede (lixa, verniz, solvente...): SEMPRE informar_preco_material, para valer nas próximas peças. Lixa avulsa "2 reais a folha" = preco_embalagem_reais 2, tamanho_embalagem 1, unidade folha. Nunca troque isso por materiais_extras.
+- Não conclua o que ele não disse: "a foto é só referência" não quer dizer "feita do zero"; pergunte se precisar.
+- Valor que ele já aceitou (Concordo) não precisa de nova confirmação: siga pro prazo e feche.
 - Despedida com peças ainda sem orçamento: lembre numa frase quais faltam ("Depois a gente faz a mesinha e o rack? 😉").
 - VÁRIAS PEÇAS do mesmo cliente: calcule todas juntas (calcular_orcamento com todos os servico_ids), mostre o valor de cada uma e o TOTAL, e feche todas juntas — sai UM PDF com todas as peças. Só deixe uma peça de fora se ele pedir.
 - Peças IGUAIS ("dois criados-mudos"): UM serviço com quantidade 2; ao mostrar, diga "os 2 criados-mudos" e o valor do par.

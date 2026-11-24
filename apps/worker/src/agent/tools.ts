@@ -42,6 +42,8 @@ export interface AgentState {
   pending?: PendingAction | null;
   /** orçamentos fechados juntos: "cliente aceitou" vale para todos */
   closed?: string[];
+  /** serviços sob medida em que já perguntamos o material (pergunta uma vez) */
+  askedMaterial?: string[];
   /** turno em que perguntamos se as outras peças do cliente entram no mesmo orçamento */
   siblingsAskedTurn?: number;
   /** valores calculados por simular_ajuste (em reais) — podem ser usados no fechamento */
@@ -813,6 +815,15 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         const falta = missingFor(job);
         const tk = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
         if (tk.includes("sob_medida") && !(await getOverrides(t.ctx, job.id)).artisanTotal) falta.push("quantas horas ele acha que leva o trabalho todo");
+        // pelas horas dele não tem receita de material: pergunte o material (ou se já tem tudo) antes de dar o valor
+        if (tk.includes("sob_medida")) {
+          const ov0 = await getOverrides(t.ctx, job.id);
+          const hasMat = ov0.artisanMaterialCents !== null || ov0.specificExpenses.some((e) => e.category === "outros") || job.facts.material_status?.value === "tem_tudo";
+          if (ov0.artisanTotal && !hasMat && !t.state.askedMaterial?.includes(job.id)) {
+            t.state.askedMaterial = [...(t.state.askedMaterial ?? []), job.id];
+            falta.push("o material que ele vai gastar (material_total_reais ou materiais_extras) — ou se já tem tudo (material=tem_tudo)");
+          }
+        }
         if (falta.length) {
           items.push({ servico_id: job.id, nome: jobPhrase(job), pode_calcular: false, falta });
           continue;
