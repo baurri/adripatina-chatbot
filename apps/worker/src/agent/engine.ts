@@ -54,7 +54,7 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - Transporte: só anote ou diga que ele busca/entrega se ele disser claramente ("eu vou buscar a mesa"). "Tenho um serviço pra pegar lá na casa dela" ou "vou lá ver" = pegar o TRABALHO / ir orçar, NÃO é buscar a peça: não escreva "você busca". Pergunte quem leva e traz.
 - PEÇA QUE NÃO É MÓVEL (estátua, bandeja, faqueiro, caixa, quadro...) também é serviço: crie com o nome que ele usou.
 - TRABALHO FORA DAS TÉCNICAS (encapar com tecido, pintura artística à mão, entalhe...) ou PEÇA FORA DO COMUM (estátua, bandeja, caixa): anote trabalho_descricao e pergunte quantas horas ele acha que leva o trabalho todo (horas_artesao). A conta passa a ser pelas horas dele + materiais_extras: não pergunte medida, método nem preço de material da conta padrão.
-- Tempo em DIAS ("leva uns 7 dias"): dias_artesao (não insista em horas). Material total dito por ele ("de material dá uns 70"): material_total_reais.
+- Tempo em DIAS ("leva de 3 a 5 dias", "fica pronto numa semana") é prazo/referência: NÃO muda a conta e não é motivo pra pedir horas. Anote em observação (ou prazo). Material total dito por ele ("de material dá uns 70"): material_total_reais.
 - Ele perguntar de onde saiu o valor: explique em 2 linhas com mao_de_obra, material_usado e extras_cobrados do cálculo.
 - Ele disser o tempo do trabalho todo ("isso me leva umas 6 horas") ou reclamar que a conta não bate com o que ele faz: use horas_artesao (e materiais_extras com o que ele gasta). A palavra dele vale mais que a conta padrão.
 - Trabalho A MAIS numa peça normal (trocar puxadores, colocar ferragem): horas_extra + trabalho_descricao, que somam à conta.
@@ -64,6 +64,9 @@ const PLAYBOOK = `GUIA DO OFÍCIO (como conduzir)
 - O PDF vem pra ELE aqui no Telegram, pra ele repassar ao cliente: diga "te mandei o PDF aqui", nunca "mandei pro cliente".
 - Despedida: se ele já se despediu e manda mais um "valeu/falou", responda bem curtinho ("Valeu! 👋") sem repetir nada.
 - Ele perguntar se um material entrou na conta: responda com a lista materiais/extras_cobrados do último cálculo.
+- VÁRIAS PEÇAS do mesmo cliente: calcule todas juntas (calcular_orcamento com todos os servico_ids), mostre o valor de cada uma e o TOTAL, e feche todas juntas — sai UM PDF com todas as peças. Só deixe uma peça de fora se ele pedir.
+- Peças IGUAIS ("dois criados-mudos"): UM serviço com quantidade 2; ao mostrar, diga "os 2 criados-mudos" e o valor do par.
+- Valor fechado pelo total ("150 fechado em tudo"): use valor_final_reais no fechamento de todas as peças juntas.
 - Fale dos serviços pelo móvel e pelo cliente ("a cômoda da Dona Carla"), nunca por código ou id.
 - Só liste os serviços em andamento se ele perguntar ou se precisar saber de qual peça ele está falando.
 - Resposta final: CURTA. Em geral 1 a 3 frases curtas e uma pergunta no fim. Nada de listas de campos, nada de repetir tudo o que ele falou.`;
@@ -270,7 +273,8 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
       const lastMsg = messages.at(-1);
       if (lastMsg?.role === "user") lastMsg.content = Array.isArray(lastMsg.content) ? [...lastMsg.content, ask] : `${lastMsg.content}\n\n${ask.text}`;
       else messages.push({ role: "user", content: [ask] });
-      const last = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 800);
+      console.error(JSON.stringify({ level: "warn", msg: "agent_no_text", turn: t.turn }));
+      const last = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 800, { noTools: true });
       finalText = stripJobCodes(last.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim());
     } catch {
       // segue para a frase padrão

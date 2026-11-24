@@ -192,6 +192,33 @@ describe("motor novo (D-075): travas do código", () => {
     expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM jobs").then((x) => x!.n)).toBe(0);
   });
 
+  it("duas peças do mesmo cliente fechadas juntas saem num PDF só", async () => {
+    const ids: string[] = [];
+    const base = { tecnicas: ["verniz"], cliente: "Dona Ana", estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo: "daqui a 2 meses" };
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "mesa", campos: { ...base, largura_cm: 100, fundura_cm: 60, altura_cm: 80 } }),
+      (m) => {
+        ids.push((lastToolResult(m).criado as { servico_id: string }).servico_id);
+        return tool("criar_servico", { movel: "dois criados-mudos", campos: { ...base, porte: "pequeno" } }, "c2");
+      },
+      (m) => {
+        ids.push((lastToolResult(m).criado as { servico_id: string }).servico_id);
+        return tool("calcular_orcamento", { servico_ids: ids });
+      },
+      () => say("Mesa e os 2 criados: concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: ids }),
+      () => say("Fechado! ✅ Te mandei o PDF aqui."),
+    ]);
+    await h.send("mesa da dona Ana 1 metro por 60, 80 de altura, e dois criados-mudos pequenos, verniz, tá bom, só por fora, inteiro, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
+    const ft = (await getJob(h.ctx, ids[1]!))!.facts.furniture_type?.value as { quantity?: number };
+    expect(ft.quantity).toBe(2);
+    h.telegram.clear();
+    await h.send("concordo");
+    expect(h.telegram.sent.filter((s) => s.kind === "document").length).toBe(1);
+    expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quote_documents WHERE kind = 'COMERCIAL'").then((x) => x!.n)).toBe(1);
+    expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quotes WHERE status IN ('APROVADO','ENVIADO')").then((x) => x!.n)).toBe(2);
+  });
+
   it("sem o Claude (falha), o motor antigo responde", async () => {
     const h = await createHarness();
     h.ctx.ai.agent = { name: "claude-haiku-5-5", step: async () => { throw new Error("fora do ar"); } };

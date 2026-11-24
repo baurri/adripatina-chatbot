@@ -4,11 +4,11 @@ import { allocateCents, formatBRL, normalizeText } from "@adripatina/shared";
 import { findConfidentialTerms } from "@adripatina/pdf";
 import type { Ctx } from "../context.js";
 import type { AgentTool } from "../ports.js";
-import { getActiveSettings, getMaterialByKey, listMaterials } from "../repos/catalog.js";
+import { getMaterialByKey, listMaterials } from "../repos/catalog.js";
 import { createJob, getJob, jobPhrase, listActiveJobs, setFact, transitionJob, computePending, jobBalance, type Job } from "../repos/jobs.js";
 import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase } from "../repos/finance.js";
 import { applyConfirmedPrice, missingPriceKeys } from "../services/material-pricing.js";
-import { calculateQuote, closeQuoteByArtisan, getOverrides, issueDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
+import { calculateQuote, closeQuoteByArtisan, getOverrides, issueDocuments, issueGroupDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
 import { enqueueOutbox } from "../services/outbox.js";
 import type { User } from "../repos/users.js";
 
@@ -164,8 +164,7 @@ const FIELDS_SCHEMA = {
     cliente: s("nome do dono com tratamento: 'Dona Carla', 'Seu Luiz'"),
     prazo: s("quando fica pronto para o cliente, do jeito que ele falou, incluindo quando ele consegue começar: 'começo daqui a 2 meses, fica pronto em uns 10 dias', 'daqui a 6 meses', 'sem prazo'"),
     trabalho_descricao: s("o que vai ser feito quando NÃO é uma das técnicas (ex.: 'encapar o interior com veludo vinho', 'pintar flores à mão', 'trocar os puxadores'). Vai no PDF."),
-    horas_artesao: n("horas que ELE diz para o TRABALHO TODO desta peça (incluindo conserto). A conta passa a ser pelas horas dele + materiais_extras, sem a conta padrão. Use quando ele disser o tempo total, ou quando a peça/trabalho foge do comum (estátua, peça artística, tecido)."),
-    dias_artesao: n("se ele falar o tempo do trabalho todo em DIAS de trabalho ('leva uns 7 dias'): use isto em vez de horas_artesao (não peça horas)"),
+    horas_artesao: n("HORAS que ELE diz para o trabalho todo desta peça (incluindo conserto). A conta passa a ser pelas horas dele + materiais_extras, sem a conta padrão. Use em peça/trabalho fora do comum (estátua, peça artística, tecido) ou quando ele pedir pra conta seguir as horas dele. Dias ('leva 3 dias') NÃO são horas: não converta."),
     material_total_reais: n("quanto ELE diz que gasta de material no total nesta peça ('de material dá uns 70'): substitui os materiais da conta padrão"),
     horas_extra: n("horas de um trabalho A MAIS que soma à conta normal (ex.: trocar os puxadores = 1 h). Vai junto com trabalho_descricao."),
     materiais_extras: {
@@ -402,9 +401,7 @@ async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correc
   }
   // trabalho sob medida: cobrado pelas horas que ele estima (vai no PDF com a descrição dele)
   const desc = typeof fields.trabalho_descricao === "string" && fields.trabalho_descricao.trim().length >= 3 ? fields.trabalho_descricao.trim().slice(0, 80) : null;
-  const dias = num("dias_artesao", 120);
-  const perDay = dias ? Number((await getActiveSettings(t.ctx)).params.hoursPerWorkday) || 6 : 0;
-  const horas = num("horas_artesao", 400) ?? (dias ? Math.round(dias * perDay * 10) / 10 : undefined);
+  const horas = num("horas_artesao", 400);
   const matTotal = num("material_total_reais", 20000);
   if (matTotal) {
     const ov = await getOverrides(t.ctx, job.id);
@@ -528,7 +525,7 @@ function isVaguePiece(text: string): boolean {
   const norm = normalizeText(text.replace(/\([^)]*\)/g, " "));
   if (/sem nome|nao sei o que e|ainda nao sei/.test(normalizeText(text))) return true;
   const tokens = norm.split(/\s+/).filter((w) => w && !/^(o|a|os|as|um|uma|uns|umas|dois|duas|tres|quatro|outro|outra|outros|outras|mais|\d+)$/.test(w));
-  return tokens.length === 0 || /^(moveis?|pecas?|coisas?|itens?|item|objetos?|trabalhos?|servicos?|tampos?|partes?|pes|gavetas?)$/.test(tokens[0]!);
+  return tokens.length === 0 || /^(movel|moveis|pecas?|coisas?|itens?|item|objetos?|trabalhos?|servicos?|tampos?|partes?|pes|gavetas?)$/.test(tokens[0]!);
 }
 
 function resolveFurniture(movel: string): { key: string; label: string } | null {
@@ -556,7 +553,9 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const job = await createJob(t.ctx, { actor: t.user.id, description: a.movel.slice(0, 200), messageId: t.inboundMessageId });
       // peça fora do catálogo (estátua, bandeja, faqueiro...): guarda o nome que ele usou
       const custom = a.movel.trim().replace(/^(um|uma|o|a)\s+/i, "").slice(0, 50);
-      await setFact(t.ctx, job.id, "furniture_type", (f ? { type: f.key, descriptors: [] } : { type: "outro", label: custom, descriptors: [] }) as never, opts(t));
+      // "dois criados-mudos" no nome: quantidade vem do que ele falou
+      const spokenQty = parseFurnitureList(a.movel)[0]?.quantity ?? 1;
+      await setFact(t.ctx, job.id, "furniture_type", (f ? { type: f.key, descriptors: [], ...(spokenQty > 1 ? { quantity: spokenQty } : {}) } : { type: "outro", label: custom, descriptors: [] }) as never, opts(t));
       const fields = (a.campos && typeof a.campos === "object" ? a.campos : {}) as Fields;
       // técnica dita em texto livre no nome do móvel ("cômoda pra patinar") também vale
       if (!Array.isArray(fields.tecnicas) || !fields.tecnicas.length) {
@@ -617,6 +616,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         items.push({
           servico_id: job.id,
           nome: jobPhrase(job),
+          quantidade_de_pecas: (job.facts.furniture_type?.value as { quantity?: number } | undefined)?.quantity ?? 1,
           sugestao: reais(r.recommendedCents),
           minimo_sem_prejuizo: reais(r.floorCents),
           material_a_comprar: reais(r.materials.purchaseCashOutlayCents),
@@ -759,6 +759,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const reason = typeof a.motivo_ajuste === "string" && a.motivo_ajuste.trim() ? a.motivo_ajuste.trim().slice(0, 30) : undefined;
       let pdfs = 0;
       const closedIds: string[] = [];
+      const byClient = new Map<string, { quoteId: string; preliminary: boolean }[]>();
       for (let i = 0; i < valid.length; i++) {
         const q = valid[i]!;
         const delta = shares[i]! - q.recommendedCents!;
@@ -767,8 +768,16 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         const adj: PriceAdjustment | null = delta === 0 ? null : { baseCents: q.recommendedCents!, deltaCents: delta, label };
         const res = await closeQuoteByArtisan(t.ctx, q.id, t.user.id, shares[i]!, adj);
         closedIds.push(res.quote.id);
+        const jobOf = await getJob(t.ctx, q.jobId);
+        const client = normalizeText(((jobOf?.facts.client_name?.value as string | undefined) ?? jobOf?.clientName ?? "").replace(/^(dona|seu|sr|sra)\s+/i, ""));
+        byClient.set(client, [...(byClient.get(client) ?? []), { quoteId: res.quote.id, preliminary: res.preliminary }]);
+      }
+      // um PDF por cliente, com todas as peças dele
+      for (const group of byClient.values()) {
         try {
-          const docs = await issueDocuments(t.ctx, res.quote.id, t.user.id, { preliminary: res.preliminary, artisanClosed: true });
+          const docs = group.length === 1
+            ? await issueDocuments(t.ctx, group[0]!.quoteId, t.user.id, { preliminary: group[0]!.preliminary, artisanClosed: true })
+            : await issueGroupDocuments(t.ctx, group.map((g) => g.quoteId), t.user.id, { preliminary: group.some((g) => g.preliminary), artisanClosed: true });
           await sendDocumentToArtisan(t.ctx, docs.commercial.id, t.user.id, t.chatId);
           pdfs++;
         } catch (err) {

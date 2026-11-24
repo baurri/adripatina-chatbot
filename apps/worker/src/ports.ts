@@ -86,7 +86,8 @@ export interface AgentStep {
 /** O modelo que conduz a conversa com ferramentas (Claude). Um passo = uma chamada. */
 export interface AgentModel {
   readonly name: string;
-  step(system: string, messages: AgentMessage[], tools: AgentTool[], maxTokens: number): Promise<AgentStep>;
+  /** noTools: as ferramentas continuam declaradas (o histórico tem chamadas), mas o modelo só pode responder em texto */
+  step(system: string, messages: AgentMessage[], tools: AgentTool[], maxTokens: number, opts?: { noTools?: boolean }): Promise<AgentStep>;
 }
 
 export interface AiProviders {

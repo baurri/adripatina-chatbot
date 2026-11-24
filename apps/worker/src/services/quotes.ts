@@ -844,6 +844,129 @@ export async function issueDocuments(ctx: Ctx, quoteId: string, actor: string, o
   return { commercial: docs[0]!, internal: docs[1]! };
 }
 
+/** plural simples do nome da peça: criado-mudo → criados-mudos, cadeira → cadeiras, baú → baús */
+export function pluralPt(label: string): string {
+  const one = (w: string) => (/ão$/i.test(w) ? w.replace(/ão$/i, "ões") : /[aeiouáéíóúâêô]$/i.test(w) ? `${w}s` : /l$/i.test(w) ? w.replace(/l$/i, "is") : /[rz]$/i.test(w) ? `${w}es` : w);
+  const [head, ...rest] = label.split(" ");
+  const parts = head!.split("-");
+  // guarda-roupa, porta-retrato: só a segunda palavra vai pro plural
+  const verbFirst = parts.length > 1 && /^(guarda|porta|para|bate|toca)$/i.test(parts[0]!);
+  return [parts.map((p, i) => (verbFirst && i === 0 ? p : one(p))).join("-"), ...rest].join(" ");
+}
+
+/**
+ * Várias peças do mesmo cliente fechadas juntas → UM PDF comercial (uma seção por peça + total).
+ * O documento fica ligado ao primeiro orçamento; o snapshot guarda todos. Uma peça só → issueDocuments.
+ */
+export async function issueGroupDocuments(ctx: Ctx, quoteIds: string[], actor: string, opts: { preliminary: boolean; artisanClosed?: boolean }): Promise<{ commercial: IssuedDocument; internal: IssuedDocument }> {
+  if (quoteIds.length === 1) return issueDocuments(ctx, quoteIds[0]!, actor, opts);
+  const pairs: { q: QuoteRecord; job: Job }[] = [];
+  for (const id of quoteIds) {
+    const q = await getQuote(ctx, id);
+    if (!q) throw new DomainError("NOT_FOUND", "Orçamento não encontrado", 404);
+    const job = await getJob(ctx, q.jobId);
+    if (!job) throw new DomainError("NOT_FOUND", "Projeto não encontrado", 404);
+    if (!q.result.computable || (q.finalPriceCents === null && q.recommendedCents === null)) throw new DomainError("NOT_COMPUTABLE", "Ainda faltam dados para calcular. Não dá para gerar documento.", 422);
+    if (!opts.preliminary && q.status !== "APROVADO" && q.status !== "ENVIADO") throw new DomainError("NOT_APPROVED", "Proposta definitiva exige aprovação.", 422);
+    pairs.push({ q, job });
+  }
+  const number = await nextDocumentNumber(ctx);
+  const docVersion = 1;
+  const parts = await Promise.all(pairs.map(({ q, job }) => buildCommercialDoc(ctx, q, job, number, docVersion, opts.preliminary)));
+  const first = parts[0]!;
+  const items = parts.map((d, i) => {
+    const ft = pairs[i]!.job.facts.furniture_type?.value as FactValueMap["furniture_type"] | null | undefined;
+    const qty = ft?.quantity && ft.quantity > 1 ? `${ft.quantity} ` : "";
+    return { title: capitalize(qty ? `${qty}${pluralPt(pieceLabel(ft))}` : pieceLabel(ft)), description: d.furniture.description, scope: d.scope, finishes: d.finishes, amountCents: d.totalCents };
+  });
+  const adjs = pairs.map(({ q }) => q.priceAdjustment).filter((x): x is PriceAdjustment => !!x && x.deltaCents !== 0);
+  const total = items.reduce((acc, it) => acc + it.amountCents, 0);
+  const baseSum = pairs.reduce((acc, { q }) => acc + (q.priceAdjustment && q.priceAdjustment.deltaCents !== 0 ? q.priceAdjustment.baseCents : (q.finalPriceCents ?? q.recommendedCents ?? 0)), 0);
+  const deltaSum = total - baseSum;
+  const deadlines = [...new Set(parts.map((d) => d.deadlineText).filter((x) => x && x !== "a combinar"))];
+  const clients = [...new Set(parts.map((d) => d.client.name))];
+  const commercialDoc: CommercialQuoteDoc = {
+    ...first,
+    client: { name: clients.join(" / ") },
+    furniture: { description: items.map((it) => it.title).join(" + ") },
+    scope: [],
+    finishes: [],
+    items,
+    lines: adjs.length && deltaSum !== 0 ? [{ label: "Valor do serviço", amountCents: baseSum }, { label: deltaSum < 0 ? "Desconto" : adjs[0]!.label, amountCents: deltaSum }] : [],
+    totalCents: total,
+    deadlineText: deadlines.length ? deadlines.join("; ") : "a combinar",
+    depositCents: null,
+    photos: parts.flatMap((d) => d.photos).slice(0, 3),
+    preliminary: parts.some((d) => d.preliminary),
+  };
+  const primary = pairs[0]!.q;
+  const snapshot = {
+    quoteIds,
+    number,
+    docVersion,
+    preliminary: opts.preliminary,
+    commercial: { ...commercialDoc, photos: commercialDoc.photos.length },
+    internal: pairs.map(({ q }) => ({ quoteId: q.id, input: q.input, result: q.result, engineVersion: q.engineVersion, settingsVersionId: q.settingsVersionId })),
+  };
+  const snapshotJson = canonicalJson(snapshot);
+  const snapshotHash = await sha256Hex(snapshotJson);
+  const snapshotId = newId();
+  const commercialPdf = await renderCommercialQuote(commercialDoc);
+  const leaked = findConfidentialTerms(commercialPdf.renderedText);
+  if (leaked.length > 0) throw new DomainError("CONFIDENTIAL_LEAK", `Documento comercial bloqueado: termos internos detectados (${leaked.join(", ")}).`, 500);
+  const internalPdf = await renderInternalQuote({
+    number,
+    version: docVersion,
+    generatedAt: nowIso(ctx),
+    title: items.map((it) => it.title).join(" + "),
+    sections: pairs.flatMap(({ q, job }) => internalSections(q).map((s) => ({ ...s, heading: `${job.title} — ${s.heading}` }))),
+  });
+  const now = nowIso(ctx);
+  const docs: IssuedDocument[] = [];
+  for (const [kind, pdf] of [
+    ["COMERCIAL", commercialPdf],
+    ["INTERNO", internalPdf],
+  ] as const) {
+    const r2Key = `documents/${newId()}.pdf`;
+    await ctx.storage.put(r2Key, pdf.bytes, { httpMetadata: { contentType: "application/pdf" } });
+    docs.push({
+      id: newId(),
+      number,
+      docVersion,
+      kind,
+      preliminary: commercialDoc.preliminary,
+      r2Key,
+      sha256: await sha256Hex(pdf.bytes),
+      sizeBytes: pdf.bytes.byteLength,
+      createdAt: now,
+      filename: kind === "COMERCIAL" ? commercialFilename(number, docVersion, commercialDoc.preliminary) : `Interno-${number}-v${docVersion}.pdf`,
+    });
+  }
+  await ctx.db.batch([
+    ctx.db.stmt("INSERT INTO quote_snapshots (id, quote_id, number, doc_version, snapshot_json, sha256, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", snapshotId, primary.id, number, docVersion, snapshotJson, snapshotHash, actor, now),
+    ...docs.map((d) =>
+      ctx.db.stmt(
+        "INSERT INTO quote_documents (id, quote_id, snapshot_id, number, doc_version, kind, preliminary, r2_key, sha256, size_bytes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        d.id,
+        primary.id,
+        snapshotId,
+        d.number,
+        d.docVersion,
+        d.kind,
+        d.preliminary ? 1 : 0,
+        d.r2Key,
+        d.sha256,
+        d.sizeBytes,
+        actor,
+        now,
+      ),
+    ),
+    ...pairs.map(({ q }) => auditStmt(ctx, actor, "quote.issue", "quote", q.id, undefined, { number, docVersion, grouped: quoteIds.length, snapshotHash })),
+  ]);
+  for (const { q } of pairs) await addJobEvent(ctx, q.jobId, "documento_emitido", { number, docVersion, grouped: quoteIds.length }, actor);
+  return { commercial: docs[0]!, internal: docs[1]! };
+}
+
 function internalSections(q: QuoteRecord): { heading: string; rows: [string, string][] }[] {
   const r = q.result;
   const money = (c: number | null) => (c === null ? "PENDENTE" : formatBRL(c));

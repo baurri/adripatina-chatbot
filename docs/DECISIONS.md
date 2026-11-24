@@ -131,4 +131,12 @@ Avaliação com 10 cenários diversos (guarda-roupa decapê, estátua com folha 
 - Motor de preço: sem técnica mas com horas/parceiro, calcula sem exigir área.
 - Algo acrescentado depois de mostrar o valor obriga recalcular antes de fechar. O cálculo devolve materiais, mão de obra e extras para ele perguntar "o que entrou na conta".
 - Se o Claude terminar sem texto, uma chamada extra pede a resposta (antes caía em "me perdi").
-- Pendente: orçamento de várias peças ainda gera um PDF por peça e se confunde com quantidade de peças iguais.
+- Várias peças: ver D-079.
+
+## D-079 — Várias peças: um PDF por cliente (2026-11-23)
+
+- Peças do mesmo cliente fechadas juntas geram UM PDF (`issueGroupDocuments`): uma seção por peça (o que vai ser feito, acabamento, valor da peça) e o total; desconto/acréscimo aparece uma vez sobre o total. O documento fica ligado ao primeiro orçamento e o snapshot guarda todos. Clientes diferentes no mesmo fechamento: um PDF por cliente.
+- Peças iguais ("dois criados-mudos") viram um serviço com quantidade, também quando a quantidade vem no nome do móvel; o PDF mostra "2 criados-mudos" (plural simples do nome).
+- "Leva de 3 a 5 dias" é prazo/referência, não muda a conta (antes virava 3 dias inteiros de trabalho e o valor quase dobrava).
+- Se o Claude terminar sem texto, a chamada extra agora proíbe ferramentas (`tool_choice: none`), para sempre sair uma resposta.
+- Avaliação completa (24 cenários): todas as conferências passam, menos uma oscilação (um dos aparadores "só o tampo" às vezes fica "inteiro").

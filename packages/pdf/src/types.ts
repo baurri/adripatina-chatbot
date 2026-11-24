@@ -23,6 +23,8 @@ export interface CommercialQuoteDoc {
   notes: string[];
   photos: { bytes: Uint8Array; mime: "image/jpeg" | "image/png" }[];
   showAcceptance: boolean;
+  /** orçamento de várias peças do mesmo cliente: uma seção por peça (com o valor dela) e o total no fim */
+  items?: { title: string; description: string; scope: string[]; finishes: string[]; amountCents: number }[];
 }
 
 /** Dados comerciais — exibidos SOMENTE quando fornecidos (nunca inventados). */

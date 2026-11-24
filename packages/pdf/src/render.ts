@@ -191,7 +191,8 @@ export async function renderCommercialQuote(q: CommercialQuoteDoc): Promise<Rend
   w.draw(valid, 440, w.y, 11, fonts.regular);
   w.y -= 26;
 
-  w.heading("Móvel");
+  const multi = (q.items?.length ?? 0) > 1;
+  w.heading(multi ? "Peças" : "Móvel");
   w.paragraph(q.furniture.description, { size: 11.5 });
 
   if (q.photos.length > 0) {
@@ -210,13 +211,27 @@ export async function renderCommercialQuote(q: CommercialQuoteDoc): Promise<Rend
     w.y -= boxH + 10;
   }
 
-  if (q.scope.length) {
-    w.heading("Serviços incluídos");
-    w.bullets(q.scope);
-  }
-  if (q.finishes.length) {
-    w.heading("Acabamento");
-    w.bullets(q.finishes);
+  if (multi) {
+    for (const [i, item] of q.items!.entries()) {
+      w.heading(`${i + 1}. ${item.title}`);
+      w.paragraph(item.description, { size: 10.5 });
+      const lines = [...item.scope, ...item.finishes.map((f) => `Acabamento: ${f}`)];
+      if (lines.length) w.bullets(lines);
+      w.ensure(18);
+      const amt = formatBRL(item.amountCents);
+      w.draw("Valor desta peça", MARGIN, w.y, 10.5, fonts.bold);
+      w.draw(amt, A4[0] - MARGIN - fonts.bold.widthOfTextAtSize(amt, 10.5), w.y, 10.5, fonts.bold);
+      w.y -= 18;
+    }
+  } else {
+    if (q.scope.length) {
+      w.heading("Serviços incluídos");
+      w.bullets(q.scope);
+    }
+    if (q.finishes.length) {
+      w.heading("Acabamento");
+      w.bullets(q.finishes);
+    }
   }
 
   w.heading("Investimento");

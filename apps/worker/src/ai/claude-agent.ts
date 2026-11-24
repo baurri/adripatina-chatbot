@@ -16,13 +16,14 @@ export class ClaudeAgentModel implements AgentModel {
     this.client = new Anthropic({ apiKey, timeout: opts.timeoutMs ?? 30000, maxRetries: 1 });
   }
 
-  async step(system: string, messages: AgentMessage[], tools: AgentTool[], maxTokens: number): Promise<AgentStep> {
+  async step(system: string, messages: AgentMessage[], tools: AgentTool[], maxTokens: number, opts?: { noTools?: boolean }): Promise<AgentStep> {
     const response = await this.client.messages.create({
       model: this.name,
       max_tokens: maxTokens,
       system,
       messages: messages as Anthropic.MessageParam[],
       tools: tools as Anthropic.Tool[],
+      ...(opts?.noTools && tools.length ? { tool_choice: { type: "none" as const } } : {}),
       output_config: { effort: this.opts.effort ?? "medium" },
     });
     const content: AgentBlock[] = [];
