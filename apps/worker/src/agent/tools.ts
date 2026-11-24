@@ -86,14 +86,17 @@ const REQUIRED_LABEL: Partial<Record<ProjectField, string>> = {
 function missingFor(job: Job): string[] {
   const techs = (job.facts.techniques?.value as string[] | null | undefined) ?? [];
   // trabalho só sob medida (tecido, pintura artística...): cobra pelas horas, não precisa de medida nem método
-  const hoursOnly = techs.includes("sob_medida");
+  // peça fora do catálogo (estátua, pomba decorativa...): a conta padrão por área não serve — vai pelas horas dele
+  const custom = (job.facts.furniture_type?.value as { type?: string } | undefined)?.type === "outro";
+  const hoursOnly = techs.includes("sob_medida") || custom;
   const part = (job.facts.scope?.value as { part?: string } | null | undefined)?.part;
   // só o tampo: não existe "por dentro" pra perguntar
   const skip: ProjectField[] = hoursOnly ? ["dimensions", "application_method", "surfaces", "scope"] : part === "tampo" ? ["surfaces"] : [];
   return computePending(job.facts)
     .filter((f) => !OPTIONAL_FIELDS.includes(f) && f !== "details" && f !== "size_class" && !skip.includes(f))
     .filter((f) => !(f === "dimensions" && (job.facts.size_class?.value || job.facts.dimensions?.value)))
-    .map((f) => REQUIRED_LABEL[f] ?? f);
+    .map((f) => REQUIRED_LABEL[f] ?? f)
+    .concat(custom && !techs.includes("sob_medida") ? ["quantas horas ele acha que leva o trabalho todo (horas_artesao) e o material que vai gastar"] : []);
 }
 
 function describeJob(job: Job): Record<string, unknown> {
