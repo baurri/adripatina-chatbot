@@ -42,6 +42,8 @@ export interface AgentState {
   pending?: PendingAction | null;
   /** orçamentos fechados juntos: "cliente aceitou" vale para todos */
   closed?: string[];
+  /** turno em que perguntamos se as outras peças do cliente entram no mesmo orçamento */
+  siblingsAskedTurn?: number;
   /** valores calculados por simular_ajuste (em reais) — podem ser usados no fechamento */
   simulated?: number[];
 }
@@ -682,9 +684,12 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       if (!ids.length) return { erro: "servico_ids vazio" };
       // outras peças abertas do mesmo cliente: o orçamento vai junto (um PDF) — só separa se ele quiser
-      if (a.so_estes !== true) {
+      // "só estas" só vale depois de perguntar a ele (num turno anterior) — o Claude não decide sozinho
+      const askedBefore = t.state.siblingsAskedTurn !== undefined && t.state.siblingsAskedTurn < t.turn;
+      if (a.so_estes !== true || !askedBefore) {
         const others = await openSiblings(t, ids);
         if (others.length) {
+          t.state.siblingsAskedTurn = t.turn;
           return {
             erro: "outras_pecas_do_mesmo_cliente",
             outras: others.map((j) => ({ servico_id: j.id, nome: jobPhrase(j), falta: missingFor(j) })),
