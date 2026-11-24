@@ -197,7 +197,17 @@ export function adminRoutes(): Hono<AppEnv> {
     const status = c.req.query("status");
     const statuses = status ? status.split(",").filter((s): s is (typeof JOB_STATUSES)[number] => (JOB_STATUSES as readonly string[]).includes(s)) : undefined;
     const jobs = await listJobs(c.get("ctx"), { ...(statuses ? { statuses } : {}), ...page(c) });
-    return c.json({ rows: jobs.map((j) => ({ id: j.id, code: j.code, title: j.title, status: j.status, clientName: j.clientName, contractedCents: j.contractedCents, lastInteractionAt: j.lastInteractionAt, pending: j.pending, createdAt: j.createdAt })) });
+    // proposta mais recente que inclui o serviço (PDF de uma peça ou de várias): "Orçamento enviado · AP-…"
+    const ctx = c.get("ctx");
+    const proposals = await Promise.all(
+      jobs.map((j) =>
+        ctx.db.first<{ number: string }>(
+          "SELECT s.number FROM quote_snapshots s WHERE EXISTS (SELECT 1 FROM quotes q WHERE q.job_id = ? AND s.snapshot_json LIKE '%' || q.id || '%') ORDER BY s.created_at DESC LIMIT 1",
+          j.id,
+        ),
+      ),
+    );
+    return c.json({ rows: jobs.map((j, i) => ({ id: j.id, code: j.code, title: j.title, status: j.status, proposal: proposals[i]?.number ?? null, clientName: j.clientName, contractedCents: j.contractedCents, lastInteractionAt: j.lastInteractionAt, pending: j.pending, createdAt: j.createdAt })) });
   });
   r.post("/jobs", async (c) => {
     const body = z.object({ description: z.string().trim().min(3).max(1000) }).parse(await c.req.json());

@@ -14,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function Jobs() {
   const [status, setStatus] = useState("ORCAMENTO,AGUARDANDO_INICIO,EM_EXECUCAO,CONCLUIDO");
-  const { data, error, loading, reload } = useLoad(() => api<{ rows: { id: string; code: string; title: string; status: string; clientName: string | null; contractedCents: number | null; lastInteractionAt: string | null; pending: string[] }[] }>(`/jobs?status=${status}`), [status]);
+  const { data, error, loading, reload } = useLoad(() => api<{ rows: { id: string; code: string; title: string; status: string; proposal: string | null; clientName: string | null; contractedCents: number | null; lastInteractionAt: string | null; pending: string[] }[] }>(`/jobs?status=${status}`), [status]);
   const [desc, setDesc] = useState("");
   const { run, message, busy } = useAction();
   return (
@@ -44,9 +44,9 @@ export function Jobs() {
           columns={[
             { header: "Código", cell: (r) => <a href={`#/servicos/${r.id}`}>{r.code}</a> },
             { header: "Serviço", cell: (r) => r.title },
-            { header: "Situação", cell: (r) => STATUS_LABEL[r.status] ?? r.status },
+            { header: "Situação", cell: (r) => (r.status === "ORCAMENTO" && r.proposal ? `Orçamento enviado · ${r.proposal}` : (STATUS_LABEL[r.status] ?? r.status)) },
             { header: "Contratado", cell: (r) => formatBRL(r.contractedCents), className: "num" },
-            { header: "Pendências", cell: (r) => (r.pending.length ? <Badge tone="warn">{r.pending.length}</Badge> : <Badge tone="ok">0</Badge>) },
+            { header: "Pendências", cell: (r) => (r.status === "ORCAMENTO" && r.proposal ? "—" : r.pending.length ? <Badge tone="warn">{r.pending.length}</Badge> : <Badge tone="ok">0</Badge>) },
             { header: "Última conversa", cell: (r) => formatDate(r.lastInteractionAt) },
           ]}
         />
