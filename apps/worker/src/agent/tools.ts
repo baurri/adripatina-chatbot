@@ -177,7 +177,7 @@ const FIELDS_SCHEMA = {
     prazo_entrega: s("QUANDO fica pronto pro cliente, se ele disser direto: 'daqui a 2 meses', 'até o Natal', 'fim de janeiro'. Ou 'a combinar' se ele pedir pra deixar sem prazo."),
     trabalho_descricao: s("o que vai ser feito quando NÃO é uma das técnicas (ex.: 'encapar o interior com veludo vinho', 'pintar flores à mão', 'trocar os puxadores'). Vai no PDF."),
     horas_artesao: n("HORAS que ELE diz para o trabalho todo desta peça (incluindo conserto). A conta passa a ser pelas horas dele + materiais_extras, sem a conta padrão. Use em peça/trabalho fora do comum (estátua, peça artística, tecido) ou quando ele pedir pra conta seguir as horas dele. Dias ('leva 3 dias') NÃO são horas: não converta."),
-    material_total_reais: n("quanto ELE diz que gasta de material no total nesta peça ('de material dá uns 70'): substitui os materiais da conta padrão"),
+    material_total_reais: n("quanto ELE diz que gasta de material no total nesta peça ('de material dá uns 70'), inclusive o que já tem em casa (custo de repor): substitui os materiais da conta padrão"),
     horas_extra: n("horas de um trabalho A MAIS que soma à conta normal (ex.: trocar os puxadores = 1 h). Vai junto com trabalho_descricao."),
     materiais_extras: {
       type: ["array", "null"],
@@ -818,10 +818,11 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         // pelas horas dele não tem receita de material: pergunte o material (ou se já tem tudo) antes de dar o valor
         if (tk.includes("sob_medida")) {
           const ov0 = await getOverrides(t.ctx, job.id);
-          const hasMat = ov0.artisanMaterialCents !== null || ov0.specificExpenses.some((e) => e.category === "outros") || job.facts.material_status?.value === "tem_tudo";
+          // material que ele já tem também custa (ele repõe depois): igual aos móveis comuns, entra no valor
+          const hasMat = ov0.artisanMaterialCents !== null || ov0.specificExpenses.some((e) => e.category === "outros");
           if (ov0.artisanTotal && !hasMat && !t.state.askedMaterial?.includes(job.id)) {
             t.state.askedMaterial = [...(t.state.askedMaterial ?? []), job.id];
-            falta.push("o material que ele vai gastar (material_total_reais ou materiais_extras) — ou se já tem tudo (material=tem_tudo)");
+            falta.push("quanto dá, mais ou menos, o material que ele vai usar nesta peça (material_total_reais) — MESMO que já tenha em casa, porque depois ele repõe");
           }
         }
         if (falta.length) {
