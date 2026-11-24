@@ -87,7 +87,7 @@ export const SCENARIOS: Scenario[] = [
     title: "Administrador: mesinha + 2 criados-mudos, medidas todas de uma vez",
     opening: "peça o orçamento de uma mesinha de centro com tampo um pouco danificado (lixar, acertar detalhes, envernizar) e mais dois móveis só o tampo; diga que vai demorar 3 a 5 dias e que o material dá uns 70 reais.",
     brief:
-      "Cliente: Dona Carla. Peças: mesinha de centro (inteira; lixar, acertar detalhes, envernizar) e dois criados-mudos (só o tampo, lixar e envernizar). Estado: só precisa lixar e acertar uns detalhes em todos. Medidas: a mesinha é redonda com 2 metros de largura; os criados-mudos têm 80 cm de largura e 40 de altura (os dois iguais). Pincel e uma faca pra raspar. Já tem o material. A cliente deixa e busca depois de pronto.",
+      "Cliente: Dona Carla. Peças: mesinha de centro (inteira; lixar, acertar detalhes, envernizar) e dois criados-mudos (só o tampo, lixar e envernizar). Estado: só precisa lixar e acertar uns detalhes em todos. Medidas: a mesinha é redonda com 2 metros de largura; os criados-mudos têm 80 cm de largura e 40 de altura (os dois iguais). Pincel e uma faca pra raspar. Já tem o material. A cliente deixa e busca depois de pronto. Prazo, se perguntarem: começa semana que vem e leva uns 5 dias.",
     quirks: "Quando perguntarem medidas, fala as de TODAS as peças numa frase só. Escreve 'já trnho' com erro. Responde a logística com 'a cliente deixa em casa e busca depois de pronto'.",
     goal: "Receber o valor e pedir 10% de desconto.",
     checks: async (h) => {

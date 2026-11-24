@@ -552,7 +552,12 @@ async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correc
     }
   }
   if (fields.material === "tem_tudo" || fields.material === "tem_parte" || fields.material === "precisa_comprar") await set("material_status", fields.material, `material: ${fields.material}`);
-  const drawers = num("gavetas", 40);
+  // "4 gavetas e 1 gavetão" = 5 no total (o Claude às vezes manda só as 4); a soma vem do que ele falou
+  const NUMW: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8 };
+  const gm = /(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito)\s+gavetas?\s+e\s+(\d+|um|uma|dois|duas)\s+gavet(?:ao|oes)\b/.exec(normalizeText(t.userCorpus));
+  const toN = (x: string) => (/^\d+$/.test(x) ? Number(x) : (NUMW[x] ?? 0));
+  const gvSum = gm && (typeof fields.gavetas === "number" || fields.gavetas === undefined) && (fields.gavetas === toN(gm[1]!) || (fields.gavetas === undefined && !(job.facts.furniture_type?.value as { drawers?: number } | undefined)?.drawers)) ? toN(gm[1]!) + toN(gm[2]!) : undefined;
+  const drawers = gvSum ?? num("gavetas", 40);
   const doors = num("portas", 40);
   const qty = num("quantidade", 30);
   if (drawers || doors || qty) {
