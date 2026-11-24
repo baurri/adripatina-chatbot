@@ -165,7 +165,9 @@ const FIELDS_SCHEMA = {
     portas: n("total de portas"),
     quantidade: n("quantas peças iguais neste serviço"),
     cliente: s("nome do dono com tratamento: 'Dona Carla', 'Seu Luiz'"),
-    prazo: s("quando fica pronto para o cliente, do jeito que ele falou, incluindo quando ele consegue começar: 'começo daqui a 2 meses, fica pronto em uns 10 dias', 'daqui a 6 meses', 'sem prazo'"),
+    prazo_inicio: s("QUANDO ele consegue começar, do jeito que falou: 'daqui a 2 semanas', 'segunda que vem', 'em janeiro', 'já posso começar'. 'Sim, consigo começar' sem dizer quando NÃO é início: pergunte."),
+    prazo_duracao: s("quanto tempo leva depois de começar: '2 dias', 'uma semana'"),
+    prazo_entrega: s("QUANDO fica pronto pro cliente, se ele disser direto: 'daqui a 2 meses', 'até o Natal', 'fim de janeiro'. Ou 'a combinar' se ele pedir pra deixar sem prazo."),
     trabalho_descricao: s("o que vai ser feito quando NÃO é uma das técnicas (ex.: 'encapar o interior com veludo vinho', 'pintar flores à mão', 'trocar os puxadores'). Vai no PDF."),
     horas_artesao: n("HORAS que ELE diz para o trabalho todo desta peça (incluindo conserto). A conta passa a ser pelas horas dele + materiais_extras, sem a conta padrão. Use em peça/trabalho fora do comum (estátua, peça artística, tecido) ou quando ele pedir pra conta seguir as horas dele. Dias ('leva 3 dias') NÃO são horas: não converta."),
     material_total_reais: n("quanto ELE diz que gasta de material no total nesta peça ('de material dá uns 70'): substitui os materiais da conta padrão"),
@@ -490,7 +492,31 @@ async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correc
     );
     saved.push(`parceiro: ${scope}${cost !== null ? ` ${formatBRL(cost)}` : " (falta o valor)"}`);
   }
-  if (typeof fields.prazo === "string" && fields.prazo.trim().length >= 3) await set("deadline", fields.prazo.trim().slice(0, 120), `prazo: ${fields.prazo.trim().slice(0, 120)}`);
+  // prazo vai escrito no PDF: precisa de QUANDO começa + quanto leva, ou QUANDO fica pronto
+  const txt = (k: string) => (typeof fields[k] === "string" && (fields[k] as string).trim().length >= 2 ? (fields[k] as string).trim().slice(0, 60) : null);
+  const inicio = txt("prazo_inicio") ?? txt("prazo");
+  const duracao = txt("prazo_duracao");
+  const entrega = txt("prazo_entrega");
+  if (inicio || duracao || entrega) {
+    const cur = (job.facts.deadline?.value as string | undefined) ?? "";
+    const prevStart = /^Início: ([^·]+)/.exec(cur)?.[1]?.trim() ?? null;
+    const prevDur = /cerca de ([^·]+?) de trabalho/.exec(cur)?.[1]?.trim() ?? null;
+    const s0 = inicio ?? prevStart;
+    const d0 = duracao ?? prevDur;
+    let text: string | null = null;
+    if (entrega) text = /combinar|sem prazo/i.test(entrega) ? "a combinar" : `Pronto ${entrega}`;
+    else if (s0 && d0) text = `Início: ${s0} · cerca de ${d0} de trabalho`;
+    if (text) {
+      const when = estimateDelivery(t.ctx.clock(), entrega, s0, d0);
+      await set("deadline", when ? `${text} · previsão de entrega: por volta de ${when}` : text, `prazo: ${text}`);
+    } else {
+      // metade do prazo: guarda e pede o resto
+      const parcial = s0 ? `Início: ${s0}` : `cerca de ${d0} de trabalho`;
+      const notes = (job.facts.details?.value as string | undefined) ?? "";
+      if (!notes.includes(parcial)) await set("details", notes ? `${notes}; prazo (parcial): ${parcial}` : `prazo (parcial): ${parcial}`, `prazo parcial: ${parcial}`);
+      rejected.push(s0 ? "prazo incompleto: falta quanto tempo leva depois de começar" : "prazo incompleto: falta QUANDO ele consegue começar (ou quando fica pronto)");
+    }
+  }
   if (fields.material === "tem_tudo" || fields.material === "tem_parte" || fields.material === "precisa_comprar") await set("material_status", fields.material, `material: ${fields.material}`);
   const drawers = num("gavetas", 40);
   const doors = num("portas", 40);
@@ -559,6 +585,33 @@ async function openSiblings(t: ToolContext, ids: string[]): Promise<Job[]> {
     out.push(j);
   }
   return out;
+}
+
+/** "daqui a 2 semanas" + "2 dias" → data aproximada (dd/mm/aaaa). Sem número claro, não chuta. */
+function estimateDelivery(now: Date, entrega: string | null, inicio: string | null, duracao: string | null): string | null {
+  const WORDS: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, quinze: 15, vinte: 20, trinta: 30 };
+  const days = (s: string | null, needDaqui: boolean): number | null => {
+    if (!s) return null;
+    const n = normalizeText(s);
+    if (/\b(ja|agora|hoje|imediat)/.test(n)) return 0;
+    if (/\bamanha\b/.test(n)) return 1;
+    if (/semana que vem|proxima semana/.test(n)) return 7;
+    if (/mes que vem|proximo mes/.test(n)) return 30;
+    const m = /(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta)\s*(dia|semana|mes|meses)/.exec(n);
+    if (!m || (needDaqui && !/daqui|em\s/.test(n))) return null;
+    const q = /^\d+$/.test(m[1]!) ? Number(m[1]) : WORDS[m[1]!]!;
+    return q * (m[2]!.startsWith("semana") ? 7 : m[2]!.startsWith("mes") ? 30 : 1);
+  };
+  let total: number | null;
+  if (entrega) total = days(entrega, false);
+  else {
+    const a = days(inicio, false);
+    const b = days(duracao, false);
+    total = a !== null && b !== null ? a + Math.ceil(b * 1.4) : null; // dias de trabalho → corridos (fins de semana)
+  }
+  if (total === null || total > 400) return null;
+  const d = new Date(now.getTime() + total * 86400000);
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
 }
 
 function resolveFurniture(movel: string): { key: string; label: string } | null {
@@ -785,7 +838,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       // prazo é crítico (ele tem fila de serviços): nunca vai pro PDF um prazo que ele não deu
       for (const id of ids) {
         const j = await getJob(t.ctx, id);
-        if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte quando ele consegue começar e quando fica pronto pro cliente (ex.: 'daqui a 2 meses'). Anote em campos.prazo e depois feche." };
+        if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte QUANDO ele consegue começar (ex.: 'daqui a 2 semanas') e quanto tempo leva — ou quando fica pronto pro cliente. Anote em prazo_inicio + prazo_duracao, ou prazo_entrega, e depois feche." };
       }
       let final = p.baseCents;
       if (typeof a.valor_final_reais === "number") {

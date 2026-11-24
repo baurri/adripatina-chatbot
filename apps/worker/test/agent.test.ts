@@ -90,7 +90,7 @@ describe("motor novo (D-075): travas do código", () => {
     let jobId = "";
     let closeSameTurn: Record<string, unknown> = {};
     const { h } = await setup([
-      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo: "daqui a 2 meses" } }),
+      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo_entrega: "daqui a 2 meses" } }),
       (m) => {
         jobId = ((lastToolResult(m).criado as { servico_id: string }).servico_id);
         return tool("calcular_orcamento", { servico_ids: [jobId] });
@@ -194,7 +194,7 @@ describe("motor novo (D-075): travas do código", () => {
 
   it("duas peças do mesmo cliente fechadas juntas saem num PDF só", async () => {
     const ids: string[] = [];
-    const base = { tecnicas: ["verniz"], cliente: "Dona Ana", estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo: "daqui a 2 meses" };
+    const base = { tecnicas: ["verniz"], cliente: "Dona Ana", estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo_entrega: "daqui a 2 meses" };
     const { h } = await setup([
       () => tool("criar_servico", { movel: "mesa", campos: { ...base, largura_cm: 100, fundura_cm: 60, altura_cm: 80 } }),
       (m) => {
