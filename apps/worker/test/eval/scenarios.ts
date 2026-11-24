@@ -76,7 +76,8 @@ export const SCENARIOS: Scenario[] = [
         check(pieces(js.filter((j) => has(v(j, "furniture_type"), /aparador/))) === 2, "2 aparadores reconhecidos", js.map((j) => v(j, "furniture_type"))),
         check(js.every((j) => has(v(j, "techniques"), /verniz/)), "técnica verniz em todos"),
         check(js.every((j) => has(v(j, "client_name"), /Roberto|Jo/)), "cliente Seu Roberto/Dona Jo"),
-        check(js.filter((j) => has(v(j, "scope"), /tampo/)).length >= 2, "aparadores só no tampo", js.map((j) => v(j, "scope"))),
+        // conta PEÇAS (um serviço com quantidade 2 vale pelos dois aparadores)
+        check(pieces(js.filter((j) => has(v(j, "furniture_type"), /aparador/) && has(v(j, "scope"), /tampo/))) >= 2, "aparadores só no tampo", js.map((j) => [v(j, "furniture_type"), v(j, "scope")])),
         check(js.every((j) => v(j, "dimensions") || v(j, "size_class")), "medida/porte de todas as peças"),
         check((await quoteStatuses(h)).length === js.length, "orçamento calculado para todos os serviços", await quoteStatuses(h)),
       ];

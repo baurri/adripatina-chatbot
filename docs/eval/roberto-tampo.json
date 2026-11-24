@@ -1,0 +1,232 @@
+[
+  {
+    "id": "real-adriano-roberto-jo",
+    "title": "Conversa real do Adriano: mesinha + 2 móveis do Seu Roberto e da Dona Jo",
+    "turns": [
+      {
+        "who": "adriano",
+        "text": "E aí, beleza? Terça eu vou pegar um trabalho do seu Roberto e da Dona Jo. Uma mesinha de centro pra lixar e passar verniz, e mais outros dois móveis que é só o tampo. Quanto que eu cobro nisso?",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"E aí, beleza? Terça eu vou pegar um trabalho do seu Roberto e da Dona Jo. Uma mesinha de centro pra lixar e passar verniz, e mais outros dois móveis que é só o tampo. Quanto que eu cobro nisso?\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei a mesinha de centro pra lixar e envernizar ✅ Mas os outros dois não deu pra criar ainda: falta saber o que são. Quais são os dois móveis que são só o tampo?\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, são duas aparadoras. Só o tampo de cada uma, lixar e envernizar. Tão em bom estado, só precisam de lixa e verniz mesmo. Cada tampo tem 1,20 por 40. A mesinha é redonda, 80 de diâmetro e 45 de altura. Vou usar pincel, o verniz eu já tenho. Eu mesmo busco e entrego. Acho que leva uns 3 a 5 dias e o material deve dar uns 70 reais. Me fala aí quanto que sai.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, são duas aparadoras. Só o tampo de cada uma, lixar e envernizar. Tão em bom estado, só precisam de lixa e verniz mesmo. Cada tampo tem 1,20 por 40. A mesinha é redonda, 80 de diâmetro e 45 de altura. Vou usar pincel, o verniz eu já tenho. Eu mesmo busco e entrego. Acho que leva uns 3 a 5 dias e o material deve dar uns 70 reais. Me fala aí quanto que sai.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei as duas aparadoras (só tampo, 120 x 40, em bom estado, pincel) e a mesinha redonda de 80 cm. Você busca e entrega os três ✅\n\nQual deles é do Seu Roberto e qual é da Dona Jo?\n\n📸 Se tiver foto da peça, manda que ajuda!",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, é tudo do casal, Seu Roberto e Dona Jo, um cliente só. Não precisa separar não, é um orçamento só pros três. Quanto que sai no total?",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, é tudo do casal, Seu Roberto e Dona Jo, um cliente só. Não precisa separar não, é um orçamento só pros três. Quanto que sai no total?\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei: é um orçamento só pro casal, com as duas aparadoras e a mesinha ✅ Falta saber o estado da mesinha. Ela tá boa, precisa de reparo ou tá danificada?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "A mesinha tá com o tampo um pouco danificado, precisa acertar uns detalhes antes de lixar e envernizar. As aparadoras tão boas, só lixa e verniz mesmo. Já pode calcular o total aí com isso, e se quiser que eu ajuste depois eu te falo.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"A mesinha tá com o tampo um pouco danificado, precisa acertar uns detalhes antes de lixar e envernizar. As aparadoras tão boas, só lixa e verniz mesmo. Já pode calcular o total aí com isso, e se quiser que eu ajuste depois eu te falo.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Anotei o estado da mesinha ✅ Pras duas aparadoras (só tampo, pincel), a sugestão tá em R$ 175,00 o par, e leva uns 2 dias de trabalho.\n\nPra fechar a mesinha, falta uma coisa: o verniz e a lixa são só por fora ou por dentro também?",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Ah, é por fora só, a lixa e o verniz. O tampo tem o dano, mas a parte de baixo e as pernas é só lixar e passar verniz por fora mesmo. Leva uns 3 a 5 dias, e o material deve dar uns 70 reais. Me fala aí quanto que sai no total pros três.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Ah, é por fora só, a lixa e o verniz. O tampo tem o dano, mas a parte de baixo e as pernas é só lixar e passar verniz por fora mesmo. Leva uns 3 a 5 dias, e o material deve dar uns 70 reais. Me fala aí quanto que sai no total pros três.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fiz as contas dos três 🧮\n\n• Duas aparadoras (só tampo, 2 peças): R$ 175,00\n• Mesinha de centro: R$ 252,00\n💰 Total sugerido: R$ 427,00\n\nAbaixo de R$ 352,00 você fica no prejuízo. Não entrou frete nem o conserto da mesinha, porque você ainda não me passou esses valores.\n\nVocê concorda com R$ 427,00 ou quer ajustar algo?",
+        "buttons": [
+          {
+            "text": "👍 Concordo",
+            "data": "ag:btn:Concordo%20com%20o%20valor"
+          },
+          {
+            "text": "➖ Dar desconto",
+            "data": "ag:btn:Quero%20dar%20um%20desconto"
+          },
+          {
+            "text": "➕ Acrescentar",
+            "data": "ag:btn:Quero%20acrescentar%20um%20valor"
+          }
+        ]
+      },
+      {
+        "who": "adriano",
+        "text": "[tocou: 👍 Concordo]"
+      },
+      {
+        "who": "bot",
+        "text": "Show, fechou o valor do casal ✅ Falta só o prazo pro PDF: a partir de quando você consegue começar esse trabalho? 📅",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Bora! Começo terça mesmo, quando eu pegar as peças. Pode colocar que começo na terça e levo uns 3 a 5 dias.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Bora! Começo terça mesmo, quando eu pegar as peças. Pode colocar que começo na terça e levo uns 3 a 5 dias.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "[PDF enviado: Proposta-AP-2026-0001-v1.pdf]",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "📲 Pra mandar pro cliente: segure o PDF ☝️ → Compartilhar → WhatsApp.",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Fechado ✅ Anotei: começa na terça, quando pegar as peças, e leva 3 a 5 dias.\n\nTe mandei o PDF aqui no Telegram, de R$ 427,00 pro Seu Roberto e Dona Jo. Quando o cliente responder, me avisa 👍",
+        "buttons": []
+      },
+      {
+        "who": "adriano",
+        "text": "Valeu, parceiro! Recebi o PDF aqui. Tá certo, R$ 427,00 pro casal, começo terça quando eu pegar as peças e levo uns 3 a 5 dias. Quando o Seu Roberto responder eu te falo.",
+        "voice": true
+      },
+      {
+        "who": "bot",
+        "text": "🎧 Ouvi: \"Valeu, parceiro! Recebi o PDF aqui. Tá certo, R$ 427,00 pro casal, começo terça quando eu pegar as peças e levo uns 3 a 5 dias. Quando o Seu Roberto responder eu te falo.\"",
+        "buttons": []
+      },
+      {
+        "who": "bot",
+        "text": "Valeu, Adriano! Quando o Seu Roberto responder, me avisa 👍",
+        "buttons": []
+      }
+    ],
+    "checks": [
+      {
+        "ok": true,
+        "name": "3 peças (mesinha + 2 aparadores)"
+      },
+      {
+        "ok": true,
+        "name": "2 aparadores reconhecidos"
+      },
+      {
+        "ok": true,
+        "name": "técnica verniz em todos"
+      },
+      {
+        "ok": true,
+        "name": "cliente Seu Roberto/Dona Jo"
+      },
+      {
+        "ok": true,
+        "name": "aparadores só no tampo"
+      },
+      {
+        "ok": true,
+        "name": "medida/porte de todas as peças"
+      },
+      {
+        "ok": true,
+        "name": "orçamento calculado para todos os serviços"
+      }
+    ],
+    "judge": {
+      "notas": {
+        "entendimento": 4,
+        "naturalidade": 3,
+        "acessibilidade": 3,
+        "uma_pergunta_por_vez": 4,
+        "sem_invencao": 3,
+        "eficiencia": 3,
+        "conclusao": 5
+      },
+      "problemas": [
+        {
+          "turno": 6,
+          "gravidade": "media",
+          "classe": "pergunta_desnecessaria",
+          "descricao": "Perguntou qual móvel é de quem, sendo que ele já tinha dito que são do casal (Seu Roberto e Dona Jo, um cliente só). A informação estava no turno 1."
+        },
+        {
+          "turno": 9,
+          "gravidade": "media",
+          "classe": "pergunta_repetida",
+          "descricao": "Perguntou o estado da mesinha, mas ele já tinha dito no turno 1 que o tampo estava danificado (pelo menos a lixa e o verniz estavam ditos). Perguntou algo que ele já informou."
+        },
+        {
+          "turno": 12,
+          "gravidade": "media",
+          "classe": "fluxo_confuso",
+          "descricao": "Soltou o valor só das aparadoras e dos 2 dias de trabalho no meio da conversa, sem ele pedir, e fez uma pergunta sobre 'por fora ou por dentro', fora de contexto para uma mesinha. Misturou assuntos e não respondeu o pedido do total."
+        },
+        {
+          "turno": 13,
+          "gravidade": "baixa",
+          "classe": "pergunta_desnecessaria",
+          "descricao": "A pergunta 'por fora ou por dentro' é estranha para uma mesinha redonda e forçou ele a repetir informações (tempo e material) pela terceira vez."
+        },
+        {
+          "turno": 15,
+          "gravidade": "media",
+          "classe": "jargao",
+          "descricao": "Frase 'Abaixo de R$ 352,00 você fica no prejuízo' e 'não entrou frete nem o conserto' soam técnicas e confusas; o conserto do tampo é detalhe dito por ele e ficou sem valor, com explicação pouco clara. Não deixou claro que o prazo de 3 a 5 dias e os 70 de material entraram na conta."
+        },
+        {
+          "turno": 17,
+          "gravidade": "baixa",
+          "classe": "pergunta_confusa",
+          "descricao": "Perguntou a partir de quando ele começa, sendo que ele já tinha dito que vai pegar na terça; ele precisou repetir."
+        },
+        {
+          "turno": 22,
+          "gravidade": "baixa",
+          "classe": "tom",
+          "descricao": "Mensagens do PDF e instruções em várias mensagens seguidas, um pouco robóticas; a repetição de 'quando o cliente responder, me avisa' nos turnos 22 e 25 soa como insistência leve."
+        }
+      ],
+      "resumo": "O objetivo foi atingido: ele recebeu R$ 427,00, concordou e saiu o PDF. Mas o bot perguntou coisas que ele já tinha dito (de quem é cada peça, estado da mesinha, quando começa), fez uma pergunta estranha sobre 'por fora ou por dentro', e a mensagem do valor ficou com aviso técnico de prejuízo e de conserto sem valor. Isso gerou trocas desnecessárias e o conserto do tampo ficou sem preço."
+    },
+    "ms": 89105
+  }
+]
