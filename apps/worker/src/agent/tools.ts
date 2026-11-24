@@ -149,6 +149,7 @@ const FIELDS_SCHEMA = {
     conserto_descricao: s("o que consertar"),
     conserto_horas: n("horas que ele estima para o conserto"),
     altura_cm: n("altura em cm"),
+    comprimento_cm: n("comprimento em cm (o lado maior de mesa/tampo/banco: '1,30 x 60' = comprimento 130, largura 60)"),
     largura_cm: n("largura em cm"),
     fundura_cm: n("fundura/profundidade em cm"),
     diametro_cm: n("diâmetro em cm (mesa redonda)"),
@@ -338,6 +339,13 @@ async function applyFields(t: ToolContext, job: Job, fields: Fields, correction:
 async function applyFieldsInner(t: ToolContext, job: Job, fields: Fields, correction: boolean): Promise<{ saved: string[]; rejected: string[] }> {
   const saved: string[] = [];
   const rejected: string[] = [];
+  // campo que não existe: avisa (antes era descartado em silêncio e a medida sumia)
+  for (const k of Object.keys(fields)) if (!(k in FIELDS_SCHEMA.properties) && fields[k] !== null && fields[k] !== undefined) rejected.push(`campo '${k}' não existe — use um dos campos da lista`);
+  // "1,30 x 60": comprimento é o lado maior (largura do móvel) e a largura dita vira a fundura
+  if (typeof fields.comprimento_cm === "number") {
+    if (typeof fields.largura_cm === "number" && typeof fields.fundura_cm !== "number") fields = { ...fields, fundura_cm: fields.largura_cm };
+    fields = { ...fields, largura_cm: fields.comprimento_cm };
+  }
   const set = async (field: ProjectField, value: unknown, label: string) => {
     const current = job.facts[field]?.value;
     if (current !== undefined && current !== null && JSON.stringify(current) === JSON.stringify(value)) return;
