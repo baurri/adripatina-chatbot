@@ -41,7 +41,8 @@ async function isOpen(ctx: Ctx, p: Proposal, createdAt: string): Promise<boolean
   if (!p.quotes.every((q) => q.status === "APROVADO" || q.status === "ENVIADO")) return false;
   for (const q of p.quotes) {
     const newer = await ctx.db.first(
-      "SELECT 1 FROM quote_snapshots s JOIN quote_documents d ON d.snapshot_id = s.id AND d.kind = 'COMERCIAL' WHERE s.created_at > ? AND s.id <> ? AND EXISTS (SELECT 1 FROM quotes x WHERE x.job_id = ? AND s.snapshot_json LIKE '%' || x.id || '%') LIMIT 1",
+      // só um PDF mais novo VÁLIDO substitui (um com peça cancelada — ex.: fechado por engano — não)
+      "SELECT 1 FROM quote_snapshots s JOIN quote_documents d ON d.snapshot_id = s.id AND d.kind = 'COMERCIAL' WHERE s.created_at > ? AND s.id <> ? AND EXISTS (SELECT 1 FROM quotes x WHERE x.job_id = ? AND s.snapshot_json LIKE '%' || x.id || '%') AND NOT EXISTS (SELECT 1 FROM quotes y WHERE s.snapshot_json LIKE '%' || y.id || '%' AND y.status NOT IN ('APROVADO', 'ENVIADO', 'ACEITO')) LIMIT 1",
       createdAt,
       p.snapshotId,
       q.jobId,

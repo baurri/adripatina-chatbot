@@ -4,7 +4,8 @@ import type { Ctx } from "../context.js";
 import type { AgentMessage, AgentTool, OutgoingMessage } from "../ports.js";
 import { logUsage } from "../ai/service.js";
 import { answerFollowup } from "../services/followup.js";
-import { loadSession, saveSession } from "../repos/sessions.js";
+import { loadSession, saveSession, type DataCollectionState } from "../repos/sessions.js";
+import { interpretForState } from "../conversation/data-collection-flow.js";
 import { getJob, jobPhrase, listActiveJobs } from "../repos/jobs.js";
 import type { EngineInput } from "../conversation/engine.js";
 import { AGENT_TOOLS, executePending, queueInfo, runTool, type AgentState, type ToolContext } from "./tools.js";
@@ -298,6 +299,14 @@ export interface AgentRunResult {
   out: OutgoingMessage[];
 }
 
+const QUOTE_BUTTONS: Record<string, string> = { c: "Concordo com o valor", d: "Quero dar um desconto", a: "Quero acrescentar um valor" };
+
+/** Resposta fixa a um botão de orçamento que já ficou pra trás. */
+export function staleButtonText(state: AgentState): string {
+  if (!state.presented && state.closed?.length) return "Esse orçamento já foi fechado, o PDF está aqui em cima. 🙂 Se quiser mudar alguma coisa, é só me falar.";
+  return "Esse botão é de um valor antigo, que já mudou. 🙂 Use os botões da mensagem mais nova ou me fala o que quer fazer.";
+}
+
 /** Uma mensagem (ou botão) do usuário → respostas. Null = o motor antigo deve tratar. */
 export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMessage[] | null> {
   const model = ctx.ai.agent;
@@ -309,7 +318,18 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   }
   const session = await loadSession(ctx, input.user.id);
   // pergunta proativa aguardando resposta: o fluxo dela (estruturado) responde
-  if (session.flow === "data_collection") return null;
+  if (session.flow === "data_collection") {
+    // só a RESPOSTA à pergunta vai pro fluxo dela; outro assunto ("Bom dia, o Seu Roberto quer mudar
+    // o orçamento") vem pro agente — antes ganhava "Tudo certo por aqui, valeu!" e se perdia
+    const dc = (session.context as { dataCollection?: DataCollectionState }).dataCollection;
+    const words = normalizeText(input.text).split(" ").filter(Boolean).length;
+    const answers = input.kind === "callback" || !dc || interpretForState(dc, input.text).kind !== "unparsed" || words <= 5;
+    if (answers) return null;
+    delete (session.context as { dataCollection?: unknown }).dataCollection;
+    const pq = (session.context as { pendingQuestion?: { type?: string } }).pendingQuestion;
+    if (pq?.type === "data_request") delete (session.context as { pendingQuestion?: unknown }).pendingQuestion;
+    session.flow = "idle";
+  }
   if (input.kind === "photo" && session.flow === "quote_material_pricing") return null;
   const state = ((session.context as { agent?: AgentState }).agent ??= {});
   const out: OutgoingMessage[] = [];
@@ -332,10 +352,20 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
         const result = await safeExecute(ctx, input.user, p);
         userText = `[confirmou no botão: ${p.summary} → ${result}]`;
       } else userText = `[não confirmou: ${p.summary}]`;
-    } else if (action === "btn") {
-      userText = decodeURIComponent(input.text.slice("ag:btn:".length));
+    } else if (action === "q" || action === "btn") {
+      // botões do orçamento mostrado. "ag:q:<turno>:<c|d|a>" diz de QUAL valor é; botão de mensagem velha
+      // (valor que já mudou ou orçamento já fechado) não fecha nada (24/11: um "Concordo" velho fechou
+      // R$ 1.459 sem o desconto em cima do PDF certo de R$ 1.240,15)
+      const label = action === "q" ? QUOTE_BUTTONS[input.text.split(":")[3] ?? ""] : decodeURIComponent(input.text.slice("ag:btn:".length));
+      const p = state.presented;
+      if (!label || !p || (action === "q" && p.turn !== Number(arg))) {
+        out.push({ text: staleButtonText(state) });
+        await saveSession(ctx, session);
+        return out;
+      }
+      userText = label;
       // tocou "Concordo": o valor está aceito; com o prazo, fecha direto (sem reconfirmar)
-      if (/^Concordo/.test(userText) && state.presented) state.presented.accepted = true;
+      if (/^Concordo/.test(userText)) p.accepted = true;
     }
   } else if (state.pending) {
     // "sim"/"não" digitado com uma ação esperando confirmação
@@ -431,10 +461,11 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     // conferência da resposta: nenhum número que não veio das ferramentas, do estado ou dele
     const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...(nPhotos ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
     const invented = numbersIn(finalText).filter((x) => !grounded(x, allowed));
-    const tone = toneIssues(finalText, 4);
-    if (/\bsistema\b|\bmarca[cç](ao|ão)\b|\bferramenta\b/i.test(finalText)) tone.push('palavras de sistema ("sistema", "marcação", "ferramenta")');
     // acessibilidade: mensagem comprida cansa; só o orçamento (que traz valores) pode ser maior
     const showedQuote = toolResults.some((r) => r.includes("mensagem_pronta"));
+    // a mensagem pronta do orçamento tem um emoji por linha (🧮💰⚠️🛒⏱️🤝): não reescreve por isso
+    const tone = toneIssues(finalText, showedQuote ? 9 : 4);
+    if (/\bsistema\b|\bmarca[cç](ao|ão)\b|\bferramenta\b/i.test(finalText)) tone.push('palavras de sistema ("sistema", "marcação", "ferramenta")');
     if (finalText.length > (showedQuote ? 700 : 380)) tone.push("texto comprido (deixe bem mais curta: no máximo 3 frases curtas e uma pergunta)");
     if (finalText && (invented.length || tone.length)) {
       messages.push({ role: "assistant", content: finalText });
@@ -477,10 +508,11 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
       { text: "✏️ Não", data: `ag:no:${state.pending.id}` },
     ]);
   } else if (t.effects.presentedQuote && state.presented) {
-    buttons.push([{ text: "👍 Concordo", data: `ag:btn:${encodeURIComponent("Concordo com o valor")}` }]);
+    const q = `ag:q:${state.presented.turn}`;
+    buttons.push([{ text: "👍 Concordo", data: `${q}:c` }]);
     buttons.push([
-      { text: "➖ Dar desconto", data: `ag:btn:${encodeURIComponent("Quero dar um desconto")}` },
-      { text: "➕ Acrescentar", data: `ag:btn:${encodeURIComponent("Quero acrescentar um valor")}` },
+      { text: "➖ Dar desconto", data: `${q}:d` },
+      { text: "➕ Acrescentar", data: `${q}:a` },
     ]);
   }
   out.push(buttons.length ? { text: finalText.replace(/\n{3,}/g, "\n\n"), buttons } : { text: finalText.replace(/\n{3,}/g, "\n\n") });

@@ -166,3 +166,16 @@ Motivo: o fechamento já era bom; o que pesava era o caminho (perguntas repetida
   - Horas da peça toda = horas_artesao, nunca horas_extra; conserto em dias não vira dias × 8 h.
   - "Ainda tô vendo a agenda": o bot oferece "prazo a combinar" em vez de travar o PDF.
   - Resultado: falas do Adriano até o PDF caíram de ~10 para ~6 nos casos reais; casos que travavam (porta, oratório, puxadores) fecham em 3–7 falas.
+
+## D-082 — Um fechamento certo por vez (2026-11-24)
+
+Caso real (Seu Roberto, 24/11): três PDFs no mesmo dia. O último (AP-0010) saiu **sem o desconto de 15% e com o prazo antigo**, porque um toque em "Concordo" de uma mensagem anterior chegou 1 s depois do fechamento certo (AP-0009) e fechou de novo. Como o PDF mais novo substitui o anterior, o errado ficou valendo.
+
+- **Uma mensagem por vez por artesão** (`user_locks`, migração 0010): a segunda espera a primeira terminar e já vê o estado novo. Acaba com a resposta dupla quando texto e botão chegam juntos.
+- **Botões do orçamento carimbados** (`ag:q:<turno>:c|d|a`): botão de um valor que mudou ou de um orçamento já fechado ganha resposta fixa ("Esse orçamento já foi fechado…"), sem Claude e sem fechar nada.
+- **O desconto dado continua valendo**: se o valor das mesmas peças é refeito, a mensagem mostra "Com o desconto de 15% que você deu: R$ X". Fechar sem valor com um desconto combinado é recusado (`sem_ajuste: true` só se ele desistiu). Se as peças mudaram, o bot pergunta se o desconto vale pro conjunto novo.
+- **Prazo de outra conversa** (anotado há mais de 6 h) é confirmado antes de ir pro PDF (`prazo_confirmado`).
+- **Pergunta proativa aberta** (estoque/preço) não engole outro assunto: "Bom dia, o Seu Roberto quer mudar os orçamentos" vai pro agente, e não para o "Tudo certo por aqui" do fluxo antigo.
+- A mensagem pronta do orçamento (um emoji por linha) não é mais reescrita por "emojis demais"; antes toda mensagem de valor era reescrita.
+- "O cliente respondeu?" (D-081): só um PDF mais novo **válido** substitui o anterior (um com peça cancelada não).
+- Dados corrigidos: AP-0009 (R$ 1.240,15, começa já, ~10 dias, 08/12) voltou a ser o válido; a versão do rack só do AP-0010 foi cancelada e o prazo das 3 peças restaurado (registro em `audit_events`, `quote.data_fix`).

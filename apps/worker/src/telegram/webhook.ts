@@ -98,14 +98,45 @@ async function route(ctx: Ctx, update: TelegramUpdate): Promise<WebhookOutcome> 
 }
 
 async function deliver(ctx: Ctx, user: User, chatId: string, input: EngineInput): Promise<WebhookOutcome> {
-  const replies = await handleConversation(ctx, input);
-  const session = await loadSession(ctx, user.id);
-  for (const r of replies) {
-    if (r.document) await ctx.telegram.sendDocument(chatId, r.document.filename, r.document.bytes, r.document.caption);
-    else await ctx.telegram.sendMessage(chatId, r.text, r.buttons);
-    await logMessage(ctx, { sessionId: session.id, userId: user.id, jobId: session.activeJobId, direction: "out", kind: "text", text: r.text });
+  // uma mensagem por vez por artesão: a segunda espera a primeira terminar e já vê o estado novo
+  // (antes: texto + botão juntos davam duas respostas; botão velho fechava em cima do recém-fechado)
+  const token = await acquireUserLock(ctx, user.id);
+  try {
+    const replies = await handleConversation(ctx, input);
+    const session = await loadSession(ctx, user.id);
+    for (const r of replies) {
+      if (r.document) await ctx.telegram.sendDocument(chatId, r.document.filename, r.document.bytes, r.document.caption);
+      else await ctx.telegram.sendMessage(chatId, r.text, r.buttons);
+      await logMessage(ctx, { sessionId: session.id, userId: user.id, jobId: session.activeJobId, direction: "out", kind: "text", text: r.text });
+    }
+    return "ok";
+  } finally {
+    if (token) await ctx.db.run("DELETE FROM user_locks WHERE user_id = ? AND token = ?", user.id, token).catch(() => undefined);
   }
-  return "ok";
+}
+
+export const userLock = { ttlMs: 90_000, waitMs: 60_000, pollMs: 400 };
+
+/** Trava por artesão (D1). Espera a anterior até waitMs; se não conseguir, segue sem trava (nunca deixa sem resposta). */
+async function acquireUserLock(ctx: Ctx, userId: string): Promise<string | null> {
+  const token = crypto.randomUUID();
+  const deadline = Date.now() + userLock.waitMs;
+  for (;;) {
+    const now = Date.now();
+    const got = await ctx.db
+      .run(
+        "INSERT INTO user_locks (user_id, until_ms, token) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET until_ms = excluded.until_ms, token = excluded.token WHERE user_locks.until_ms < ?",
+        userId,
+        now + userLock.ttlMs,
+        token,
+        now,
+      )
+      .catch(() => -1);
+    if (got === -1) return null; // tabela ausente/erro: não trava
+    if (got > 0) return token;
+    if (Date.now() > deadline) return null;
+    await new Promise((r) => setTimeout(r, userLock.pollMs));
+  }
 }
 
 async function handleVoice(ctx: Ctx, user: User, chatId: string, msg: TelegramMessage, updateId: number, sessionId: string, jobId: string | null): Promise<WebhookOutcome> {

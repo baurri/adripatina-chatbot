@@ -109,7 +109,7 @@ describe("motor novo (D-075): travas do código", () => {
     ]);
     const r1 = await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
     expect(String(closeSameTurn.erro)).toMatch(/ainda não respondeu/);
-    expect(buttonsOf(r1.at(-1))).toEqual(expect.arrayContaining([expect.stringMatching(/^ag:btn:/)]));
+    expect(buttonsOf(r1.at(-1))).toEqual(expect.arrayContaining([expect.stringMatching(/^ag:(btn|q):/)]));
     h.telegram.clear();
     await h.send("concordo");
     expect(h.telegram.sent.some((s) => s.kind === "document")).toBe(true);
@@ -536,5 +536,129 @@ describe("excelência: extras não duplicam", () => {
     expect(sameItem("Trocar puxadores", "Troca dos puxadores")).toBe(true);
     expect(sameItem("veludo", "cola de contato")).toBe(false);
     expect(sameItem("Trabalho extra", "trabalho de entalhe")).toBe(false);
+  });
+});
+
+describe("24/11 (Seu Roberto): botão velho, desconto, prazo antigo, uma mensagem por vez", () => {
+  const mesa = { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false } };
+  const MSG = "mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca, começa já e leva 3 dias, 10% de desconto";
+
+  it("botão de um orçamento já fechado não fecha de novo (resposta fixa, sem Claude)", async () => {
+    let jobId = "";
+    const { h, agent } = await setup([
+      () => tool("criar_servico", mesa),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("anotar", { servico_id: jobId, campos: { prazo_inicio: "já", prazo_duracao: "3 dias" } });
+      },
+      () => tool("calcular_orcamento", { servico_ids: [jobId] }),
+      () => say("Concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: [jobId] }),
+      () => say("Fechado ✅"),
+    ]);
+    const r1 = await h.send(MSG);
+    const btn = buttonsOf(r1.at(-1)).find((d) => d.endsWith(":c"))!;
+    expect(btn).toMatch(/^ag:q:\d+:c$/);
+    await h.send("pode fechar");
+    const docs = (await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quote_documents WHERE kind = 'COMERCIAL'"))!.n;
+    expect(docs).toBe(1);
+    const calls = agent.calls.length;
+    const r = h.allText(await h.click(btn));
+    expect(r).toMatch(/já foi fechado/);
+    expect(agent.calls.length).toBe(calls);
+    expect((await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quote_documents WHERE kind = 'COMERCIAL'"))!.n).toBe(1);
+  });
+
+  it("botão de um valor que mudou (recalculado depois) não vale", async () => {
+    const { staleButtonText } = await import("../src/agent/engine.js");
+    expect(staleButtonText({ presented: { jobIds: [], quoteIds: [], turn: 3, baseCents: 1, floorCents: null } })).toMatch(/valor antigo/);
+  });
+
+  it("desconto dado continua valendo quando o valor é refeito; fechar sem valor não perde o desconto", async () => {
+    let jobId = "";
+    let recalc: Record<string, unknown> = {};
+    let closeTry: Record<string, unknown> = {};
+    const { h } = await setup([
+      () => tool("criar_servico", mesa),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      () => say("Concorda? 🤝"),
+      () => tool("simular_ajuste", { servico_ids: [jobId], desconto_pct: 10 }),
+      () => say("Com 10% fica menos. Fecho assim?"),
+      () => tool("calcular_orcamento", { servico_ids: [jobId] }),
+      (m) => {
+        recalc = lastToolResult(m);
+        return say(String(recalc.mensagem_pronta));
+      },
+      () => tool("fechar_orcamento", { servico_ids: [jobId] }),
+      (m) => {
+        closeTry = lastToolResult(m);
+        return say("ok");
+      },
+    ]);
+    await h.send(MSG);
+    await h.send("dá 10% de desconto");
+    await h.send("refaz a conta");
+    expect(String(recalc.mensagem_pronta)).toMatch(/Com o desconto de 10% que você deu: R\$/);
+    await h.send("concordo");
+    expect(closeTry.erro, JSON.stringify(closeTry)).toMatch(/ajuste/);
+    expect(String(closeTry.valor_com_ajuste)).toMatch(/R\$/);
+  });
+
+  it("prazo anotado em outra conversa (horas antes) é confirmado antes do PDF", async () => {
+    let jobId = "";
+    let closeTry: Record<string, unknown> = {};
+    const { h } = await setup([
+      () => tool("criar_servico", mesa),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("anotar", { servico_id: jobId, campos: { prazo_inicio: "já", prazo_duracao: "3 dias" } });
+      },
+      () => say("Anotado"),
+      () => tool("calcular_orcamento", { servico_ids: [jobId] }),
+      () => say("Concorda?"),
+      () => tool("fechar_orcamento", { servico_ids: [jobId] }),
+      (m) => {
+        closeTry = lastToolResult(m);
+        return tool("fechar_orcamento", { servico_ids: [jobId], prazo_confirmado: true });
+      },
+      () => say("Fechado ✅"),
+    ]);
+    await h.send(MSG);
+    h.advance(0.5); // 12 horas depois
+    await h.send("faz a conta da mesa");
+    await h.send("concordo");
+    expect(closeTry.erro).toMatch(/prazo anotado em outra conversa/);
+    expect((await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quote_documents WHERE kind = 'COMERCIAL'"))!.n).toBe(1);
+  });
+
+  it("duas mensagens juntas: uma espera a outra (o turno conta 2, sem uma sobrescrever a outra)", async () => {
+    const { h } = await setup([() => say("Oi! 🙂"), () => say("Tudo certo 🙂")]);
+    await Promise.all([h.send("oi"), h.send("tudo bem?")]);
+    const s = await h.ctx.db.first<{ context_json: string }>("SELECT context_json FROM conversation_sessions");
+    expect((JSON.parse(s!.context_json) as { agent?: { turn?: number } }).agent?.turn).toBe(2);
+    expect((await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM user_locks"))!.n).toBe(0);
+  });
+});
+
+describe("24/11: pergunta proativa aberta e outro assunto", () => {
+  it("'Bom dia, o Seu Roberto quer mudar os orçamentos' vai pro agente (não 'Tudo certo por aqui'); resposta curta continua no fluxo da pergunta", async () => {
+    const { h, agent } = await setup([() => say("Bora! O que ele quer mudar? 🙂")]);
+    await h.send("oi");
+    const setFlow = async () => {
+      const s = (await h.ctx.db.first<{ id: string; context_json: string }>("SELECT id, context_json FROM conversation_sessions"))!;
+      const c = JSON.parse(s.context_json) as Record<string, unknown>;
+      c.dataCollection = { requestId: "r1", expecting: "primary", kind: "stock_quantity" };
+      await h.ctx.db.run("UPDATE conversation_sessions SET flow = 'data_collection', context_json = ? WHERE id = ?", JSON.stringify(c), s.id);
+    };
+    await setFlow();
+    const calls = agent.calls.length;
+    const r = h.allText(await h.send("Bom dia, o senhor Roberto quer mudar os orçamentos do rack e do aparador"));
+    expect(agent.calls.length).toBeGreaterThan(calls);
+    expect(r).not.toMatch(/Tudo certo por aqui/);
+    const s = await h.ctx.db.first<{ flow: string }>("SELECT flow FROM conversation_sessions");
+    expect(s!.flow).toBe("idle");
   });
 });

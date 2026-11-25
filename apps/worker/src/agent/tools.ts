@@ -50,7 +50,32 @@ export interface AgentState {
   siblingsAskedTurn?: number;
   /** valores calculados por simular_ajuste (em reais) — podem ser usados no fechamento */
   simulated?: number[];
+  /** último desconto/acréscimo que ele deu (simular_ajuste): segue valendo se o valor for refeito com as mesmas peças */
+  adjustment?: { jobIds: string[]; kind: AdjustKind; value: number };
 }
+
+export type AdjustKind = "desconto_pct" | "desconto_reais" | "acrescimo_reais" | "valor_final_reais";
+
+/** Valor final de um ajuste sobre a sugestão (centavos). */
+export function applyAdjustment(baseCents: number, kind: AdjustKind, value: number): number {
+  if (kind === "valor_final_reais") return Math.round(value * 100);
+  if (kind === "desconto_pct") return Math.round(baseCents * (1 - value / 100));
+  if (kind === "desconto_reais") return baseCents - Math.round(value * 100);
+  return baseCents + Math.round(value * 100);
+}
+
+export function describeAdjustment(kind: AdjustKind, value: number): string {
+  const v = String(value).replace(".", ",");
+  if (kind === "desconto_pct") return `desconto de ${v}%`;
+  if (kind === "desconto_reais") return `desconto de ${formatBRL(Math.round(value * 100))}`;
+  if (kind === "acrescimo_reais") return `acréscimo de ${formatBRL(Math.round(value * 100))}`;
+  return `valor combinado de ${formatBRL(Math.round(value * 100))}`;
+}
+
+const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+
+/** prazo anotado há mais que isso (ex.: na conversa de ontem) é confirmado antes de ir pro PDF */
+export const STALE_DEADLINE_MS = 6 * 3600 * 1000;
 
 export interface ToolContext {
   ctx: Ctx;
@@ -286,6 +311,8 @@ export const AGENT_TOOLS: AgentTool[] = [
         valor_final_reais: n("total final que ele decidiu (omita se concordou com a sugestão)"),
         motivo_ajuste: s("ex.: 'frete' quando ele acrescenta"),
         confirmou_abaixo_do_minimo: b("ele confirmou que quer cobrar abaixo do mínimo"),
+        sem_ajuste: b("ele desistiu do desconto/acréscimo que tinha dado e quer a sugestão cheia"),
+        prazo_confirmado: b("ele confirmou AGORA que o prazo anotado antes (em outra conversa) continua valendo"),
       },
       required: ["servico_ids"],
     },
@@ -1059,7 +1086,29 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         if (sinceShown) {
           lines.splice(lines.length - 2, 0, "", `🔄 Antes deu ${sinceShown.antes}; mudou porque ${sinceShown.o_que_mudou.length ? `anotei: ${sinceShown.o_que_mudou.join("; ")}` : "a conta foi refeita"}.`);
         }
-        return { itens: items, total_sugerido: reais(base), material_a_comprar_total: reais(buy), mudou_desde_o_ultimo_pdf: changes, ...(sinceShown ? { mudou_desde_o_valor_mostrado: sinceShown } : {}), mensagem_pronta: lines.join("\n"), proximo_passo: "Responda com a mensagem_pronta (pode trocar uma palavra ou outra, mas sem tirar nem pôr números e sem outra pergunta)." };
+        // desconto/acréscimo que ele já deu nessas MESMAS peças continua valendo na conta nova
+        const adj = t.state.adjustment;
+        let combinado: { ajuste: string; valor_final: string; abaixo_do_minimo: boolean } | null = null;
+        if (adj && sameSet(adj.jobIds, ids)) {
+          const fin = applyAdjustment(base, adj.kind, adj.value);
+          combinado = { ajuste: describeAdjustment(adj.kind, adj.value), valor_final: formatBRL(fin), abaixo_do_minimo: floor !== null && fin < floor };
+          t.state.simulated = [...(t.state.simulated ?? []), fin / 100].slice(-6);
+          lines.splice(lines.length - 2, 0, "", `Com o ${combinado.ajuste} que você deu: ${combinado.valor_final}.`);
+          lines[lines.length - 1] = "Fecho assim, com o ajuste? 🤝";
+        } else if (adj) t.state.adjustment = undefined; // outras peças: o ajuste antigo não vale sozinho
+        return {
+          itens: items,
+          total_sugerido: reais(base),
+          material_a_comprar_total: reais(buy),
+          mudou_desde_o_ultimo_pdf: changes,
+          ...(sinceShown ? { mudou_desde_o_valor_mostrado: sinceShown } : {}),
+          ...(combinado ? { ajuste_ja_combinado: combinado } : {}),
+          ...(adj && !combinado ? { ajuste_anterior_era_de_outras_pecas: describeAdjustment(adj.kind, adj.value) } : {}),
+          mensagem_pronta: lines.join("\n"),
+          proximo_passo: adj && !combinado
+            ? `Responda com a mensagem_pronta, mas troque a pergunta final por esta: ele tinha dado ${describeAdjustment(adj.kind, adj.value)} quando eram outras peças — vale pra esse conjunto também? (sem tirar nem pôr números)`
+            : "Responda com a mensagem_pronta (pode trocar uma palavra ou outra, mas sem tirar nem pôr números e sem outra pergunta).",
+        };
       }
       return { itens: items, proximo_passo: "Ainda falta informação: pergunte UMA coisa por vez." };
     }
@@ -1124,10 +1173,11 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
         if (v !== undefined && !ok(v, t)) return { erro: `${k}=${v} não foi dito por ele — pergunte` };
       }
       let final = base;
-      if (num("valor_final_reais")) final = Math.round(num("valor_final_reais")! * 100);
-      else if (num("desconto_pct")) final = Math.round(base * (1 - num("desconto_pct")! / 100));
-      else if (num("desconto_reais")) final = base - Math.round(num("desconto_reais")! * 100);
-      else if (num("acrescimo_reais")) final = base + Math.round(num("acrescimo_reais")! * 100);
+      const kind = (["valor_final_reais", "desconto_pct", "desconto_reais", "acrescimo_reais"] as const).find((k) => num(k) !== undefined);
+      if (kind) {
+        final = applyAdjustment(base, kind, num(kind)!);
+        t.state.adjustment = { jobIds: [...p.jobIds], kind, value: num(kind)! };
+      }
       t.state.simulated = [...(t.state.simulated ?? []), final / 100].slice(-6);
       return { sugestao: formatBRL(base), valor_final: formatBRL(final), diferenca: formatBRL(Math.abs(final - base)), abaixo_do_minimo: p.floorCents !== null && final < p.floorCents, minimo: reais(p.floorCents), proximo_passo: "Diga o valor final e pergunte se fecha assim (se abaixo do mínimo, avise que dá prejuízo)." };
     }
@@ -1137,10 +1187,21 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       if (!p || !ids.length || ids.some((id) => !p.jobIds.includes(id))) return { erro: "calcule e mostre o orçamento antes (calcular_orcamento)" };
       if (p.turn >= t.turn) return { erro: "ele ainda não respondeu ao valor: mostre e pergunte se concorda; feche só depois da resposta" };
       if (p.stale) return { erro: "depois do valor mostrado ele acrescentou ou mudou coisas", o_que_mudou: [...new Set(p.changed ?? [])].slice(0, 6), proximo_passo: "Calcule de novo (calcular_orcamento), mostre o NOVO valor dizendo numa frase o que mudou (o_que_mudou) e pergunte se fecha assim." };
+      // desconto/acréscimo que ele deu nessas peças: fechar sem valor perderia o ajuste
+      const adj = t.state.adjustment;
+      if (adj && sameSet(adj.jobIds, p.jobIds) && typeof a.valor_final_reais !== "number" && a.sem_ajuste !== true) {
+        const fin = applyAdjustment(p.baseCents, adj.kind, adj.value);
+        return { erro: "ele deu um ajuste nessas peças", ajuste: describeAdjustment(adj.kind, adj.value), valor_com_ajuste: formatBRL(fin), proximo_passo: `Feche com valor_final_reais = ${(fin / 100).toFixed(2)} (o valor com o ajuste). Só use sem_ajuste: true se ele disse que desistiu do desconto/acréscimo.` };
+      }
       // prazo é crítico (ele tem fila de serviços): nunca vai pro PDF um prazo que ele não deu
       for (const id of ids) {
         const j = await getJob(t.ctx, id);
         if (j && !j.facts.deadline?.value) return { erro: "falta o prazo", proximo_passo: "Antes de fechar, pergunte QUANDO ele consegue começar (ex.: 'daqui a 2 semanas') e quanto tempo leva — ou quando fica pronto pro cliente. Anote em prazo_inicio + prazo_duracao, ou prazo_entrega, e depois feche. Se o ESTADO ATUAL tiver fila_de_servicos com livre_a_partir_de, proponha o início com base nela." };
+        // prazo de outra conversa (ex.: ontem, para outro conjunto de peças): confirma antes de ir pro PDF
+        const at = Date.parse(j?.facts.deadline?.updatedAt ?? "");
+        if (j && a.prazo_confirmado !== true && Number.isFinite(at) && t.ctx.clock().getTime() - at > STALE_DEADLINE_MS) {
+          return { erro: "prazo anotado em outra conversa", prazo_anotado: j.facts.deadline?.value, proximo_passo: "Pergunte numa frase se esse prazo continua valendo (diga o prazo). Se ele disser que sim, feche com prazo_confirmado: true; se der outro, anote o novo (prazo_inicio + prazo_duracao, ou prazo_entrega) e feche." };
+        }
       }
       // várias peças = um orçamento = UM prazo para o conjunto
       if (ids.length > 1) {
@@ -1204,6 +1265,7 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       }
       t.state.closed = closedIds;
       t.state.presented = undefined;
+      t.state.adjustment = undefined;
       t.effects.pdfsSent = pdfs;
       const first = await getJob(t.ctx, p.jobIds[0]!);
       await enqueueOutbox(t.ctx, "notify_admins", { text: `${t.user.displayName} fechou o orçamento ${first?.code ?? ""} (${first?.title ?? ""}${p.jobIds.length > 1 ? ` e mais ${p.jobIds.length - 1}` : ""}) por ${formatBRL(final)}. Sugerido: ${formatBRL(p.baseCents)}${p.floorCents !== null && final < p.floorCents ? ` · ABAIXO do mínimo (${formatBRL(p.floorCents)})` : ""}.` }, `agent-close:${closedIds.join(",").slice(0, 150)}`);
