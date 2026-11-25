@@ -634,6 +634,28 @@ describe("24/11 (Seu Roberto): botão velho, desconto, prazo antigo, uma mensage
     expect((await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quote_documents WHERE kind = 'COMERCIAL'"))!.n).toBe(1);
   });
 
+  it("a previsão de entrega calculada num turno pode ser repetida no seguinte (não é 'número inventado')", async () => {
+    let jobId = "";
+    let date = "";
+    const { h, agent } = await setup([
+      () => tool("criar_servico", mesa),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("anotar", { servico_id: jobId, campos: { prazo_inicio: "já", prazo_duracao: "3 dias" } });
+      },
+      () => say("Prazo anotado 📅"),
+      () => say(`Beleza, não fecho nada agora. Fica pronto por volta de ${date}. 👍`),
+    ]);
+    await h.send(MSG);
+    const job = await h.ctx.db.first<{ facts_json: string }>("SELECT facts_json FROM jobs WHERE id = ?", jobId);
+    date = /por volta de (\d{2}\/\d{2})/.exec(job!.facts_json)?.[1] ?? "";
+    expect(date).toMatch(/^\d{2}\/\d{2}$/);
+    const calls = agent.calls.length;
+    const r = h.allText(await h.send("ainda não combinei o valor"));
+    expect(agent.calls.length).toBe(calls + 1); // sem volta de reescrita
+    expect(r).toContain(date);
+  });
+
   it("duas mensagens juntas: uma espera a outra (o turno conta 2, sem uma sobrescrever a outra)", async () => {
     const { h } = await setup([() => say("Oi! 🙂"), () => say("Tudo certo 🙂")]);
     await Promise.all([h.send("oi"), h.send("tudo bem?")]);

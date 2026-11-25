@@ -459,7 +459,11 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
       }
     }
     // conferência da resposta: nenhum número que não veio das ferramentas, do estado ou dele
-    const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...(nPhotos ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
+    // o que já está anotado nas peças em foco também vale (ex.: a previsão "por volta de 08/12" que a
+    // ferramenta calculou num turno anterior — antes, o bot repetia a data e era mandado desmentir)
+    const factIds = [...new Set([...(state.focus ?? []), ...(state.presented?.jobIds ?? [])])].slice(0, 6);
+    const factText = (await Promise.all(factIds.map((id) => getJob(ctx, id)))).map((j) => (j ? JSON.stringify(j.facts) : "")).join(" ");
+    const allowed = [...groundNumbers(t.userCorpus), ...groundNumbers(toolResults.join(" ")), ...groundNumbers(current), ...groundNumbers(factText),...(nPhotos ? Array.from({ length: 12 }, (_, i) => i + 1) : [])]; // contagens vistas na foto (gavetas, portas) ele vai confirmar
     const invented = numbersIn(finalText).filter((x) => !grounded(x, allowed));
     // acessibilidade: mensagem comprida cansa; só o orçamento (que traz valores) pode ser maior
     const showedQuote = toolResults.some((r) => r.includes("mensagem_pronta"));
