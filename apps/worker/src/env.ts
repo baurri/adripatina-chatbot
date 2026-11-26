@@ -32,6 +32,8 @@ export interface Env {
   AI_CLAUDE_MODEL?: string;
   /** bom dia (07h30) e boa noite (23h10) para o artesão; "false" desliga */
   GREETINGS?: string;
+  /** piadinha do dia quando não há nada pra perguntar; "false" desliga */
+  JOKES?: string;
   /** pacotes de figurinhas (nomes de t.me/addstickers/NOME, separados por vírgula) */
   STICKERS_BOM_DIA?: string;
   STICKERS_BOA_NOITE?: string;
@@ -80,6 +82,7 @@ export const ConfigSchema = z.object({
   /** modelo Claude para texto (usado só se houver ANTHROPIC_API_KEY; a chave fica fora da Config) */
   claudeModel: z.string(),
   greetings: z.boolean(),
+  jokes: z.boolean(),
   stickersMorning: z.array(z.string()),
   stickersNight: z.array(z.string()),
 });
@@ -112,6 +115,7 @@ export function loadConfig(env: Partial<Env>): Config {
     // fora de produção o padrão é só simular — nunca enviar mensagens reais automaticamente
     claudeModel: env.AI_CLAUDE_MODEL || "claude-haiku-5-5",
     greetings: env.GREETINGS !== "false",
+    jokes: env.JOKES !== "false",
     stickersMorning: packList(env.STICKERS_BOM_DIA),
     stickersNight: packList(env.STICKERS_BOA_NOITE),
     proactiveMode: (["off", "dry_run", "live"].includes(env.PROACTIVE_MODE ?? "") ? env.PROACTIVE_MODE : environment === "production" ? "live" : "dry_run") as "off" | "dry_run" | "live",

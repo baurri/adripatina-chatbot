@@ -125,3 +125,63 @@ describe("Bom dia (07h30) e boa noite (23h10)", () => {
     expect(h.telegram.sent.filter((s) => /^Bom dia/.test(s.text ?? ""))).toHaveLength(0);
   });
 });
+
+describe("Piadinha do dia (quando não há nada pra perguntar)", () => {
+  const at = (day: string, hour: number) => new Date(`${day}T${String(hour + 3).padStart(2, "0")}:05:00Z`); // hora de Brasília
+
+  it("uma por dia, no horário sorteado, sem repetir a do dia anterior; nunca no meio de conversa; não sai com pergunta aberta", async () => {
+    const { jokeHour, JOKES } = await import("../src/services/jokes.js");
+    const h = await createHarness();
+    await h.send("/start");
+    const day = "2026-11-17";
+    const hr = jokeHour(day);
+    expect(hr).toBeGreaterThanOrEqual(10);
+    expect(hr).toBeLessThanOrEqual(17);
+    const isJoke = (t?: string) => JOKES.some((j) => (t ?? "").includes(j.text.replace(/^Adriano, /, "")));
+    h.telegram.clear();
+    if (hr > 10) {
+      h.clock.now = at(day, hr - 1);
+      await runScheduled(h.ctx);
+      expect(h.telegram.sent.filter((s) => isJoke(s.text))).toHaveLength(0); // antes da hora do dia
+    }
+    h.clock.now = at(day, hr);
+    await runScheduled(h.ctx);
+    await runScheduled(h.ctx);
+    const first = h.telegram.sent.filter((s) => isJoke(s.text));
+    expect(first).toHaveLength(1);
+    // dia seguinte: outra piada (não repete), mas não se ele acabou de conversar
+    const next = "2026-11-18";
+    h.clock.now = new Date(at(next, jokeHour(next)).getTime() - 30 * 60_000);
+    await h.send("oi");
+    h.clock.now = at(next, jokeHour(next));
+    h.telegram.clear();
+    await runScheduled(h.ctx);
+    expect(h.telegram.sent.filter((s) => isJoke(s.text))).toHaveLength(0);
+    h.clock.now = at(next, 17);
+    await runScheduled(h.ctx);
+    const second = h.telegram.sent.filter((s) => isJoke(s.text));
+    expect(second).toHaveLength(1);
+    expect(second[0]!.text).not.toBe(first[0]!.text);
+  });
+
+  it("sorteio respeita as últimas e dá mais peso às que ele adora", async () => {
+    const { pickJoke, JOKES } = await import("../src/services/jokes.js");
+    expect(pickJoke([], 0)).toBe(0); // "você pinta como eu pinto?" tem o maior peso
+    expect(pickJoke([0], 0)).toBe(1);
+    expect(pickJoke(JOKES.map((_, i) => i), 0)).toBe(0); // todas recentes: volta pro começo
+  });
+
+  it("com pergunta de coleta aberta, não manda piada", async () => {
+    const { jokeHour } = await import("../src/services/jokes.js");
+    const h = await createHarness();
+    await h.send("/start");
+    const u = await h.ctx.db.first<{ id: string }>("SELECT id FROM users WHERE telegram_chat_id IS NOT NULL LIMIT 1");
+    await h.ctx.db.run("INSERT INTO data_collection_requests (id, user_id, need_kind, reason, entity_type, entity_id, entity_key, entity_label, dedupe_key, status, priority, attempts, correlation_id, created_at, updated_at) VALUES ('r1', ?, 'material_price', 'x', 'material', 'm1', 'k', 'lixa', 'd1', 'queued', 1, 0, 'c1', ?, ?)", u!.id, "2026-11-17T00:00:00Z", "2026-11-17T00:00:00Z");
+    h.ctx.config.proactiveMode = "off";
+    h.clock.now = at("2026-11-17", 17);
+    h.telegram.clear();
+    void jokeHour;
+    await runScheduled(h.ctx);
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+});

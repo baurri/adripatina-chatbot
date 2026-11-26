@@ -1,4 +1,5 @@
 import { CONTRACT_WITH_VOICE, groundNumbers, grounded, numbersIn, toneIssues, type Button } from "@adripatina/conversations";
+import { JOKES } from "../services/jokes.js";
 import { normalizeText } from "@adripatina/shared";
 import type { Ctx } from "../context.js";
 import type { AgentMessage, AgentTool, OutgoingMessage } from "../ports.js";
@@ -406,7 +407,11 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
   const photo = input.kind === "photo" ? await loadPhoto(ctx, state, input) : null;
   const nPhotos = photo?.blocks.length ?? 0;
   const what = input.kind === "voice" ? " (áudio transcrito)" : photo ? ` (mandou ${nPhotos > 1 ? `${nPhotos} fotos juntas — olhe todas e responda uma vez só` : "uma foto"}${photo.repeated ? ` — essa mesma foto já estava guardada ${photo.repeated}` : ""}${userText ? "; legenda" : ", sem legenda"})` : "";
-  const current = `ESTADO ATUAL (dados): ${await stateSnapshot(ctx, state)}\n\nMENSAGEM DO ${firstName.toUpperCase() || "ARTESÃO"}${what}: ${userText}`;
+  // piadinha do dia (D-084): a resposta dele vem no clima da brincadeira
+  const jokeHint = JOKES.some((j) => lastBot.includes(j.text.replace(/^Adriano, /, "")))
+    ? `\n\n[A sua última mensagem foi uma piadinha pra animar o dia dele. Responda no mesmo clima, curtinho e bem-humorado (sem puxar trabalho). ${/gatos/.test(lastBot) ? "A resposta da dos gatos: são 4 gatos — um em cada canto, e cada um vê os outros 3." : ""}]`
+    : "";
+  const current = `ESTADO ATUAL (dados): ${await stateSnapshot(ctx, state)}\n\nMENSAGEM DO ${firstName.toUpperCase() || "ARTESÃO"}${what}: ${userText}${jokeHint}`;
   const messages: AgentMessage[] = [...history];
   const last = messages.at(-1);
   const merged = last && last.role === "user" ? `${String(last.content)}\n\n${current}` : current;

@@ -182,3 +182,6 @@ Caso real (Seu Roberto, 24/11): três PDFs no mesmo dia. O último (AP-0010) sai
 
 ## D-083 — Bom dia e boa noite (25/11/2026)
 Todo dia às 07h30 o bot dá bom dia ao artesão e lembra que pode chamá-lo pra fazer orçamento ou consultar coisas de antes; às 23h10 dá boa noite, se oferece pra ajudar e deseja bom descanso. Três textos de cada, sorteados. Uma vez por dia cada (dedupe em `scheduled_reminders`). Cron extra `10 2 * * *` (23h10 de Brasília). Figurinha sorteada antes do texto quando há pacotes em `STICKERS_BOM_DIA` / `STICKERS_BOA_NOITE` (nomes de t.me/addstickers/…, separados por vírgula); sem pacote ou com falha, vai só o texto. `GREETINGS=false` desliga.
+
+## D-084 — Piadinha do dia (25/11/2026)
+Quando não há nada pra perguntar (nenhuma solicitação de dado aberta: estoque e preços em dia), nenhuma pergunta de coleta saiu hoje e não há conversa nas últimas 2 h, o bot manda uma piadinha pra animar o Adriano — no máximo uma por dia, a partir de uma hora sorteada por dia entre 10h e 17h, sem repetir as 4 últimas. As preferidas dele ("você pinta como eu pinto?" e a dos 4 gatos) têm mais peso; as outras são trocadilhos de pinto/pintor, pincel, tinta, verniz e lixa. Quando ele responde, o agente recebe a dica de responder no clima (e a resposta da dos gatos: 4). `JOKES=false` desliga.

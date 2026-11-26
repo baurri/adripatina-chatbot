@@ -684,3 +684,27 @@ describe("24/11: pergunta proativa aberta e outro assunto", () => {
     expect(s!.flow).toBe("idle");
   });
 });
+
+describe("25/11: piadinha do dia", () => {
+  it("a resposta dele à piada dos gatos chega ao agente com a dica do clima e a resposta (4 gatos)", async () => {
+    let seen = "";
+    const { h } = await setup([
+      () => say("Oi! 🙂"),
+      (m) => {
+        seen = JSON.stringify(m.at(-1));
+        return say("Acertou! São 4 gatos 😄");
+      },
+    ]);
+    await h.send("oi");
+    const { loadSession, logMessage } = await import("../src/repos/sessions.js");
+    const u = (await h.ctx.db.first<{ id: string }>("SELECT id FROM users WHERE telegram_chat_id IS NOT NULL LIMIT 1"))!;
+    const s = await loadSession(h.ctx, u.id);
+    h.advance(0.2);
+    await logMessage(h.ctx, { sessionId: s.id, userId: u.id, jobId: null, direction: "out", kind: "text", text: "Adriano, uma sala tem 4 cantos, cada canto tem um gato, cada gato vê 3 gatos. Quantos gatos tem na sala? 🐱🤔" });
+    h.advance(0.01);
+    const r = h.allText(await h.send("12?"));
+    expect(seen).toMatch(/piadinha/);
+    expect(seen).toMatch(/são 4 gatos/);
+    expect(r).toMatch(/4 gatos/);
+  });
+});

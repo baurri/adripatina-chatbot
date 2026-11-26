@@ -9,6 +9,7 @@ import { scanForDuplicates } from "./services/duplicates.js";
 import { runProactiveCollection } from "./services/proactive/job.js";
 import { runQuoteFollowups } from "./services/followup.js";
 import { runGreetings } from "./services/greetings.js";
+import { runJokes } from "./services/jokes.js";
 
 /** Cron (a cada 15 min): outbox, resumo diário idempotente, retenção de mídia, varredura de duplicidades. */
 export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
@@ -39,6 +40,12 @@ export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
   } catch (err) {
     result.proactive = { error: err instanceof Error ? err.name : "unknown" };
     console.error(JSON.stringify({ level: "error", msg: "proactive_failed", error: err instanceof Error ? err.message.slice(0, 200) : "unknown" }));
+  }
+  // piadinha do dia (D-084): depois da coleta — só quando não há nada pra perguntar
+  try {
+    result.jokes = await runJokes(ctx);
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", msg: "jokes_failed", error: err instanceof Error ? err.message.slice(0, 200) : "unknown" }));
   }
   return result;
 }
