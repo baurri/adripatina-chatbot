@@ -9,6 +9,7 @@ import {
   interpretCollectionAnswer,
   isWithinWindow,
   localDayStart,
+  ofArticle,
   parseProactiveSettings,
   rankNeeds,
   scoreNeed,
@@ -154,6 +155,12 @@ describe("política de envio", () => {
   });
 });
 
+  it("artigo pelo primeiro nome antes da barra: do betume/veladura, da lixa", () => {
+    expect(ofArticle("betume/veladura para pátina")).toBe("do");
+    expect(ofArticle("lixa 220")).toBe("da");
+    expect(ofArticle("tinta/esmalte")).toBe("da");
+    expect(ofArticle("verniz")).toBe("do");
+  });
 describe("mensagens", () => {
   const spec = { kind: "material_price" as const, reason: "quote_blocked" as const, subject: "verniz", baseUnit: "L", firstName: "Adriano", greet: true, seed: 0 };
   it("22/23/24. contexto correto, espaçamento e emoji moderado", () => {

@@ -49,7 +49,8 @@ export function emojiFor(kind: NeedKind, subject: string): string {
 
 /** "do verniz" / "da lixa" (heurística simples pelo primeiro substantivo). */
 export function ofArticle(subject: string): string {
-  const first = subject.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  // "betume/veladura para pátina" → "betume" (a barra junta alternativas; vale a primeira)
+  const first = subject.trim().split(/[\s/]+/)[0]?.toLowerCase() ?? "";
   return /a$/.test(first) && !/^(sistema|clima|tema)$/.test(first) ? "da" : "do";
 }
 function theArticle(subject: string): string {
