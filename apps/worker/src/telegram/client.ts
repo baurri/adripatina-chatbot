@@ -42,6 +42,15 @@ export class LiveTelegramClient implements TelegramClient {
     await this.call("answerCallbackQuery", { callback_query_id: callbackQueryId, ...(text ? { text } : {}) });
   }
 
+  async sendSticker(chatId: string, fileId: string): Promise<void> {
+    await this.call("sendSticker", { chat_id: chatId, sticker: fileId });
+  }
+
+  async getStickerSet(name: string): Promise<string[]> {
+    const set = (await this.call("getStickerSet", { name })) as { stickers?: { file_id: string }[] };
+    return (set.stickers ?? []).map((x) => x.file_id);
+  }
+
   async downloadFile(fileId: string, maxBytes: number): Promise<{ bytes: Uint8Array; filePath: string }> {
     const file = (await this.call("getFile", { file_id: fileId })) as { file_path?: string; file_size?: number };
     if (!file.file_path) throw new Error("Arquivo indisponível no Telegram");
@@ -62,7 +71,7 @@ export class MediaTooLargeError extends Error {
 }
 
 export interface SentRecord {
-  kind: "message" | "document" | "callback";
+  kind: "message" | "document" | "callback" | "sticker";
   chatId: string;
   text?: string;
   buttons?: Button[][];
@@ -95,6 +104,16 @@ export class MockTelegramClient implements TelegramClient {
     this.sent.push({ kind: "document", chatId, filename, bytes, ...(caption ? { text: caption } : {}) });
     if (this.log) console.info(`[telegram-mock → ${chatId}] [PDF ${filename}, ${bytes.byteLength} bytes]`);
   }
+  /** testes: pacotes de figurinhas conhecidos */
+  readonly stickerSets = new Map<string, string[]>();
+  async sendSticker(chatId: string, fileId: string): Promise<void> {
+    this.sent.push({ kind: "sticker", chatId, text: fileId });
+  }
+  async getStickerSet(name: string): Promise<string[]> {
+    const s = this.stickerSets.get(name);
+    if (!s) throw new Error("Telegram getStickerSet falhou: STICKERSET_INVALID");
+    return s;
+  }
   async answerCallbackQuery(_id: string, text?: string): Promise<void> {
     this.sent.push({ kind: "callback", chatId: "", ...(text ? { text } : {}) });
   }
@@ -105,7 +124,7 @@ export class MockTelegramClient implements TelegramClient {
     return { bytes: f, filePath: `mock/${fileId}` };
   }
   last(): SentRecord | undefined {
-    return [...this.sent].reverse().find((s) => s.kind !== "callback");
+    return [...this.sent].reverse().find((s) => s.kind !== "callback" && s.kind !== "sticker");
   }
   clear(): void {
     this.sent.length = 0;

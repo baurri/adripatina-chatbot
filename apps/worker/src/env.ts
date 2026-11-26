@@ -30,12 +30,20 @@ export interface Env {
   PROACTIVE_MODE?: string;
   /** modelo Claude para texto quando ANTHROPIC_API_KEY existe (padrão claude-haiku-5-5) */
   AI_CLAUDE_MODEL?: string;
+  /** bom dia (07h30) e boa noite (23h10) para o artesão; "false" desliga */
+  GREETINGS?: string;
+  /** pacotes de figurinhas (nomes de t.me/addstickers/NOME, separados por vírgula) */
+  STICKERS_BOM_DIA?: string;
+  STICKERS_BOA_NOITE?: string;
   // segredos
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   /** com a chave, a parte de TEXTO da IA vai para o Claude (o áudio segue no Workers AI) */
   ANTHROPIC_API_KEY?: string;
 }
+
+/** "t.me/addstickers/Nome, Outro" → ["Nome", "Outro"] */
+const packList = (v?: string) => (v ?? "").split(",").map((x) => x.trim().replace(/^.*addstickers\//, "")).filter(Boolean);
 
 const intStr = (def: number) =>
   z
@@ -71,6 +79,9 @@ export const ConfigSchema = z.object({
   proactiveMode: z.enum(["off", "dry_run", "live"]),
   /** modelo Claude para texto (usado só se houver ANTHROPIC_API_KEY; a chave fica fora da Config) */
   claudeModel: z.string(),
+  greetings: z.boolean(),
+  stickersMorning: z.array(z.string()),
+  stickersNight: z.array(z.string()),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
@@ -100,6 +111,9 @@ export function loadConfig(env: Partial<Env>): Config {
     agentModel: env.AI_AGENT_MODEL ?? env.AI_CLAUDE_MODEL ?? "claude-haiku-5-5",
     // fora de produção o padrão é só simular — nunca enviar mensagens reais automaticamente
     claudeModel: env.AI_CLAUDE_MODEL || "claude-haiku-5-5",
+    greetings: env.GREETINGS !== "false",
+    stickersMorning: packList(env.STICKERS_BOM_DIA),
+    stickersNight: packList(env.STICKERS_BOA_NOITE),
     proactiveMode: (["off", "dry_run", "live"].includes(env.PROACTIVE_MODE ?? "") ? env.PROACTIVE_MODE : environment === "production" ? "live" : "dry_run") as "off" | "dry_run" | "live",
   });
 }

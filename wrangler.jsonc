@@ -24,7 +24,7 @@
   ],
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files" }],
   "ai": { "binding": "AI" },
-  "triggers": { "crons": ["*/15 * * * *"] },
+  "triggers": { "crons": ["*/15 * * * *", "10 2 * * *"] },
   "vars": {
     "ENVIRONMENT": "production",
     "PUBLIC_BASE_URL": "https://adripatina-chatbot.baurri.workers.dev",
@@ -51,7 +51,7 @@
         { "binding": "DB", "database_name": "adripatina-local", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "db/migrations" }
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files-local" }],
-      "triggers": { "crons": ["*/15 * * * *"] },
+      "triggers": { "crons": ["*/15 * * * *", "10 2 * * *"] },
       "vars": {
         "ENVIRONMENT": "local",
         "AI_ENABLED": "false",
@@ -78,7 +78,7 @@
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files-staging" }],
       "ai": { "binding": "AI" },
-      "triggers": { "crons": ["*/15 * * * *"] },
+      "triggers": { "crons": ["*/15 * * * *", "10 2 * * *"] },
       "vars": {
         "ENVIRONMENT": "staging",
         "AI_ENABLED": "false",
@@ -105,7 +105,7 @@
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "adripatina-files" }],
       "ai": { "binding": "AI" },
-      "triggers": { "crons": ["*/15 * * * *"] },
+      "triggers": { "crons": ["*/15 * * * *", "10 2 * * *"] },
       "vars": {
         "ENVIRONMENT": "production",
     "PUBLIC_BASE_URL": "https://adripatina-chatbot.baurri.workers.dev",

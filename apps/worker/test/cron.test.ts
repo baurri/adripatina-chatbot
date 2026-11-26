@@ -62,3 +62,66 @@ describe("Cron, lembretes e retenção", () => {
     expect(h.allText(bad)).toMatch(/Não consegui abrir/);
   });
 });
+
+describe("Bom dia (07h30) e boa noite (23h10)", () => {
+  it("manda uma vez por dia em cada horário, com o lembrete de chamar o assistente", async () => {
+    const { greetingDue } = await import("../src/services/greetings.js");
+    const h = await createHarness();
+    await h.send("/start");
+    h.telegram.clear();
+    h.clock.now = new Date("2026-11-17T10:15:00Z"); // 07:15 — ainda não
+    await runScheduled(h.ctx);
+    expect(h.telegram.sent.filter((s) => /^Bom dia/.test(s.text ?? ""))).toHaveLength(0);
+    h.clock.now = new Date("2026-11-17T10:30:00Z"); // 07:30
+    await runScheduled(h.ctx);
+    h.clock.now = new Date("2026-11-17T10:45:00Z"); // 07:45 — não repete
+    await runScheduled(h.ctx);
+    const morning = h.telegram.sent.filter((s) => /^Bom dia/.test(s.text ?? ""));
+    expect(morning).toHaveLength(1);
+    expect(morning[0]!.text).toMatch(/or[çc]amento/);
+    h.clock.now = new Date("2026-11-18T02:10:00Z"); // 23:10 do dia 17
+    await runScheduled(h.ctx);
+    h.clock.now = new Date("2026-11-18T02:15:00Z"); // 23:15 — não repete
+    await runScheduled(h.ctx);
+    const night = h.telegram.sent.filter((s) => /^Boa noite/.test(s.text ?? ""));
+    expect(night).toHaveLength(1);
+    expect(night[0]!.text).toMatch(/descans/i);
+    expect(night[0]!.text).toMatch(/me chamar|me manda|ajuda/);
+    expect(h.telegram.sent.some((s) => s.kind === "sticker")).toBe(false); // sem pacote, sem figurinha
+    expect(greetingDue(new Date("2026-11-18T02:09:00Z"))).toBeNull();
+    // dia seguinte, de novo
+    h.clock.now = new Date("2026-11-18T10:30:00Z");
+    await runScheduled(h.ctx);
+    expect(h.telegram.sent.filter((s) => /^Bom dia/.test(s.text ?? ""))).toHaveLength(2);
+  });
+
+  it("com pacote de figurinhas, vai uma figurinha sorteada antes do texto; pacote inválido não impede o texto", async () => {
+    const h = await createHarness();
+    await h.send("/start");
+    h.telegram.clear();
+    h.telegram.stickerSets.set("BomDiaPack", ["stk1", "stk2"]);
+    h.ctx.config.stickersMorning = ["BomDiaPack"];
+    h.ctx.config.stickersNight = ["NaoExiste"];
+    h.clock.now = new Date("2026-11-17T10:30:00Z");
+    await runScheduled(h.ctx);
+    const i = h.telegram.sent.findIndex((s) => s.kind === "sticker");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(["stk1", "stk2"]).toContain(h.telegram.sent[i]!.text);
+    expect(h.telegram.sent[i + 1]!.text).toMatch(/^Bom dia/);
+    h.telegram.clear();
+    h.clock.now = new Date("2026-11-18T02:10:00Z");
+    await runScheduled(h.ctx);
+    expect(h.telegram.sent.some((s) => s.kind === "sticker")).toBe(false);
+    expect(h.telegram.sent.filter((s) => /^Boa noite/.test(s.text ?? ""))).toHaveLength(1);
+  });
+
+  it("dá pra desligar (GREETINGS=false)", async () => {
+    const h = await createHarness();
+    await h.send("/start");
+    h.telegram.clear();
+    h.ctx.config.greetings = false;
+    h.clock.now = new Date("2026-11-17T10:30:00Z");
+    await runScheduled(h.ctx);
+    expect(h.telegram.sent.filter((s) => /^Bom dia/.test(s.text ?? ""))).toHaveLength(0);
+  });
+});

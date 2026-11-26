@@ -8,6 +8,7 @@ import { listActiveJobs } from "./repos/jobs.js";
 import { scanForDuplicates } from "./services/duplicates.js";
 import { runProactiveCollection } from "./services/proactive/job.js";
 import { runQuoteFollowups } from "./services/followup.js";
+import { runGreetings } from "./services/greetings.js";
 
 /** Cron (a cada 15 min): outbox, resumo diário idempotente, retenção de mídia, varredura de duplicidades. */
 export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
@@ -24,6 +25,12 @@ export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
     } catch (err) {
       console.error(JSON.stringify({ level: "error", msg: "followups_failed", error: err instanceof Error ? err.message.slice(0, 200) : "unknown" }));
     }
+  }
+  // bom dia (07h30) e boa noite (23h10) — isolado como a coleta
+  try {
+    result.greetings = await runGreetings(ctx);
+  } catch (err) {
+    console.error(JSON.stringify({ level: "error", msg: "greetings_failed", error: err instanceof Error ? err.message.slice(0, 200) : "unknown" }));
   }
   // coleta proativa: isolada — uma falha aqui nunca interrompe o restante do cron nem o bot
   try {

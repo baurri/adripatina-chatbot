@@ -179,3 +179,6 @@ Caso real (Seu Roberto, 24/11): três PDFs no mesmo dia. O último (AP-0010) sai
 - A mensagem pronta do orçamento (um emoji por linha) não é mais reescrita por "emojis demais"; antes toda mensagem de valor era reescrita.
 - "O cliente respondeu?" (D-081): só um PDF mais novo **válido** substitui o anterior (um com peça cancelada não).
 - Dados corrigidos: AP-0009 (R$ 1.240,15, começa já, ~10 dias, 08/12) voltou a ser o válido; a versão do rack só do AP-0010 foi cancelada e o prazo das 3 peças restaurado (registro em `audit_events`, `quote.data_fix`).
+
+## D-083 — Bom dia e boa noite (25/11/2026)
+Todo dia às 07h30 o bot dá bom dia ao artesão e lembra que pode chamá-lo pra fazer orçamento ou consultar coisas de antes; às 23h10 dá boa noite, se oferece pra ajudar e deseja bom descanso. Três textos de cada, sorteados. Uma vez por dia cada (dedupe em `scheduled_reminders`). Cron extra `10 2 * * *` (23h10 de Brasília). Figurinha sorteada antes do texto quando há pacotes em `STICKERS_BOM_DIA` / `STICKERS_BOA_NOITE` (nomes de t.me/addstickers/…, separados por vírgula); sem pacote ou com falha, vai só o texto. `GREETINGS=false` desliga.

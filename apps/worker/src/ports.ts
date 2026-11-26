@@ -16,6 +16,10 @@ export interface TelegramClient {
   answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void>;
   /** Baixa um arquivo pelo file_id. */
   downloadFile(fileId: string, maxBytes: number): Promise<{ bytes: Uint8Array; filePath: string }>;
+  /** Figurinha pelo file_id. */
+  sendSticker?(chatId: string, fileId: string): Promise<void>;
+  /** file_ids das figurinhas de um pacote público (t.me/addstickers/NOME). */
+  getStickerSet?(name: string): Promise<string[]>;
 }
 
 /** Subconjunto do R2 usado pelo sistema (o binding R2Bucket satisfaz). */
