@@ -758,3 +758,105 @@ describe("26/11: 'qual o valor dos orçamentos oferecidos?'", () => {
     expect(s.orcamento.recalculo_nao_enviado).toBeTruthy();
   });
 });
+
+describe("27/11: proposta de grupo — fonte única do que foi oferecido", () => {
+  const base = { tecnicas: ["verniz"], cliente: "Dona Ana", estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo_entrega: "daqui a 2 meses" };
+  async function groupClosed(extra: ((msgs: AgentMessage[]) => AgentStep)[] = []) {
+    const ids: string[] = [];
+    const r = await setup([
+      () => tool("criar_servico", { movel: "mesa", campos: { ...base, largura_cm: 100, fundura_cm: 60, altura_cm: 80 } }),
+      (m) => {
+        ids.push((lastToolResult(m).criado as { servico_id: string }).servico_id);
+        return tool("criar_servico", { movel: "dois criados-mudos", campos: { ...base, porte: "pequeno" } }, "c2");
+      },
+      (m) => {
+        ids.push((lastToolResult(m).criado as { servico_id: string }).servico_id);
+        return tool("calcular_orcamento", { servico_ids: ids });
+      },
+      () => say("Mesa e os 2 criados: concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: ids }),
+      () => say("Fechado! ✅"),
+      ...extra,
+    ]);
+    await r.h.send("mesa da dona Ana 1 metro por 60, 80 de altura, e dois criados-mudos pequenos, verniz, tá bom, só por fora, inteiro, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
+    await r.h.send("concordo");
+    return { ...r, ids };
+  }
+
+  it("todas as peças do PDF de grupo viram ENVIADO (não só a primeira)", async () => {
+    const { h } = await groupClosed();
+    expect(await h.ctx.db.first<{ n: number }>("SELECT COUNT(*) n FROM quote_documents WHERE kind = 'COMERCIAL'").then((x) => x!.n)).toBe(1);
+    const st = await h.ctx.db.all<{ status: string }>("SELECT status FROM quotes ORDER BY created_at");
+    expect(st.map((s) => s.status)).toEqual(["ENVIADO", "ENVIADO"]);
+  });
+
+  it("recalcular a 2ª peça do grupo cria versão nova e não apaga o valor oferecido; a proposta continua com o valor do PDF", async () => {
+    const { offerForJob } = await import("../src/services/offers.js");
+    const { calculateQuote } = await import("../src/services/quotes.js");
+    const { h, ids } = await groupClosed();
+    const first = (await offerForJob(h.ctx, ids[1]!))!;
+    expect(first.cents).not.toBeNull();
+    // simula o caso do aparador: a peça de grupo, com desconto, ainda estava como APROVADO (legado) e é recalculada
+    await h.ctx.db.run("UPDATE quotes SET status = 'APROVADO', final_price_cents = ? WHERE id = ?", first.cents! - 3805, first.quote.id);
+    const before = (await offerForJob(h.ctx, ids[1]!))!;
+    expect(before.cents).toBe(first.cents! - 3805);
+    h.advance(0.1);
+    const u = (await h.ctx.db.first<{ id: string }>("SELECT id FROM users LIMIT 1"))!;
+    const recalc = await calculateQuote(h.ctx, ids[1]!, u.id);
+    expect(recalc.id).not.toBe(before.quote.id);
+    const kept = await h.ctx.db.first<{ final_price_cents: number }>("SELECT final_price_cents FROM quotes WHERE id = ?", before.quote.id);
+    expect(kept!.final_price_cents).toBe(before.cents);
+    const after = (await offerForJob(h.ctx, ids[1]!))!;
+    expect(after.cents).toBe(before.cents);
+    expect(after.number).toBe(before.number);
+    expect(after.unsentRecalcCents).toBe(recalc.finalPriceCents ?? recalc.recommendedCents);
+  });
+
+  it("listar_servicos e situacao_financeira mostram o valor do PDF para TODAS as peças do grupo", async () => {
+    let listed: Record<string, unknown> = {};
+    let fin: Record<string, unknown> = {};
+    let aparador = "";
+    const { h, ids } = await groupClosed([
+      () => tool("listar_servicos", {}),
+      (m) => {
+        listed = lastToolResult(m);
+        return tool("situacao_financeira", { servico_id: aparador });
+      },
+      (m) => {
+        fin = lastToolResult(m);
+        return say("Aqui 💰");
+      },
+    ]);
+    aparador = ids[1]!;
+    await h.send("quanto ficou cada um?");
+    const { offerForJob } = await import("../src/services/offers.js");
+    const offers = await Promise.all(ids.map((id) => offerForJob(h.ctx, id)));
+    const { formatBRL } = await import("@adripatina/shared");
+    const servs = listed.servicos as { servico_id: string; orcamento: Record<string, unknown> }[];
+    for (let i = 0; i < ids.length; i++) {
+      const s = servs.find((x) => x.servico_id === ids[i])!;
+      expect(s.orcamento.valor_oferecido).toBe(formatBRL(offers[i]!.cents!));
+      expect(s.orcamento.pdf).toBe(offers[i]!.number);
+    }
+    expect(fin.valor_do_servico).toBe(formatBRL(offers[1]!.cents!));
+    expect(String(fin.situacao_do_orcamento)).toMatch(/enviado/);
+  });
+});
+
+describe("27/11: reescrita e conferência de valores (qualquer resposta)", () => {
+  it("keepsContent: descarta reescrita que vira cumprimento, que perde a lista ou que perde os valores", async () => {
+    const { keepsContent } = await import("../src/agent/engine.js");
+    const lista = "Seus orçamentos:\n• Seu Roberto: mesa R$ 512,55\n• Dona Jô: pomba R$ 232,00\nQuer ver algum? 🙂";
+    expect(keepsContent(lista, "Beleza, Adriano 👍")).toBe(false);
+    expect(keepsContent(lista, "Seu Roberto tem a mesa e a Dona Jô a pomba, com os valores já combinados. Quer ver algum? 🙂")).toBe(false);
+    expect(keepsContent(lista, "Seu Roberto tem a mesa e a Dona Jô a pomba, com os valores já combinados. Quer ver algum? 🙂", true)).toBe(true);
+    expect(keepsContent(lista, "• Seu Roberto: mesa R$ 512,55\n• Dona Jô: pomba R$ 232,00")).toBe(true);
+  });
+  it("recalcPresentedAsOffer: valor de recálculo dito como oferecido é apontado; dizendo que é recálculo, passa", async () => {
+    const { recalcPresentedAsOffer } = await import("../src/agent/engine.js");
+    const tr = [JSON.stringify({ servicos: [{ orcamento: { valor_oferecido: "R$ 512,55", pdf: "AP-1", recalculo_nao_enviado: "R$ 603,00" } }] })];
+    expect(recalcPresentedAsOffer("A mesa ficou R$ 603,00.", tr)).toMatch(/recálculo/);
+    expect(recalcPresentedAsOffer("A mesa foi oferecida por R$ 512,55.", tr)).toBeNull();
+    expect(recalcPresentedAsOffer("No PDF foi R$ 512,55; se recalcular hoje dá R$ 603,00.", tr)).toBeNull();
+  });
+});

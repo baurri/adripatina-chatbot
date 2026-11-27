@@ -10,6 +10,7 @@ import { financialIdempotencyKey, recordExpense, recordPayment, recordPurchase }
 import { applyConfirmedPrice, missingPriceKeys } from "../services/material-pricing.js";
 import { calculateQuote, closeQuoteByArtisan, getOverrides, getQuote, issueDocuments, issueGroupDocuments, latestQuoteForJob, markQuoteOutcome, saveOverrides, sendDocumentToArtisan, supersedeOlderProposals, type PriceAdjustment, type QuoteRecord } from "../services/quotes.js";
 import { enqueueOutbox } from "../services/outbox.js";
+import { offerForJob, type Offer } from "../services/offers.js";
 import type { User } from "../repos/users.js";
 
 /**
@@ -151,6 +152,17 @@ function describeJob(job: Job): Record<string, unknown> {
     prazo: v("deadline"),
     observacoes: v("details"),
     falta_para_orcamento: missingFor(job),
+  };
+}
+
+/** Como a proposta aparece para o agente: o valor do PDF, a situação e — separado — um recálculo que não saiu. */
+function offerView(o: Offer): Record<string, unknown> {
+  return {
+    valor_oferecido: o.cents != null ? formatBRL(o.cents) : null,
+    pdf: o.number,
+    situacao: ({ aguardando_resposta: "enviado, esperando o cliente", aceito: "cliente aceitou", recusado: "cliente recusou", expirado: "venceu" } as const)[o.state],
+    ...(o.preliminary ? { preliminar: true } : {}),
+    ...(o.unsentRecalcCents != null ? { recalculo_nao_enviado: formatBRL(o.unsentRecalcCents) } : {}),
   };
 }
 
@@ -711,9 +723,9 @@ async function closedRecentSiblings(t: ToolContext, ids: string[]): Promise<Job[
     );
     // peça que entrou num PDF de grupo fica ligada ao documento do primeiro orçamento: confere também o snapshot
     const g = (r?.n ?? 0) > 0 ? null : await t.ctx.db.first<{ n: number }>(
-      "SELECT COUNT(*) n FROM quote_snapshots s WHERE s.created_at >= ? AND s.snapshot_json LIKE ?",
+      "SELECT COUNT(*) n FROM quote_snapshots s WHERE s.created_at >= ? AND EXISTS (SELECT 1 FROM quotes q WHERE q.job_id = ? AND s.snapshot_json LIKE '%\"' || q.id || '\"%')",
       since,
-      `%${(await latestQuoteForJob(t.ctx, j.id))?.id ?? "__none__"}%`,
+      j.id,
     );
     if ((r?.n ?? 0) > 0 || (g?.n ?? 0) > 0) out.push(j);
   }
@@ -916,27 +928,15 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
   switch (name) {
     case "listar_servicos": {
       const jobs = await listActiveJobs(t.ctx, 12);
-      // valor de cada peça (26/11: "qual o valor dos orçamentos?" saía sem o do
-      // Seu Roberto — ele respondia de memória e a conferência tirava o número que não veio de lugar nenhum)
+      // valor de cada peça pela FONTE ÚNICA da proposta (PDF de grupo incluído; nunca um recálculo que não saiu)
       const rows = await Promise.all(
         jobs.map(async (j) => {
-          // o que vale é o valor do último PDF enviado (com desconto) — não um recálculo posterior que
-          // nunca saiu (26/11: ele disse 603/469/387 em vez de 512,55/398,65/348,30 que estão nos PDFs)
-          const sent = await t.ctx.db.first<{ cents: number | null; status: string; number: string; created_at: string }>(
-            `SELECT COALESCE(q.final_price_cents, q.recommended_cents) AS cents, q.status, d.number, d.created_at FROM quote_documents d JOIN quotes q ON q.id = d.quote_id
-             WHERE q.job_id = ? AND d.kind = 'COMERCIAL' AND d.sent_to_artisan_at IS NOT NULL ORDER BY d.created_at DESC LIMIT 1`,
-            j.id,
-          );
-          const q = await latestQuoteForJob(t.ctx, j.id);
-          const latestCents = q ? (q.finalPriceCents ?? q.recommendedCents) : null;
-          const newer = sent && q && latestCents != null && latestCents !== sent.cents && q.createdAt > sent.created_at ? formatBRL(latestCents) : null;
-          const orcamento = sent
-            ? { valor_oferecido: sent.cents != null ? formatBRL(sent.cents) : null, pdf: sent.number, ...(newer ? { recalculo_nao_enviado: newer } : {}) }
-            : q
-              ? { valor_estimado_sem_pdf: latestCents != null ? formatBRL(latestCents) : null, situacao: q.status }
-              : null;
+          const o = await offerForJob(t.ctx, j.id);
+          const q = o ? null : await latestQuoteForJob(t.ctx, j.id);
+          const est = q ? (q.finalPriceCents ?? q.recommendedCents) : null;
+          const orcamento = o ? offerView(o) : q ? { sem_pdf_ainda: true, valor_estimado: est != null ? formatBRL(est) : null } : null;
           const client = typeof j.facts.client_name?.value === "string" ? (j.facts.client_name.value as string) : null;
-          return { s: { ...describeJob(j), orcamento }, client, cents: sent ? sent.cents : null };
+          return { s: { ...describeJob(j), orcamento }, client, cents: o && o.state !== "recusado" && o.state !== "expirado" ? o.cents : null };
         }),
       );
       // soma por cliente pronta do que foi oferecido (pra ele não somar de cabeça) — só com mais de uma peça
@@ -1058,9 +1058,12 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
           continue;
         }
         quotes.push(q);
+        // peça que já tem proposta enviada: isto é um RECÁLCULO — o cliente recebeu o valor do PDF
+        const offered = await offerForJob(t.ctx, job.id);
         items.push({
           servico_id: job.id,
           nome: jobPhrase(job),
+          ...(offered && offered.quote.id !== q.id ? { ja_oferecido_ao_cliente: offerView(offered), aviso_recalculo: `isto é um recálculo, NÃO o valor que o cliente recebeu (${offered.cents != null ? formatBRL(offered.cents) : "—"} no ${offered.number}). Se ele perguntou o valor oferecido, responda o do PDF.` } : {}),
           quantidade_de_pecas: (job.facts.furniture_type?.value as { quantity?: number } | undefined)?.quantity ?? 1,
           sugestao: reais(r.recommendedCents),
           minimo_sem_prejuizo: reais(r.floorCents),
@@ -1349,7 +1352,8 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       let total = 0;
       for (const id of ids) {
-        const q = await latestQuoteForJob(t.ctx, id);
+        // a proposta que o cliente recebeu (no PDF de grupo também), não um recálculo posterior
+        const q = (await offerForJob(t.ctx, id))?.quote;
         if (!q || !["APROVADO", "ENVIADO"].includes(q.status)) continue;
         const r = await markQuoteOutcome(t.ctx, q.id, t.user.id, a.aceitou === true ? "ACEITO" : "RECUSADO");
         total += r.finalPriceCents ?? r.recommendedCents ?? 0;
@@ -1393,13 +1397,14 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
       if (typeof job === "string") return { erro: job };
       const bal = await jobBalance(t.ctx, job.id);
       // orçamento fechado mas o cliente ainda não deu o aceite: o valor combinado é o do orçamento
-      const q = await latestQuoteForJob(t.ctx, job.id);
-      const quoted = q && ["APROVADO", "ENVIADO", "ACEITO"].includes(q.status) ? (q.finalPriceCents ?? q.recommendedCents) : null;
+      const o = await offerForJob(t.ctx, job.id);
+      const quoted = o && (o.state === "aguardando_resposta" || o.state === "aceito") ? o.cents : null;
       const total = bal.contractedCents ?? quoted;
       return {
         servico: jobPhrase(job),
         valor_do_servico: reais(total),
-        situacao_do_orcamento: q ? (q.status === "ACEITO" ? "cliente aceitou" : ["APROVADO", "ENVIADO"].includes(q.status) ? "orçamento enviado, cliente ainda não respondeu" : "orçamento ainda não fechado") : "sem orçamento",
+        situacao_do_orcamento: o ? ({ aceito: "cliente aceitou", aguardando_resposta: "orçamento enviado, cliente ainda não respondeu", recusado: "cliente recusou", expirado: "orçamento venceu" } as const)[o.state] : (await latestQuoteForJob(t.ctx, job.id)) ? "orçamento ainda não fechado" : "sem orçamento",
+        ...(o ? { pdf: o.number } : {}),
         ja_pagou: reais(bal.paidCents),
         falta: total !== null ? reais(Math.max(0, total - bal.paidCents)) : null,
       };

@@ -30,6 +30,56 @@ export function stripMarkdown(text: string): string {
 }
 
 /** Códigos internos (S-0001) e ids nunca aparecem para o artesão. */
+/**
+ * Toda reescrita (revisão do rascunho, conferência de números/tom) tem que manter a resposta: uma
+ * reescrita que vira um "Beleza, Adriano 👍" no lugar da lista que ele pediu (26/11) é descartada —
+ * fica o rascunho. Vale para qualquer caminho de reescrita, não só o do texto comprido.
+ */
+export function keepsContent(before: string, after: string, droppingNumbers = false): boolean {
+  const b = before.trim();
+  const a = after.trim();
+  if (!a) return false;
+  // encolheu demais (menos de 30% e menos de 80 caracteres)
+  const gutted = a.length < Math.min(80, b.length * 0.3);
+  // a resposta tinha itens (lista) e a reescrita perdeu todos
+  const items = (x: string) => (x.match(/^\s*[•\-–]\s/gm) ?? []).length;
+  const lostList = items(b) >= 2 && items(a) === 0 && a.length < b.length * 0.5;
+  // tinha valores em reais e a reescrita tirou todos (sem número inventado envolvido, isso é perder a resposta)
+  const money = (x: string) => (x.match(/R\$\s?\d/g) ?? []).length;
+  // (se a reescrita foi pedida justamente pra tirar números inventados, tirar os valores é o esperado)
+  const lostMoney = !droppingNumbers && money(b) >= 1 && money(a) === 0;
+  const ok = !gutted && !lostList && !lostMoney;
+  if (!ok) console.warn(JSON.stringify({ level: "warn", msg: "agent_rewrite_dropped", before: b.length, after: a.length, gutted, lostList, lostMoney }));
+  return ok;
+}
+
+/**
+ * As ferramentas marcam o que é recálculo (recalculo_nao_enviado / aviso_recalculo) e o que o cliente
+ * recebeu (valor_oferecido). Se a resposta cita um valor de recálculo sem dizer que é recálculo, devolve a
+ * instrução de correção (vale para qualquer peça e qualquer pergunta sobre valor).
+ */
+export function recalcPresentedAsOffer(text: string, toolResults: string[]): string | null {
+  const sp = (v: string) => v.replace(/\s/g, " ");
+  const recalc = new Set<string>();
+  const offered = new Set<string>();
+  for (const r of toolResults) {
+    for (const m of r.matchAll(/"recalculo_nao_enviado":"(R\$[^"]+)"/g)) recalc.add(sp(m[1]!));
+    for (const m of r.matchAll(/"valor_oferecido":"(R\$[^"]+)"/g)) offered.add(sp(m[1]!));
+    if (r.includes("aviso_recalculo")) {
+      try {
+        const j = JSON.parse(r) as { itens?: { sugestao?: string; aviso_recalculo?: string }[] };
+        for (const it of j.itens ?? []) if (it.aviso_recalculo && it.sugestao) recalc.add(sp(it.sugestao));
+      } catch {
+        /* resultado não-JSON: ignora */
+      }
+    }
+  }
+  const norm = sp(text);
+  const cited = [...recalc].filter((v) => !offered.has(v) && norm.includes(v));
+  if (!cited.length || /recalcul|refiz|nova conta|conta nova|atualizad|se fosse hoje/i.test(text)) return null;
+  return `valor de recálculo (${cited.join(", ")}) dito como se fosse o que o cliente recebeu — o valor oferecido é o do PDF${offered.size ? ` (${[...offered].join(", ")})` : ""}; se for falar do recálculo, diga que é um recálculo que não foi mandado`;
+}
+
 export function stripJobCodes(text: string): string {
   return text.replace(/\s*[([]?(?:servi[çc]o\s+)?\bS-\d{3,}\b[)\]]?/gi, "").replace(/ +([,.!?;:])/g, "$1");
 }
@@ -460,7 +510,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
         messages.push({ role: "assistant", content: finalText });
         messages.push({ role: "user", content: `${fix.instruction} Não comente essa revisão; responda só a mensagem pro Adriano.` });
         const again = await runRounds(4);
-        if (again) finalText = again;
+        if (again && keepsContent(finalText, again)) finalText = again;
       }
     }
     // conferência da resposta: nenhum número que não veio das ferramentas, do estado ou dele
@@ -474,6 +524,9 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     const showedQuote = toolResults.some((r) => r.includes("mensagem_pronta"));
     // a mensagem pronta do orçamento tem um emoji por linha (🧮💰⚠️🛒⏱️🤝): não reescreve por isso
     const tone = toneIssues(finalText, showedQuote ? 9 : 4);
+    // valor de um recálculo (que não foi mandado ao cliente) dito como se fosse o oferecido — 26/11
+    const misread = recalcPresentedAsOffer(finalText, toolResults);
+    if (misread) tone.push(misread);
     if (/\bsistema\b|\bmarca[cç](ao|ão)\b|\bferramenta\b/i.test(finalText)) tone.push('palavras de sistema ("sistema", "marcação", "ferramenta")');
     // lista com marcadores (ex.: "quais orçamentos eu tenho?") pode ser maior: cada item é uma linha curta
     const isList = (finalText.match(/^\s*[•\-–]\s/gm) ?? []).length >= 2;
@@ -484,10 +537,7 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
       const again = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 800);
       const t2 = again.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim();
       const bad2 = numbersIn(t2).filter((x) => !grounded(x, allowed)).length;
-      // reescrita que joga o conteúdo fora ("Beleza, Adriano 👍" no lugar da lista — 26/11) não vale
-      const gutted = t2.length < Math.min(80, finalText.length * 0.3);
-      if (t2 && !gutted && bad2 < invented.length + (tone.length ? 1 : 0)) finalText = stripJobCodes(t2);
-      else if (gutted) console.warn(JSON.stringify({ level: "warn", msg: "agent_rewrite_gutted", before: finalText.length, after: t2.length }));
+      if (t2 && keepsContent(finalText, t2, invented.length > 0) && bad2 < invented.length + (tone.length ? 1 : 0)) finalText = stripJobCodes(t2);
     }
   } catch (err) {
     console.error(JSON.stringify({ level: "error", msg: "agent_failed", error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));

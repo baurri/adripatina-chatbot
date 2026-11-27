@@ -10,6 +10,7 @@ import { runProactiveCollection } from "./services/proactive/job.js";
 import { runQuoteFollowups } from "./services/followup.js";
 import { runGreetings } from "./services/greetings.js";
 import { runJokes } from "./services/jokes.js";
+import { offerForJob } from "./services/offers.js";
 
 /** Cron (a cada 15 min): outbox, resumo diário idempotente, retenção de mídia, varredura de duplicidades. */
 export async function runScheduled(ctx: Ctx): Promise<Record<string, unknown>> {
@@ -82,7 +83,9 @@ async function maybeSendDailySummary(ctx: Ctx): Promise<number> {
 
 export async function buildDailySummary(ctx: Ctx, firstName: string): Promise<string | null> {
   const jobs = await listActiveJobs(ctx, 20);
-  const awaiting = await ctx.db.all<{ title: string }>("SELECT j.title FROM quotes q JOIN jobs j ON j.id = q.job_id WHERE q.status = 'ENVIADO'");
+  // esperando resposta: pela proposta vigente de cada peça (PDF de grupo incluído — antes só a 1ª peça aparecia)
+  const awaiting: { title: string }[] = [];
+  for (const j of jobs) if ((await offerForJob(ctx, j.id))?.state === "aguardando_resposta") awaiting.push({ title: j.title });
   const receivables = await ctx.db.all<{ title: string; balance: number }>(
     `SELECT j.title, j.contracted_cents - COALESCE((SELECT SUM(CASE WHEN kind='ESTORNO' THEN -amount_cents ELSE amount_cents END) FROM payments p WHERE p.job_id = j.id),0) AS balance
      FROM jobs j WHERE j.contracted_cents IS NOT NULL AND j.status IN ('CONCLUIDO','ENTREGUE')`,

@@ -95,6 +95,7 @@ import {
   shouldStartQuoteRequest,
   startQuoteRequest,
 } from "./quote-request-flow.js";
+import { offerForJob } from "../services/offers.js";
 
 export interface EngineInput {
   user: User;
@@ -2381,9 +2382,8 @@ Está certo? Pode responder "sim" ou "não".`, [
     this.session.flow = this.session.activeJobId ? "collecting" : "idle";
     const bal = await jobBalance(this.ctx, jobId);
     if (bal.contractedCents === null) {
-      const q = await latestQuoteForJob(this.ctx, jobId);
-      const ref = q?.finalPriceCents ?? q?.recommendedCents ?? null;
-      this.say(`Anotado! Recebido até agora: ${formatBRL(bal.paidCents)}.${ref ? ` O orçamento atual é ${formatBRL(ref)}, mas ainda não foi marcado como aceito pelo cliente.` : " Ainda não temos o valor fechado desse serviço."}`);
+      const ref = (await offerForJob(this.ctx, jobId))?.cents ?? null;
+      this.say(`Anotado! Recebido até agora: ${formatBRL(bal.paidCents)}.${ref ? ` O orçamento enviado é de ${formatBRL(ref)}, mas ainda não foi marcado como aceito pelo cliente.` : " Ainda não temos o valor fechado desse serviço."}`);
     } else {
       this.say(`Anotado! Já recebeu ${formatBRL(bal.paidCents)} de ${formatBRL(bal.contractedCents)}. ${bal.balanceCents! > 0 ? `Falta ${formatBRL(bal.balanceCents!)}.` : "Está quitado!"}`);
     }
@@ -2519,11 +2519,13 @@ Está certo? Pode responder "sim" ou "não".`, [
   async describeJob(job: Job): Promise<void> {
     const s = summarizeJob(job);
     const bal = await jobBalance(this.ctx, job.id);
-    const q = await latestQuoteForJob(this.ctx, job.id);
+    const offer = await offerForJob(this.ctx, job.id);
+    const q = offer?.quote ?? (await latestQuoteForJob(this.ctx, job.id));
     const lines = [s.headline, `Situação: ${JOB_STATUS_LABEL[job.status]}`];
     if (s.confirmed.length) lines.push(`Já anotado: ${s.confirmed.join("; ")}`);
     if (s.pending.length) lines.push(`Ainda falta saber: ${s.pending.map((f) => FIELD_LABEL[f]).slice(0, 4).join("; ")}`);
-    if (q) lines.push(`Orçamento: ${q.status.toLowerCase().replace(/_/g, " ")}${q.finalPriceCents ? ` — ${formatBRL(q.finalPriceCents)}` : ""}`);
+    if (offer) lines.push(`Orçamento enviado (${offer.number})${offer.cents ? ` — ${formatBRL(offer.cents)}` : ""}`);
+    else if (q) lines.push(`Orçamento: ${q.status.toLowerCase().replace(/_/g, " ")}${q.finalPriceCents ? ` — ${formatBRL(q.finalPriceCents)}` : ""}`);
     if (bal.paidCents > 0 || bal.contractedCents) lines.push(`Recebido: ${formatBRL(bal.paidCents)}${bal.balanceCents !== null ? ` — falta ${formatBRL(Math.max(0, bal.balanceCents))}` : ""}`);
     this.session.activeJobId = job.id;
     this.say(lines.join("\n"), s.pending.length ? [[{ text: "Continuar este", data: "cmd:continue" }]] : undefined);

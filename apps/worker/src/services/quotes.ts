@@ -11,6 +11,7 @@ import { auditStmt } from "../repos/audit.js";
 import { getActiveSettings, getInventory, loadCatalog, listMaterials } from "../repos/catalog.js";
 import { addJobEvent, getJob, type Job } from "../repos/jobs.js";
 import { enqueueOutbox } from "./outbox.js";
+import { isQuoteIssued, quotesInDocument } from "./offers.js";
 
 export class DomainError extends Error {
   constructor(
@@ -422,7 +423,9 @@ export async function calculateQuote(
   const inputSnapshot = { ...input, settingsSnapshot: settings.params, catalogSnapshot: catalog };
 
   const latest = await latestQuoteForJob(ctx, jobId);
-  const hasDocs = latest ? !!(await ctx.db.first("SELECT id FROM quote_documents WHERE quote_id = ? LIMIT 1", latest.id)) : false;
+  // orçamento que já saiu num PDF (sozinho OU no grupo) nunca é editado no lugar: o recálculo vira versão nova
+  // (27/11: o aparador entrou num PDF de grupo, que só registra a 1ª peça — o recálculo apagou o desconto)
+  const hasDocs = latest ? await isQuoteIssued(ctx, latest.id) : false;
   const editable = latest && !hasDocs && ["RASCUNHO", "ESTIMATIVA", "AGUARDANDO_REVISAO", "APROVADO"].includes(latest.status);
 
   let quoteId: string;
@@ -1083,8 +1086,13 @@ export async function sendDocumentToArtisan(ctx: Ctx, documentId: string, actor:
     ctx.db.stmt("UPDATE quote_documents SET sent_to_artisan_at = ? WHERE id = ?", now, documentId),
     auditStmt(ctx, actor, "document.sent_to_artisan", "quote_document", documentId, undefined, { number: doc.number, version: doc.docVersion }),
   ]);
-  const q = await getQuote(ctx, doc.quoteId);
-  if (q && q.status === "APROVADO" && !doc.preliminary) await setQuoteStatus(ctx, q, "ENVIADO", actor, "", [], "PDF entregue ao artesão para encaminhamento");
+  // todas as peças do PDF (no de grupo, não só a primeira) passam a ENVIADO
+  if (!doc.preliminary) {
+    for (const qid of await quotesInDocument(ctx, documentId)) {
+      const q = await getQuote(ctx, qid);
+      if (q && q.status === "APROVADO") await setQuoteStatus(ctx, q, "ENVIADO", actor, "", [], "PDF entregue ao artesão para encaminhamento");
+    }
+  }
   await sendWhatsAppShortcut(ctx, documentId, chatId).catch((err) => console.error(JSON.stringify({ level: "error", msg: "whatsapp_shortcut_failed", error: String(err instanceof Error ? err.message : err).slice(0, 160) })));
 }
 
