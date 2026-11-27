@@ -725,3 +725,36 @@ describe("26/11: reescrita que joga fora o conteúdo", () => {
     expect(r).toBe(curto);
   });
 });
+
+describe("26/11: 'qual o valor dos orçamentos oferecidos?'", () => {
+  it("listar_servicos traz o valor do PDF enviado (não o recálculo que nunca saiu)", async () => {
+    let jobId = "";
+    let listed: Record<string, unknown> = {};
+    const { h } = await setup([
+      () => tool("criar_servico", { movel: "mesa", campos: { tecnicas: ["verniz"], cliente: "Dona Ana", largura_cm: 100, fundura_cm: 60, altura_cm: 80, estado: "bom", superficies: "externa", parte: "inteiro", conserto: false, metodo: "pincel", artesao_busca: false, artesao_entrega: false, prazo_entrega: "daqui a 2 meses" } }),
+      (m) => {
+        jobId = (lastToolResult(m).criado as { servico_id: string }).servico_id;
+        return tool("calcular_orcamento", { servico_ids: [jobId] });
+      },
+      () => say("Concorda? 🤝"),
+      () => tool("fechar_orcamento", { servico_ids: [jobId], valor_final_reais: 999 }),
+      () => say("Fechado! ✅"),
+      () => tool("calcular_orcamento", { servico_ids: [jobId] }),
+      () => say("Refiz a conta 🧮"),
+      () => tool("listar_servicos", {}),
+      (m) => {
+        listed = lastToolResult(m);
+        return say("Aqui estão 💰");
+      },
+    ]);
+    await h.send("mesa da dona Ana pra envernizar, 1 metro por 60, 80 de altura, tá boa, só por fora, inteira, sem conserto, pincel, ela traz e busca, fica pronto daqui a 2 meses");
+    await h.send("concordo, 999");
+    h.advance(0.1);
+    await h.send("refaz a conta da mesa");
+    await h.send("qual o valor dos orçamentos oferecidos?");
+    const s = (listed.servicos as { orcamento: Record<string, unknown> }[])[0]!;
+    expect(s.orcamento.valor_oferecido).toBe("R$ 999,00");
+    expect(String(s.orcamento.pdf)).toMatch(/^AP-/);
+    expect(s.orcamento.recalculo_nao_enviado).toBeTruthy();
+  });
+});

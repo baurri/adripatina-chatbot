@@ -225,7 +225,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: "listar_servicos",
-    description: "Lista os serviços em andamento (com o que já está anotado e o que falta). Use para achar o servico_id de um serviço que ele citar.",
+    description: "Lista os serviços em andamento (com o que já está anotado, o que falta e o valor oferecido no último PDF de cada um, mais a soma por cliente). Quando perguntarem quanto foi oferecido, use valor_oferecido (o do PDF), não recalculo_nao_enviado. Use para achar o servico_id de um serviço que ele citar e SEMPRE que ele perguntar quais orçamentos tem ou quanto valem — não responda valores de memória.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -916,7 +916,34 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
   switch (name) {
     case "listar_servicos": {
       const jobs = await listActiveJobs(t.ctx, 12);
-      return { servicos: jobs.map(describeJob) };
+      // valor de cada peça (26/11: "qual o valor dos orçamentos?" saía sem o do
+      // Seu Roberto — ele respondia de memória e a conferência tirava o número que não veio de lugar nenhum)
+      const rows = await Promise.all(
+        jobs.map(async (j) => {
+          // o que vale é o valor do último PDF enviado (com desconto) — não um recálculo posterior que
+          // nunca saiu (26/11: ele disse 603/469/387 em vez de 512,55/398,65/348,30 que estão nos PDFs)
+          const sent = await t.ctx.db.first<{ cents: number | null; status: string; number: string; created_at: string }>(
+            `SELECT COALESCE(q.final_price_cents, q.recommended_cents) AS cents, q.status, d.number, d.created_at FROM quote_documents d JOIN quotes q ON q.id = d.quote_id
+             WHERE q.job_id = ? AND d.kind = 'COMERCIAL' AND d.sent_to_artisan_at IS NOT NULL ORDER BY d.created_at DESC LIMIT 1`,
+            j.id,
+          );
+          const q = await latestQuoteForJob(t.ctx, j.id);
+          const latestCents = q ? (q.finalPriceCents ?? q.recommendedCents) : null;
+          const newer = sent && q && latestCents != null && latestCents !== sent.cents && q.createdAt > sent.created_at ? formatBRL(latestCents) : null;
+          const orcamento = sent
+            ? { valor_oferecido: sent.cents != null ? formatBRL(sent.cents) : null, pdf: sent.number, ...(newer ? { recalculo_nao_enviado: newer } : {}) }
+            : q
+              ? { valor_estimado_sem_pdf: latestCents != null ? formatBRL(latestCents) : null, situacao: q.status }
+              : null;
+          const client = typeof j.facts.client_name?.value === "string" ? (j.facts.client_name.value as string) : null;
+          return { s: { ...describeJob(j), orcamento }, client, cents: sent ? sent.cents : null };
+        }),
+      );
+      // soma por cliente pronta do que foi oferecido (pra ele não somar de cabeça) — só com mais de uma peça
+      const byClient = new Map<string, number[]>();
+      for (const r of rows) if (r.client && r.cents != null) byClient.set(r.client, [...(byClient.get(r.client) ?? []), r.cents]);
+      const total_por_cliente = Object.fromEntries([...byClient].filter(([, v]) => v.length > 1).map(([c, v]) => [c, formatBRL(v.reduce((a, b) => a + b, 0))]));
+      return { servicos: rows.map((r) => r.s), ...(Object.keys(total_por_cliente).length ? { total_por_cliente } : {}) };
     }
     case "criar_servico": {
       if (typeof a.movel !== "string" || !a.movel.trim()) return { erro: "diga qual é o móvel" };
