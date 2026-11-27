@@ -475,14 +475,19 @@ export async function runAgent(ctx: Ctx, input: EngineInput): Promise<OutgoingMe
     // a mensagem pronta do orçamento tem um emoji por linha (🧮💰⚠️🛒⏱️🤝): não reescreve por isso
     const tone = toneIssues(finalText, showedQuote ? 9 : 4);
     if (/\bsistema\b|\bmarca[cç](ao|ão)\b|\bferramenta\b/i.test(finalText)) tone.push('palavras de sistema ("sistema", "marcação", "ferramenta")');
-    if (finalText.length > (showedQuote ? 700 : 380)) tone.push("texto comprido (deixe bem mais curta: no máximo 3 frases curtas e uma pergunta)");
+    // lista com marcadores (ex.: "quais orçamentos eu tenho?") pode ser maior: cada item é uma linha curta
+    const isList = (finalText.match(/^\s*[•\-–]\s/gm) ?? []).length >= 2;
+    if (finalText.length > (showedQuote || isList ? 700 : 380)) tone.push("texto comprido (deixe bem mais curta: no máximo 3 frases curtas e uma pergunta)");
     if (finalText && (invented.length || tone.length)) {
       messages.push({ role: "assistant", content: finalText });
       messages.push({ role: "user", content: `Reescreva a sua última mensagem para o Adriano com as mesmas ideias, ${invented.length ? `sem estes números (${invented.join(", ")}) — se precisar de um valor ajustado, use simular_ajuste; se não, fale sem o número` : ""}${invented.length && tone.length ? " e " : ""}${tone.length ? `sem ${tone.join(", ")}` : ""}. Não comente essa correção nem fale de conferência, sistema ou ferramenta. Só a mensagem.` });
       const again = await model.step(system, messages, AGENT_TOOLS as AgentTool[], 800);
       const t2 = again.content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text).join("\n").trim();
       const bad2 = numbersIn(t2).filter((x) => !grounded(x, allowed)).length;
-      if (t2 && bad2 < invented.length + (tone.length ? 1 : 0)) finalText = stripJobCodes(t2);
+      // reescrita que joga o conteúdo fora ("Beleza, Adriano 👍" no lugar da lista — 26/11) não vale
+      const gutted = t2.length < Math.min(80, finalText.length * 0.3);
+      if (t2 && !gutted && bad2 < invented.length + (tone.length ? 1 : 0)) finalText = stripJobCodes(t2);
+      else if (gutted) console.warn(JSON.stringify({ level: "warn", msg: "agent_rewrite_gutted", before: finalText.length, after: t2.length }));
     }
   } catch (err) {
     console.error(JSON.stringify({ level: "error", msg: "agent_failed", error: err instanceof Error ? err.message.slice(0, 200) : String(err) }));

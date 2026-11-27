@@ -708,3 +708,20 @@ describe("25/11: piadinha do dia", () => {
     expect(r).toMatch(/4 gatos/);
   });
 });
+
+describe("26/11: reescrita que joga fora o conteúdo", () => {
+  const lista = "Seus orçamentos:\n\n• Seu Roberto: mesa, rack e aparador, fechados juntos, com PDF enviado e esperando a resposta dele.\n• Dona Jô: pomba com raios de sol, com PDF enviado e esperando a resposta dela também.\n• Dona Ana: cômoda antiga, ainda falta saber o tamanho e o estado da peça pra fechar.\n• Seu Valdir: cadeiras da cozinha, esperando ele mandar as fotos das pernas.\n\nQuer ver algum deles com mais calma? 🙂";
+  it("'quais orçamentos eu tenho?': a lista não vira 'Beleza, Adriano 👍'", async () => {
+    const { h } = await setup([() => say(lista), () => say("Beleza, Adriano 👍")]);
+    const r = h.allText(await h.send("quais orçamentos eu tenho?"));
+    expect(r).toContain("Dona Jô");
+    expect(r).not.toMatch(/^Beleza, Adriano/);
+  });
+  it("texto comprido que não é lista ainda é encurtado (reescrita com conteúdo é aceita)", async () => {
+    const longo = "Olha, pensei bem aqui e acho que a mesa do Seu Roberto merece um cuidado especial, porque a madeira é antiga e pode precisar de mais lixa do que o normal, e o verniz também pode pedir uma demão a mais pra ficar bonito, então talvez valha conversar com ele sobre isso antes de começar, pra ele não se assustar depois com o resultado ou com o tempo que vai levar até ficar pronta. O que acha? 🙂";
+    const curto = "A mesa do Seu Roberto pode pedir mais lixa e uma demão a mais de verniz. Vale avisar ele antes de começar? 🙂";
+    const { h } = await setup([() => say(longo), () => say(curto)]);
+    const r = h.allText(await h.send("e a mesa do seu roberto?"));
+    expect(r).toBe(curto);
+  });
+});
