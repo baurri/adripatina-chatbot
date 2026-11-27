@@ -812,6 +812,15 @@ describe("27/11: proposta de grupo — fonte única do que foi oferecido", () =>
     expect(after.unsentRecalcCents).toBe(recalc.finalPriceCents ?? recalc.recommendedCents);
   });
 
+  it("PDF com peça cancelada (corrigido/substituído) não é a proposta vigente — vale o anterior válido", async () => {
+    const { offerForJob } = await import("../src/services/offers.js");
+    const { h, ids } = await groupClosed();
+    const ok = (await offerForJob(h.ctx, ids[0]!))!;
+    expect(ok).not.toBeNull();
+    await h.ctx.db.run("UPDATE quotes SET status = 'CANCELADO' WHERE job_id = ?", ids[1]!);
+    expect(await offerForJob(h.ctx, ids[0]!)).toBeNull();
+  });
+
   it("listar_servicos e situacao_financeira mostram o valor do PDF para TODAS as peças do grupo", async () => {
     let listed: Record<string, unknown> = {};
     let fin: Record<string, unknown> = {};

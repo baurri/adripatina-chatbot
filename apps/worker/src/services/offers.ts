@@ -70,9 +70,12 @@ export async function offerForJob(ctx: Ctx, jobId: string): Promise<Offer | null
     jobId,
   );
   for (const d of docs) {
-    for (const qid of quoteIdsOf(d.snapshot_json, d.quote_id)) {
-      const q = await getQuote(ctx, qid);
-      if (!q || q.jobId !== jobId || q.status === "CANCELADO") continue;
+    const members = (await Promise.all(quoteIdsOf(d.snapshot_json, d.quote_id).map((qid) => getQuote(ctx, qid)))).filter((x): x is QuoteRecord => !!x);
+    // PDF com alguma peça cancelada (substituído por um mais novo, ou fechado por engano e corrigido) não é
+    // proposta vigente — mesma regra do "o cliente respondeu?" (followup.ts)
+    if (members.some((m) => m.status === "CANCELADO")) continue;
+    for (const q of members) {
+      if (q.jobId !== jobId) continue;
       const cents = q.finalPriceCents ?? q.recommendedCents;
       const latest = await latestQuoteForJob(ctx, jobId);
       const recalc = latest && latest.id !== q.id && latest.version > q.version && ["ESTIMATIVA", "RASCUNHO", "AGUARDANDO_REVISAO"].includes(latest.status) ? (latest.finalPriceCents ?? latest.recommendedCents) : null;

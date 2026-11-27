@@ -1363,17 +1363,15 @@ export async function runTool(t: ToolContext, name: string, input: unknown): Pro
     case "reenviar_orcamento": {
       const ids = Array.isArray(a.servico_ids) ? a.servico_ids.filter((x): x is string => typeof x === "string") : [];
       if (!ids.length) return { erro: "servico_ids vazio" };
-      // proposta mais recente que inclui cada peça (snapshot de uma peça ou de várias)
+      // a proposta VIGENTE de cada peça (fonte única: PDF de grupo incluído, PDF com peça cancelada não conta)
       const found = new Map<string, { docId: string; number: string; createdAt: string; settingsId: string | null }>();
       for (const id of ids) {
-        const r = await t.ctx.db.first<{ doc_id: string; number: string; created_at: string; snapshot_json: string }>(
-          "SELECT d.id doc_id, s.number, s.created_at, s.snapshot_json FROM quote_snapshots s JOIN quote_documents d ON d.snapshot_id = s.id AND d.kind = 'COMERCIAL' WHERE EXISTS (SELECT 1 FROM quotes q WHERE q.job_id = ? AND s.snapshot_json LIKE '%' || q.id || '%') ORDER BY s.created_at DESC LIMIT 1",
-          id,
-        );
-        if (!r) continue;
-        const snap = JSON.parse(r.snapshot_json) as { internal?: { settingsVersionId?: string } | { settingsVersionId?: string }[] };
+        const o = await offerForJob(t.ctx, id);
+        if (!o) continue;
+        const r = await t.ctx.db.first<{ snapshot_json: string }>("SELECT s.snapshot_json FROM quote_documents d JOIN quote_snapshots s ON s.id = d.snapshot_id WHERE d.id = ?", o.documentId);
+        const snap = JSON.parse(r?.snapshot_json ?? "{}") as { internal?: { settingsVersionId?: string } | { settingsVersionId?: string }[] };
         const internal = Array.isArray(snap.internal) ? snap.internal[0] : snap.internal;
-        found.set(r.doc_id, { docId: r.doc_id, number: r.number, createdAt: r.created_at, settingsId: internal?.settingsVersionId ?? null });
+        found.set(o.documentId, { docId: o.documentId, number: o.number, createdAt: o.issuedAt, settingsId: internal?.settingsVersionId ?? null });
       }
       if (!found.size) return { erro: "essas peças ainda não têm PDF", proximo_passo: "Diga que ainda não tem orçamento fechado dessas peças e pergunte se quer calcular." };
       const active = (await getActiveSettings(t.ctx)).id;
